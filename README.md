@@ -8,10 +8,23 @@ El repositorio contiene la base de especificacion y planificacion generada con S
 
 La fuente de verdad actual esta en:
 
+- `HANDOFF.md`: punto de reanudacion para Codex, Claude o cualquier agente.
+- `PLANNING.md`: mapa del proyecto, ruta y modelo operativo.
+- `PROGRESS.md`: historial de progreso y estado actual.
 - `.specify/memory/constitution.md`: principios y restricciones arquitectonicas.
 - `specs/001-saas-multitenant-booking/spec.md`: especificacion funcional.
 - `specs/001-saas-multitenant-booking/plan.md`: plan tecnico y estructura objetivo.
 - `specs/001-saas-multitenant-booking/tasks.md`: tareas iniciales de implementacion.
+
+## Flujo Agnostico De Agentes
+
+El proyecto esta preparado para trabajar con Codex y Claude sin perder contexto entre sesiones.
+
+- Codex usa `AGENTS.md`.
+- Claude usa `CLAUDE.md`.
+- Ambos deben leer `HANDOFF.md`, `PLANNING.md` y `PROGRESS.md`.
+- Las decisiones arquitectonicas duraderas deben registrarse en `docs/adr/`.
+- Antes de cerrar una sesion con cambios relevantes, actualizar `PROGRESS.md` y `HANDOFF.md`.
 
 ## Stack Previsto
 

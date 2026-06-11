@@ -1,3 +1,20 @@
+## Cross-Agent Continuity
+
+This project is designed to work across Codex and Claude without losing context.
+
+Read these files in order at the start of a new session:
+
+1. `HANDOFF.md` — current resume point and next actions.
+2. `PLANNING.md` — project map, source-of-truth hierarchy, operating model.
+3. `PROGRESS.md` — timeline of completed work and current state.
+4. `.specify/memory/constitution.md` — non-negotiable architecture principles.
+5. `specs/001-saas-multitenant-booking/plan.md` — current technical plan.
+6. `specs/001-saas-multitenant-booking/tasks.md` — implementation backlog.
+
+Before ending a meaningful session, update `PROGRESS.md` and `HANDOFF.md`. If tasks were completed, update `tasks.md`. If a major architecture decision was made, record it under `docs/adr/`.
+
+Do not push, publish, merge, delete reference material, or change credentials without explicit user approval.
+
 ## graphify
 
 This project keeps archived Amelia reference knowledge graphs under reference/graphify/.
