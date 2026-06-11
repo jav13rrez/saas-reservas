@@ -6,7 +6,7 @@ Last updated: 2026-06-11
 
 This is the fastest resume document for Codex, Claude, or any future agent. Read this before making changes.
 
-The project is ready to start implementation, but source code has not started yet.
+Implementation has started: the stack is decided (ADR-0001..0007) and the Phase 1 workspace skeleton (T001-T006) is in place. The next work is Phase 2, the tenant-safe foundations (T007-T014).
 
 ## Current Objective
 
@@ -14,10 +14,11 @@ Prepare and implement a SaaS-native multitenant booking platform inspired by Ame
 
 ## Current Repo State
 
-- Branch: `main`
-- Clean baseline commit: `7d6842e Initial clean project baseline`
+- Working branch: `claude/optimistic-babbage-8vdefc` (branched from `main` at `7d6842e`, plus the cross-agent docs commit `a36a6e1`).
 - Remote: `origin https://github.com/jav13rrez/saas-reservas.git`
-- Push status: dry-run was successful, but the final real push had not been done when this handoff was written.
+- Stack decisions recorded as ADR-0001 through ADR-0007 in `docs/adr/`: Next.js, Fastify, Drizzle, BullMQ, first-party cookie sessions, deferred AIProviderAdapter, Docker Compose for local dev.
+- T001-T006 complete: pnpm workspace (`pnpm-workspace.yaml`), root tooling (`package.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `vitest.config.ts`), and `packages/contracts` with `environment.ts` and `openapi.ts`.
+- Verification commands available and passing: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`.
 - Local reference folders exist but are ignored by Git: `reference/`, `archive/`, `.codex/`.
 
 ## What Matters Most
@@ -36,35 +37,22 @@ Do not treat `reference/` or `archive/` as source code. They are local research 
 
 Recommended next steps:
 
-1. Push the clean baseline if the user wants it on GitHub:
+1. Merge the working branch `claude/optimistic-babbage-8vdefc` into `main` when the user approves.
 
-   ```bash
-   git push -u origin main
-   ```
+2. Start Phase 2 (`T007`-`T014`): PostgreSQL tenancy conventions and RLS template, tenant-context package, Redis key and storage path helpers, tenant resolver, audit/event primitives, and the baseline RLS/worker tests.
 
-2. Close the first architecture decisions before coding:
+3. As part of T007/T013, add the Docker Compose file under `infra/` (Postgres 16+, Redis 7+, MinIO) per ADR-0007 so integration tests can run.
 
-   - Next.js vs alternative frontend shell.
-   - Fastify vs NestJS.
-   - ORM/migrations strategy.
-   - Redis queue library.
-   - Auth/session model.
-   - AI/model-provider abstraction timing.
-
-3. Record those decisions as ADRs under `docs/adr/`.
-
-4. Start `T001` through `T006` from `tasks.md`.
-
-5. After each meaningful implementation session, update `PROGRESS.md`, `HANDOFF.md`, and `tasks.md`.
+4. After each meaningful implementation session, update `PROGRESS.md`, `HANDOFF.md`, and `tasks.md`.
 
 ## Current Task Pointer
 
-Implementation has not started.
+Phase 1 (T001-T006) is complete.
 
 Next task:
 
 ```text
-T001 Create target workspace structure and placeholders in apps/admin/.gitkeep, services/api/src/.gitkeep, services/worker/src/.gitkeep, packages/domain/src/.gitkeep, and infra/postgres/.gitkeep
+T007 Define PostgreSQL tenancy conventions, migration layout, tenant_id indexes, and RLS policy template in infra/postgres/001-tenancy.sql
 ```
 
 ## Important Constraints

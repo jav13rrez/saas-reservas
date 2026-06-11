@@ -18,12 +18,12 @@ description: "Implementation task list for a multitenant Amelia-inspired booking
 
 **Purpose**: Establish a clean SaaS project skeleton and shared engineering contracts.
 
-- [ ] T001 Create target workspace structure and placeholders in `apps/admin/.gitkeep`, `services/api/src/.gitkeep`, `services/worker/src/.gitkeep`, `packages/domain/src/.gitkeep`, and `infra/postgres/.gitkeep`
-- [ ] T002 Initialize TypeScript workspace tooling in `package.json`, `pnpm-workspace.yaml`, and `tsconfig.base.json`
-- [ ] T003 [P] Add linting and formatting setup in `eslint.config.js` and `.prettierrc`
-- [ ] T004 [P] Add unit, integration, contract, and E2E test setup in `vitest.config.ts` and `tests/setup.ts`
-- [ ] T005 [P] Add environment configuration model in `packages/contracts/src/environment.ts`
-- [ ] T006 [P] Add OpenAPI contract generation foundation in `packages/contracts/src/openapi.ts`
+- [x] T001 Create target workspace structure and placeholders in `apps/admin/.gitkeep`, `services/api/src/.gitkeep`, `services/worker/src/.gitkeep`, `packages/domain/src/.gitkeep`, and `infra/postgres/.gitkeep`
+- [x] T002 Initialize TypeScript workspace tooling in `package.json`, `pnpm-workspace.yaml`, and `tsconfig.base.json`
+- [x] T003 [P] Add linting and formatting setup in `eslint.config.js` and `.prettierrc`
+- [x] T004 [P] Add unit, integration, contract, and E2E test setup in `vitest.config.ts` and `tests/setup.ts`
+- [x] T005 [P] Add environment configuration model in `packages/contracts/src/environment.ts`
+- [x] T006 [P] Add OpenAPI contract generation foundation in `packages/contracts/src/openapi.ts`
 
 ---
 
