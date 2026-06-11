@@ -1,0 +1,64 @@
+# Local research/reference material
+# Kept on disk for architecture work, but not committed to the SaaS repo.
+reference/*
+!reference/README.md
+archive/*
+!archive/README.md
+.codex/
+
+# Graphify generated outputs
+graphify-out/
+graphify-*-out/
+**/graphify-out/
+**/graphify-*-out/
+
+# Dependencies
+node_modules/
+**/node_modules/
+vendor/
+**/vendor/
+
+# Build and test outputs
+dist/
+build/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+**/dist/
+**/build/
+**/.next/
+**/coverage/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Logs and runtime files
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pid
+*.pid
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local caches
+.cache/
+.turbo/
+.eslintcache
+*.tsbuildinfo

@@ -1,0 +1,27 @@
+# Reference/archive material from Amelia analysis; not source for the new SaaS
+reference/
+archive/
+.codex/
+
+# Vendored dependencies and generated bundles
+**/vendor/
+**/node_modules/
+**/dist/
+**/build/
+**/.next/
+**/coverage/
+**/__snapshots__/
+
+# Lockfiles and package manager noise
+**/package-lock.json
+
+# Documentation and rich media that would require semantic extraction
+*.md
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.ico

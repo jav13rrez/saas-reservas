@@ -1,0 +1,171 @@
+openapi: 3.1.0
+info:
+  title: SaaS Reservas Multitenant API
+  version: 0.1.0
+  description: Initial contract surface for the Amelia-inspired multitenant booking SaaS.
+servers:
+  - url: https://{tenantHost}/api
+    variables:
+      tenantHost:
+        default: demo.example.com
+security:
+  - bearerAuth: []
+paths:
+  /public/availability:
+    get:
+      summary: Query public availability for a service or event
+      parameters:
+        - name: service_id
+          in: query
+          schema:
+            type: string
+        - name: event_id
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Available slots
+  /public/bookings:
+    post:
+      summary: Create a pending booking and acquire checkout lock
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookingRequest"
+      responses:
+        "201":
+          description: Pending booking created
+  /public/checkout:
+    post:
+      summary: Start payment checkout for one or more bookings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckoutRequest"
+      responses:
+        "200":
+          description: Checkout session or payment instructions
+  /admin/services:
+    post:
+      summary: Create tenant service
+      responses:
+        "201":
+          description: Service created
+  /admin/providers:
+    post:
+      summary: Create provider
+      responses:
+        "201":
+          description: Provider created
+  /admin/events:
+    post:
+      summary: Create event or recurring event series
+      responses:
+        "201":
+          description: Event created
+  /staff/bookings/{booking_id}/reschedule:
+    post:
+      summary: Reschedule booking from staff portal
+      parameters:
+        - name: booking_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Booking rescheduled
+  /customer/magic-link:
+    post:
+      summary: Request passwordless customer panel link
+      responses:
+        "202":
+          description: Link request accepted
+  /webhooks/payments/{gateway}:
+    post:
+      summary: Receive payment gateway webhook
+      parameters:
+        - name: gateway
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [stripe, paypal]
+      responses:
+        "204":
+          description: Webhook accepted
+  /webhooks/calendar/{provider}:
+    post:
+      summary: Receive external calendar webhook
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [google, microsoft]
+      responses:
+        "204":
+          description: Webhook accepted
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    CreateBookingRequest:
+      type: object
+      required: [customer, items]
+      properties:
+        customer:
+          type: object
+        items:
+          type: array
+          items:
+            type: object
+            required: [service_id, start_at]
+            properties:
+              service_id:
+                type: string
+              provider_id:
+                type: string
+              start_at:
+                type: string
+                format: date-time
+              extras:
+                type: array
+                items:
+                  type: string
+              attendees:
+                type: integer
+                minimum: 1
+    CheckoutRequest:
+      type: object
+      required: [booking_ids, payment_method]
+      properties:
+        booking_ids:
+          type: array
+          items:
+            type: string
+        payment_method:
+          type: string
+          enum: [stripe, paypal, onsite]
+        deposit:
+          type: boolean

@@ -1,0 +1,28 @@
+# Backend-focused graphify corpus for future SaaS backend runs.
+
+# Exclude archived Amelia reference material from new SaaS analysis.
+reference/
+archive/
+.codex/
+
+# Generated/build artifacts anywhere
+**/node_modules/
+**/dist/
+**/build/
+**/.next/
+**/coverage/
+**/__snapshots__/
+
+# Package manager noise
+**/package-lock.json
+
+# Non-code and rich media
+*.md
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.ico
