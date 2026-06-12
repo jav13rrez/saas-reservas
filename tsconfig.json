@@ -1,4 +1,10 @@
 {
   "files": [],
-  "references": [{ "path": "packages/contracts" }]
+  "references": [
+    { "path": "packages/contracts" },
+    { "path": "packages/domain" },
+    { "path": "packages/tenant-context" },
+    { "path": "services/api" },
+    { "path": "services/worker" }
+  ]
 }

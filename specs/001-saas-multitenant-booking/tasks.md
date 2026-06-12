@@ -31,14 +31,14 @@ description: "Implementation task list for a multitenant Amelia-inspired booking
 
 **Purpose**: Build the guardrails that every feature depends on.
 
-- [ ] T007 Define PostgreSQL tenancy conventions, migration layout, `tenant_id` indexes, and RLS policy template in `infra/postgres/001-tenancy.sql`
-- [ ] T008 [P] Implement tenant context package that sets and validates `app.current_tenant_id` in `packages/tenant-context/src/tenant-context.ts`
-- [ ] T009 [P] Implement Redis key namespace helpers for `tenant:{tenant_id}:...` in `packages/tenant-context/src/redis-keys.ts`
-- [ ] T010 [P] Implement object storage path helpers for `tenants/{tenant_id}/...` and signed URL policy in `packages/tenant-context/src/storage-paths.ts`
-- [ ] T011 Implement request tenant resolver for subdomain, custom domain, and authenticated context in `services/api/src/infrastructure/tenancy/tenant-resolver.ts`
-- [ ] T012 Create audit event and domain event primitives in `packages/domain/src/audit/events.ts`
-- [ ] T013 Add baseline integration tests proving RLS blocks cross-tenant reads/writes in `tests/integration/tenant-rls.test.ts`
-- [ ] T014 Add baseline worker test proving tenant context is set before tenant-owned database access in `tests/integration/worker-tenant-context.test.ts`
+- [x] T007 Define PostgreSQL tenancy conventions, migration layout, `tenant_id` indexes, and RLS policy template in `infra/postgres/001-tenancy.sql`
+- [x] T008 [P] Implement tenant context package that sets and validates `app.current_tenant_id` in `packages/tenant-context/src/tenant-context.ts`
+- [x] T009 [P] Implement Redis key namespace helpers for `tenant:{tenant_id}:...` in `packages/tenant-context/src/redis-keys.ts`
+- [x] T010 [P] Implement object storage path helpers for `tenants/{tenant_id}/...` and signed URL policy in `packages/tenant-context/src/storage-paths.ts`
+- [x] T011 Implement request tenant resolver for subdomain, custom domain, and authenticated context in `services/api/src/infrastructure/tenancy/tenant-resolver.ts`
+- [x] T012 Create audit event and domain event primitives in `packages/domain/src/audit/events.ts`
+- [x] T013 Add baseline integration tests proving RLS blocks cross-tenant reads/writes in `tests/integration/tenant-rls.test.ts`
+- [x] T014 Add baseline worker test proving tenant context is set before tenant-owned database access in `tests/integration/worker-tenant-context.test.ts`
 
 **Checkpoint**: Tenant context, RLS, Redis namespacing, storage namespacing, and audit primitives exist.
 

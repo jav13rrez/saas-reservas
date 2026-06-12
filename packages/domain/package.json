@@ -1,0 +1,16 @@
+{
+  "name": "@saas-reservas/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./audit/events": {
+      "types": "./dist/audit/events.d.ts",
+      "default": "./dist/audit/events.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build"
+  }
+}

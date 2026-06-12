@@ -1,0 +1,14 @@
+{
+  "name": "@saas-reservas/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build"
+  },
+  "dependencies": {
+    "@saas-reservas/contracts": "workspace:*",
+    "@saas-reservas/tenant-context": "workspace:*"
+  }
+}

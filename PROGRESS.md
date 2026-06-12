@@ -4,7 +4,7 @@ Last updated: 2026-06-11
 
 ## Current State
 
-Implementation has started. Stack decisions are recorded as ADRs and Phase 1 setup (T001-T006) is complete: the pnpm/TypeScript monorepo skeleton, lint/format/test tooling, environment contract, and OpenAPI foundation exist and pass verification.
+Implementation has started. Stack decisions are recorded as ADRs, Phase 1 setup (T001-T006) and Phase 2 tenant-safe foundations (T007-T014) are complete: tenancy SQL with RLS template, tenant-context package (Postgres context, Redis keys, storage paths), request tenant resolver, audit/event primitives, worker job wrapper, and passing RLS/worker integration tests.
 
 Current branch:
 
@@ -51,6 +51,17 @@ Current clean baseline commit:
 - Added `.prettierignore` so Spec Kit artifacts and reference material keep their own formatting.
 - Verified `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, and `pnpm test` all pass (tests pass with no test files yet; first real tests arrive in T013).
 
+### 2026-06-12
+
+- Completed T007-T014 (Phase 2, tenant-safe foundations):
+  - `infra/postgres/001-tenancy.sql`: tenancy conventions, `tenants` registry, fail-closed `current_tenant_id()` function, and `apply_tenant_rls(regclass)` policy template (restrictive + permissive policies, FORCE RLS).
+  - `infra/docker-compose.yml`: Postgres 16 + Redis 7 + MinIO per ADR-0007, with `infra/postgres/` mounted as init scripts.
+  - `packages/tenant-context`: driver-agnostic `withTenantContext`/`setTenantContext`/`getTenantContext` (transaction-local `set_config`), Redis key helpers (`tenant:{id}:...`, `lock:{id}:{provider}:{resource}:{startISO}`, 10-min default TTL), and storage path helpers (`tenants/{id}/...`, signed URL TTL policy).
+  - `services/api/src/infrastructure/tenancy/tenant-resolver.ts`: subdomain/custom-domain/authenticated resolution with session-vs-host tenant mismatch rejection and inactive-tenant handling.
+  - `packages/domain/src/audit/events.ts`: domain event + audit record primitives (constitution principle V), outbox note linked to ADR-0004.
+  - `services/worker/src/jobs/run-tenant-job.ts`: job wrapper that validates `tenantId` and binds tenant context before any handler query.
+  - Integration tests `tenant-rls.test.ts` and `worker-tenant-context.test.ts`: 9 tests proving RLS fail-closed behavior, cross-tenant read/write/update/delete blocking, context binding before handler execution, and job transaction rollback. Verified green against a local PostgreSQL 16 instance; suites self-skip with a notice when no database is reachable.
+
 ## Current Backlog
 
 Primary implementation backlog:
@@ -68,7 +79,7 @@ T001-T086
 Current next task:
 
 ```text
-T007 Define PostgreSQL tenancy conventions, migration layout, tenant_id indexes, and RLS policy template
+T015 Add tests for provider schedule, breaks, days off, special days, and timezone handling (Phase 3 / User Story 1)
 ```
 
 ## Open Decisions

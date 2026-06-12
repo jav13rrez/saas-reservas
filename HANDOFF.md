@@ -1,12 +1,12 @@
 # Handoff
 
-Last updated: 2026-06-11
+Last updated: 2026-06-12
 
 ## Read This First
 
 This is the fastest resume document for Codex, Claude, or any future agent. Read this before making changes.
 
-Implementation has started: the stack is decided (ADR-0001..0007) and the Phase 1 workspace skeleton (T001-T006) is in place. The next work is Phase 2, the tenant-safe foundations (T007-T014).
+Implementation has started: the stack is decided (ADR-0001..0007), the Phase 1 workspace skeleton (T001-T006) and the Phase 2 tenant-safe foundations (T007-T014) are in place. The next work is Phase 3, User Story 1 (T015-T026): tenant publishes a complete bookable operation.
 
 ## Current Objective
 
@@ -18,7 +18,9 @@ Prepare and implement a SaaS-native multitenant booking platform inspired by Ame
 - Remote: `origin https://github.com/jav13rrez/saas-reservas.git`
 - Stack decisions recorded as ADR-0001 through ADR-0007 in `docs/adr/`: Next.js, Fastify, Drizzle, BullMQ, first-party cookie sessions, deferred AIProviderAdapter, Docker Compose for local dev.
 - T001-T006 complete: pnpm workspace (`pnpm-workspace.yaml`), root tooling (`package.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `vitest.config.ts`), and `packages/contracts` with `environment.ts` and `openapi.ts`.
+- T007-T014 complete: `infra/postgres/001-tenancy.sql` (RLS template + `apply_tenant_rls`), `infra/docker-compose.yml` (Postgres/Redis/MinIO), `packages/tenant-context` (Postgres tenant context, Redis keys, storage paths), `services/api` tenant resolver, `packages/domain` audit/event primitives, `services/worker` `runTenantJob` wrapper, and 9 passing RLS/worker integration tests.
 - Verification commands available and passing: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`.
+- Integration tests need PostgreSQL: `docker compose -f infra/docker-compose.yml up -d postgres`, then `TEST_DATABASE_URL=postgres://saas_admin:saas_admin@localhost:5432/saas_reservas pnpm test:integration` (default URL matches the compose service, so the env var is optional). Suites self-skip when no database is reachable.
 - Local reference folders exist but are ignored by Git: `reference/`, `archive/`, `.codex/`.
 
 ## What Matters Most
@@ -39,20 +41,20 @@ Recommended next steps:
 
 1. Merge the working branch `claude/optimistic-babbage-8vdefc` into `main` when the user approves.
 
-2. Start Phase 2 (`T007`-`T014`): PostgreSQL tenancy conventions and RLS template, tenant-context package, Redis key and storage path helpers, tenant resolver, audit/event primitives, and the baseline RLS/worker tests.
+2. Start Phase 3 / User Story 1 (`T015`-`T026`), tests first (`T015`-`T018`): provider schedules with timezones, service duration/buffer/extras rules, shared resource conflicts, and the single-provider widget scenario; then domain entities, application services, availability engine v1, APIs, and minimal admin UI.
 
-3. As part of T007/T013, add the Docker Compose file under `infra/` (Postgres 16+, Redis 7+, MinIO) per ADR-0007 so integration tests can run.
+3. T026 introduces the first Next.js app under `apps/admin` (ADR-0001); scaffold it as a workspace package when that task starts.
 
 4. After each meaningful implementation session, update `PROGRESS.md`, `HANDOFF.md`, and `tasks.md`.
 
 ## Current Task Pointer
 
-Phase 1 (T001-T006) is complete.
+Phases 1 and 2 (T001-T014) are complete.
 
 Next task:
 
 ```text
-T007 Define PostgreSQL tenancy conventions, migration layout, tenant_id indexes, and RLS policy template in infra/postgres/001-tenancy.sql
+T015 Add tests for provider schedule, breaks, days off, special days, and timezone handling in tests/unit/scheduling/provider-schedule.test.ts
 ```
 
 ## Important Constraints
