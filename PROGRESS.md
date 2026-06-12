@@ -4,7 +4,7 @@ Last updated: 2026-06-11
 
 ## Current State
 
-Implementation has started. Stack decisions are recorded as ADRs; Phases 1-5 (T001-T050) are complete: tenant-safe foundations, User Story 1 (publishable bookable operation), User Story 2 (transactional checkout with locks, pricing, payments, and webhook-driven confirmation), and User Story 3 (policy-guarded cancel/reschedule, passwordless customer portal, GDPR anonymization, staff portal with permissions). 84 tests passing across unit/integration/e2e, including suites against real PostgreSQL (RLS) and real Redis (locks).
+Implementation has started. Stack decisions are recorded as ADRs; Phases 1-6 (T001-T061) are complete: tenant-safe foundations, User Story 1 (publishable bookable operation), User Story 2 (transactional checkout), User Story 3 (policy-guarded changes, portals, GDPR), and User Story 4 (events with tickets, dynamic pricing, recurrence propagation, and TTL-token waitlist). 110 tests passing across unit/integration/e2e, including suites against real PostgreSQL (RLS) and real Redis (locks).
 
 The Drizzle/RLS persistence adapter (`packages/persistence`) is built and verified: every repository port (tenants, catalog, bookings, carts, events/audit, webhook idempotency, checkout holds, occupancy) has a Postgres implementation that binds `app.current_tenant_id` per transaction, and the full checkout flow passes against real PostgreSQL with cross-tenant RLS proven. The in-memory adapters remain for fast tests and local dev without a database.
 
@@ -86,6 +86,18 @@ Current clean baseline commit:
   - Delivery: `POST /v1/public/checkout` (slot validation against the engine -> locks -> pending booking -> cart charge) and `POST /v1/public/payments/webhook` (idempotent approval/rejection + lock release + occupancy recording); `apps/booking-widget` Next.js app with the checkout feature (`next build` passes).
   - Tests: 12 unit (duration formula, state machine, pricing), 8 integration (Redis lock concurrency/TTL/ownership/tenant-scoping against real Redis; cart reconciliation + webhook idempotency), 3 e2e over HTTP (pending -> webhook approval -> slot disappears from availability; declined charge -> rejected booking + lock release; off-schedule slot rejected). Full suite: 58 passing.
 
+### 2026-06-12 (Phase 6 / User Story 4)
+
+- Completed T051-T061 (events, tickets, recurrence, waitlist), tests first:
+  - Domain (`packages/domain/src/events/event.ts`): events with shared capacity pools, ticket types with optional per-ticket caps and dynamic pricing rules, attendees, series, and the waitlist state machine (waiting -> offered -> approved; offered -> expired).
+  - Event pricing (T057): early-bird discounts by days-before-start and occupancy surcharges past a sold percentage, applied discount-then-surcharge on integer minor units.
+  - Waitlist service (T058): priority-ordered promotion with TTL claim tokens (only the SHA-256 stored), single-use claims, and `expireOffers` that expires stale offers and auto-promotes the next candidate (worker-job shaped).
+  - Recurring events (T060): "this-only" vs "this-and-future" propagation with all-or-nothing validation and per-instance audit; earlier instances never touched.
+  - Recurring appointments (T059): conflict resolver with "omit" and "suggest" (nearest same-day slot) strategies over an injected availability lookup.
+  - Routes (T061): admin events/tickets/series-PATCH and public event detail (priced tickets, remaining capacity), purchases (sold out -> 409 + waitlist enrollment), attendee cancel (auto-promotion with TTL token), and claim endpoint.
+  - Tests: 13 unit (capacity, pricing, recurrence conflicts) + 8 integration (waitlist promotion/TTL, series propagation) + 5 e2e (sell out -> waitlist -> cancel -> promote -> claim, plus scope propagation over HTTP). Full suite: 110 passing.
+- Events persistence is in-memory behind the `EventStore`/`WaitlistStore` ports; Drizzle tables for the events context are a known follow-up.
+
 ### 2026-06-12 (Phase 5 / User Story 3)
 
 - Completed T041-T050 (staff and customers manage changes under policies and privacy), tests first:
@@ -123,7 +135,7 @@ T001-T086
 Current next task:
 
 ```text
-T051 Add event capacity, ticket category, and attendee limit tests (Phase 6 / User Story 4)
+T062 Add tests verifying encrypted credential storage and redacted logs (Phase 7 / User Story 5)
 ```
 
 ## Open Decisions

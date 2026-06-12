@@ -136,20 +136,20 @@ description: "Implementation task list for a multitenant Amelia-inspired booking
 
 ### Tests for User Story 4
 
-- [ ] T051 [P] [US4] Add event capacity, ticket category, and attendee limit tests in `tests/unit/events/event-capacity.test.ts`
-- [ ] T052 [P] [US4] Add early-bird and dynamic event pricing tests in `tests/unit/events/event-pricing.test.ts`
-- [ ] T053 [P] [US4] Add waitlist priority, token TTL, expiration, and promotion tests in `tests/integration/events/waitlist-promotion.test.ts`
-- [ ] T054 [P] [US4] Add recurring event `this only` and `this & future` propagation tests in `tests/integration/events/recurring-event-propagation.test.ts`
-- [ ] T055 [P] [US4] Add recurring appointment conflict strategy tests in `tests/unit/scheduling/recurring-appointment-conflicts.test.ts`
+- [x] T051 [P] [US4] Add event capacity, ticket category, and attendee limit tests in `tests/unit/events/event-capacity.test.ts`
+- [x] T052 [P] [US4] Add early-bird and dynamic event pricing tests in `tests/unit/events/event-pricing.test.ts`
+- [x] T053 [P] [US4] Add waitlist priority, token TTL, expiration, and promotion tests in `tests/integration/events/waitlist-promotion.test.ts`
+- [x] T054 [P] [US4] Add recurring event `this only` and `this & future` propagation tests in `tests/integration/events/recurring-event-propagation.test.ts`
+- [x] T055 [P] [US4] Add recurring appointment conflict strategy tests in `tests/unit/scheduling/recurring-appointment-conflicts.test.ts`
 
 ### Implementation for User Story 4
 
-- [ ] T056 [P] [US4] Implement Event, TicketType, EventAttendee, EventSeries, and WaitlistEntry entities in `packages/domain/src/events/event.ts`
-- [ ] T057 [US4] Implement event capacity and ticket pricing service in `services/api/src/application/events/event-pricing-service.ts`
-- [ ] T058 [US4] Implement waitlist service with priority score, token generation, TTL, and promotion job in `services/api/src/application/events/waitlist-service.ts`
-- [ ] T059 [US4] Implement recurring appointment conflict resolver with suggest/omit strategies in `services/api/src/application/scheduling/recurrence-conflict-resolver.ts`
-- [ ] T060 [US4] Implement recurring event propagation service for current/future instances in `services/api/src/application/events/recurring-event-service.ts`
-- [ ] T061 [US4] Implement admin event APIs and public event booking flow in `services/api/src/api/event-routes.ts`
+- [x] T056 [P] [US4] Implement Event, TicketType, EventAttendee, EventSeries, and WaitlistEntry entities in `packages/domain/src/events/event.ts`
+- [x] T057 [US4] Implement event capacity and ticket pricing service in `services/api/src/application/events/event-pricing-service.ts`
+- [x] T058 [US4] Implement waitlist service with priority score, token generation, TTL, and promotion job in `services/api/src/application/events/waitlist-service.ts`
+- [x] T059 [US4] Implement recurring appointment conflict resolver with suggest/omit strategies in `services/api/src/application/scheduling/recurrence-conflict-resolver.ts`
+- [x] T060 [US4] Implement recurring event propagation service for current/future instances in `services/api/src/application/events/recurring-event-service.ts`
+- [x] T061 [US4] Implement admin event APIs and public event booking flow in `services/api/src/api/event-routes.ts`
 
 **Checkpoint**: Events and ticketing support premium operational behavior.
 

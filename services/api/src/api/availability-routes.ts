@@ -19,6 +19,7 @@ import {
   type TenantResolution,
 } from "../infrastructure/tenancy/tenant-resolver.js";
 import { registerCheckoutRoutes, type CheckoutDeps } from "./checkout-routes.js";
+import { registerEventRoutes, type EventDeps } from "./event-routes.js";
 import { registerPortalRoutes, type PortalDeps } from "./portal-routes.js";
 
 export interface AppDeps {
@@ -33,6 +34,8 @@ export interface AppDeps {
   checkout?: Omit<CheckoutDeps, "availability" | "tenantTimezone">;
   /** Customer/staff portal wiring (US3). */
   portal?: PortalDeps;
+  /** Events/tickets/waitlist wiring (US4). */
+  events?: EventDeps;
 }
 
 interface RequestTenant {
@@ -267,6 +270,9 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   }
   if (deps.portal !== undefined) {
     registerPortalRoutes(app, deps.portal);
+  }
+  if (deps.events !== undefined) {
+    registerEventRoutes(app, deps.events);
   }
 
   return app;
