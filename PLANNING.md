@@ -1,6 +1,6 @@
 # Planning
 
-Last updated: 2026-06-11
+Last updated: 2026-06-12
 
 ## Purpose
 
@@ -107,9 +107,8 @@ ADRs live in `docs/adr/`.
 
 ## Immediate Route
 
-The next implementation route is still:
+Stack decisions are closed (ADR-0001..0008) and Phases 1-6 (`T001`-`T061`) are merged into `main`. The route ahead:
 
-1. Close technical stack decisions that are still flexible in `plan.md`.
-2. Start `T001` through `T006` to scaffold the workspace.
-3. Build tenant-safe foundations from `T007` through `T014`.
-4. Only then implement the first vertical slice for tenant setup and availability.
+1. Phase 7 / User Story 5 (`T062`-`T075`): premium integrations — credential vault, calendar OAuth, WhatsApp, messaging/meeting adapters, attachments, outbound webhooks.
+2. Phase 8 (`T076`-`T086`): observability, billing, workers, seeds, and product readiness.
+3. Cross-cutting follow-ups tracked in `HANDOFF.md`: staff auth for admin routes, real payment gateway adapters, events persistence in Drizzle, production server bootstrap, and restyling existing screens to `docs/design-system.md`.
