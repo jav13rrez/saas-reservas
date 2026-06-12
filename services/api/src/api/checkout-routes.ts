@@ -37,7 +37,46 @@ export interface OccupancyRecorder {
     providerId: string,
     occupied: Interval,
     resources: { resourceId: string; units: number }[],
-  ): void;
+  ): void | Promise<void>;
+}
+
+/** Provisional checkout hold awaiting the payment webhook. */
+export interface CheckoutHold {
+  tenantId: string;
+  bookingId: string;
+  providerId: string;
+  occupied: Interval;
+  resources: { resourceId: string; units: number }[];
+  slots: { slot: SlotRef; token: string }[];
+}
+
+export interface HoldStore {
+  save(cartId: string, hold: CheckoutHold): Promise<void>;
+  find(tenantId: string, cartId: string): Promise<CheckoutHold | null>;
+  remove(tenantId: string, cartId: string): Promise<void>;
+}
+
+/** Default store for tests/dev; production wires the persistence adapter. */
+export class InMemoryHoldStore implements HoldStore {
+  private readonly holds = new Map<string, CheckoutHold>();
+
+  save(cartId: string, hold: CheckoutHold): Promise<void> {
+    this.holds.set(cartId, hold);
+    return Promise.resolve();
+  }
+
+  find(tenantId: string, cartId: string): Promise<CheckoutHold | null> {
+    const hold = this.holds.get(cartId);
+    return Promise.resolve(hold?.tenantId === tenantId ? hold : null);
+  }
+
+  remove(tenantId: string, cartId: string): Promise<void> {
+    const hold = this.holds.get(cartId);
+    if (hold?.tenantId === tenantId) {
+      this.holds.delete(cartId);
+    }
+    return Promise.resolve();
+  }
 }
 
 export interface CheckoutDeps {
@@ -48,6 +87,8 @@ export interface CheckoutDeps {
   carts: CartReconciliationService;
   webhooks: WebhookProcessor;
   occupancy: OccupancyRecorder;
+  /** Defaults to the in-memory store when omitted. */
+  holds?: HoldStore;
   tenantTimezone(tenantId: string): Promise<string>;
 }
 
@@ -62,20 +103,10 @@ interface CheckoutBody {
   customer: { email: string; firstName: string; lastName: string };
 }
 
-interface Hold {
-  tenantId: string;
-  bookingId: string;
-  providerId: string;
-  occupied: Interval;
-  resources: { resourceId: string; units: number }[];
-  slots: { slot: SlotRef; token: string }[];
-}
-
 export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps): void {
-  /** Pending checkout holds by cart id, until the payment webhook settles them. */
-  const holds = new Map<string, Hold>();
+  const holds: HoldStore = deps.holds ?? new InMemoryHoldStore();
 
-  async function releaseHold(hold: Hold): Promise<void> {
+  async function releaseHold(hold: CheckoutHold): Promise<void> {
     for (const { slot, token } of hold.slots) {
       await deps.locks.release(slot, token);
     }
@@ -193,7 +224,7 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
         allocations: [{ bookingId: booking.id, amount: price.totalAmount }],
         actor: { type: "customer" },
       });
-      const hold: Hold = {
+      const hold: CheckoutHold = {
         tenantId: tenant.tenantId,
         bookingId: booking.id,
         providerId: availability.provider.id,
@@ -204,7 +235,7 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
         })),
         slots: acquired,
       };
-      holds.set(cart.id, hold);
+      await holds.save(cart.id, hold);
 
       const charged = await deps.carts.chargeCart({
         tenantId: tenant.tenantId,
@@ -214,7 +245,7 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
       if (charged.status === "failed") {
         await deps.bookings.reject(tenant.tenantId, booking.id, SYSTEM_ACTOR);
         await releaseHold(hold);
-        holds.delete(cart.id);
+        await holds.remove(tenant.tenantId, cart.id);
         return await reply.code(402).send({ error: "payment-declined", bookingId: booking.id });
       }
 
@@ -239,13 +270,13 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
     }
     const event = request.body as WebhookEvent & { payload: { cartId: string } };
     const outcome = await deps.webhooks.process(tenant.tenantId, "fake", event, async () => {
-      const hold = holds.get(event.payload.cartId);
-      if (hold?.tenantId !== tenant.tenantId) {
+      const hold = await holds.find(tenant.tenantId, event.payload.cartId);
+      if (hold === null) {
         return;
       }
       if (event.type === "charge.succeeded") {
         await deps.bookings.approve(tenant.tenantId, hold.bookingId, SYSTEM_ACTOR);
-        deps.occupancy.recordBookingOccupancy(
+        await deps.occupancy.recordBookingOccupancy(
           tenant.tenantId,
           hold.providerId,
           hold.occupied,
@@ -255,7 +286,7 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
         await deps.bookings.reject(tenant.tenantId, hold.bookingId, SYSTEM_ACTOR);
       }
       await releaseHold(hold);
-      holds.delete(event.payload.cartId);
+      await holds.remove(tenant.tenantId, event.payload.cartId);
     });
     return reply.send({ outcome });
   });

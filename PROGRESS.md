@@ -6,7 +6,9 @@ Last updated: 2026-06-11
 
 Implementation has started. Stack decisions are recorded as ADRs; Phases 1-4 (T001-T040) are complete: tenant-safe foundations, User Story 1 (publishable bookable operation), and User Story 2 (transactional checkout with locks, pricing, payments, and webhook-driven confirmation). 58 tests passing across unit/integration/e2e, including suites against real PostgreSQL (RLS) and real Redis (locks).
 
-Known v1 simplifications: repositories are in-memory adapters behind ports (Drizzle/RLS persistence adapter pending in `packages/persistence`); `/v1/admin/*` routes have no staff auth yet (identity tasks pending) so they are development-only; checkout holds live in process memory (must move to persistence with the Drizzle adapter); customers are generated ids until the identity/customer registry tasks; and the gateway is the fake adapter — real Stripe/PayPal adapters implement the existing `PaymentGateway` port.
+The Drizzle/RLS persistence adapter (`packages/persistence`) is built and verified: every repository port (tenants, catalog, bookings, carts, events/audit, webhook idempotency, checkout holds, occupancy) has a Postgres implementation that binds `app.current_tenant_id` per transaction, and the full checkout flow passes against real PostgreSQL with cross-tenant RLS proven. The in-memory adapters remain for fast tests and local dev without a database.
+
+Remaining v1 simplifications: `/v1/admin/*` routes have no staff auth yet (identity tasks pending) so they are development-only; customers are generated ids until the identity/customer registry tasks; the gateway is the fake adapter — real Stripe/PayPal adapters implement the existing `PaymentGateway` port; and there is no production server bootstrap yet that wires the Drizzle adapters (tests compose them directly).
 
 Current branch:
 
@@ -83,6 +85,15 @@ Current clean baseline commit:
   - Infrastructure: Redis lock store (SET NX PX + compare-and-delete Lua) and in-memory equivalent; webhook idempotency processor (at-most-once per tenant+gateway, audited).
   - Delivery: `POST /v1/public/checkout` (slot validation against the engine -> locks -> pending booking -> cart charge) and `POST /v1/public/payments/webhook` (idempotent approval/rejection + lock release + occupancy recording); `apps/booking-widget` Next.js app with the checkout feature (`next build` passes).
   - Tests: 12 unit (duration formula, state machine, pricing), 8 integration (Redis lock concurrency/TTL/ownership/tenant-scoping against real Redis; cart reconciliation + webhook idempotency), 3 e2e over HTTP (pending -> webhook approval -> slot disappears from availability; declined charge -> rejected booking + lock release; off-schedule slot rejected). Full suite: 58 passing.
+
+### 2026-06-12 (persistence adapter)
+
+- Built `packages/persistence`, the Drizzle/RLS adapter that replaces the in-memory stores for real deployments (ADR-0003):
+  - `infra/postgres/002-domain.sql`: all domain tables (catalog, schedules, bookings, carts, subpayments, domain events, audit records, processed webhooks, provider busy, resource allocations, checkout holds) with `apply_tenant_rls` on every tenant-owned table; `tenants` extended with timezone/locale/branding/policies; `tenant_domains` stays platform-global for pre-context routing.
+  - `TenantDb.withTenant`: every repository call runs in a transaction that binds `app.current_tenant_id` first; platform tables use `global`.
+  - Drizzle repositories for every port: tenant registry + resolver lookup, catalog read/write incl. the availability read model, bookings, carts/subpayments, event sink (outbox + audit in one transaction), atomic webhook idempotency (PK + ON CONFLICT DO NOTHING), durable checkout holds, and occupancy recording.
+  - Checkout routes now use a `HoldStore` port (in-memory default, Drizzle implementation) instead of a process-local Map, so webhooks arriving after a restart still settle bookings.
+  - Integration test `tests/integration/persistence/drizzle-checkout.test.ts`: the full US1+US2 flow over HTTP against real PostgreSQL — tenant setup, catalog, availability, checkout, idempotent webhook approval, persisted occupancy removing the slot, audit trail per tenant, and RLS proving a booking id is invisible under another tenant's context. Full suite: 61 passing.
 
 ## Current Backlog
 

@@ -8,7 +8,9 @@ This is the fastest resume document for Codex, Claude, or any future agent. Read
 
 Implementation has started: the stack is decided (ADR-0001..0007) and Phases 1-4 (T001-T040) are complete, including User Story 2 end to end (slot validation -> locks -> pending booking -> cart charge -> idempotent webhook confirmation -> occupancy). The next work is Phase 5, User Story 3 (T041-T052): staff and customers manage changes under tenant policies and privacy rules.
 
-Deliberate v1 simplifications to keep in mind: repositories are in-memory adapters behind ports (the Drizzle/RLS persistence adapter for `packages/persistence` is the natural next infrastructure step); `/v1/admin/*` routes have no staff auth yet (identity tasks pending) so they are development-only; checkout holds live in process memory and must move to persistence; customers are generated ids until the customer registry lands; the payment gateway is the fake adapter behind the real `PaymentGateway` port.
+The Drizzle/RLS persistence adapter is DONE: `packages/persistence` implements every repository port against PostgreSQL with per-transaction tenant context, verified end to end by `tests/integration/persistence/drizzle-checkout.test.ts`. In-memory adapters remain for fast tests/dev.
+
+Remaining v1 simplifications: `/v1/admin/*` routes have no staff auth yet (identity tasks pending) so they are development-only; customers are generated ids until the customer registry lands; the payment gateway is the fake adapter behind the real `PaymentGateway` port; there is no production server bootstrap yet wiring the Drizzle adapters (compose them like the persistence test does).
 
 ## Current Objective
 
@@ -48,7 +50,7 @@ Recommended next steps:
 
 2. Start Phase 5 / User Story 3 (`T041`-`T052`), tests first (`T041`-`T044`): cancel/reschedule policy windows, GDPR anonymization, and customer/staff panel flows.
 
-3. Strongly consider building the Drizzle/RLS persistence adapter (`packages/persistence`) before or during Phase 5: bookings, carts, subpayments, and checkout holds need durable, RLS-protected storage before anything ships beyond development.
+3. Consider a small server bootstrap (`services/api/src/main.ts`) that loads `environment.ts`, builds the Drizzle adapters like `tests/integration/persistence/drizzle-checkout.test.ts` does, and starts Fastify — that makes the stack runnable outside tests.
 
 4. After each meaningful implementation session, update `PROGRESS.md`, `HANDOFF.md`, and `tasks.md`.
 
