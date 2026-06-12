@@ -18,6 +18,7 @@ import {
   type TenantLookup,
   type TenantResolution,
 } from "../infrastructure/tenancy/tenant-resolver.js";
+import { registerCheckoutRoutes, type CheckoutDeps } from "./checkout-routes.js";
 
 export interface AppDeps {
   platformBaseDomain: string;
@@ -27,6 +28,8 @@ export interface AppDeps {
   availability: AvailabilityService;
   /** Tenant default timezone lookup for availability queries. */
   tenantTimezone(tenantId: string): Promise<string>;
+  /** Checkout/payment wiring (US2); omit to expose catalog/availability only. */
+  checkout?: Omit<CheckoutDeps, "availability" | "tenantTimezone">;
 }
 
 interface RequestTenant {
@@ -251,6 +254,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       slots: result.slots,
     });
   });
+
+  if (deps.checkout !== undefined) {
+    registerCheckoutRoutes(app, {
+      ...deps.checkout,
+      availability: deps.availability,
+      tenantTimezone: (tenantId) => deps.tenantTimezone(tenantId),
+    });
+  }
 
   return app;
 }

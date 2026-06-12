@@ -28,7 +28,14 @@ export default tseslint.config(
     },
     rules: {
       "@typescript-eslint/consistent-type-imports": "error",
+      // Arrow shorthand returning void is idiomatic in JSX event handlers.
+      "@typescript-eslint/no-confusing-void-expression": ["error", { ignoreArrowShorthand: true }],
       "@typescript-eslint/no-floating-promises": "error",
+      // Allow the omit-via-destructuring idiom: const { service: _service, ...rest } = input.
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true },
+      ],
       "@typescript-eslint/switch-exhaustiveness-check": "error",
     },
   },

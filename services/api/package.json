@@ -16,7 +16,9 @@
   "dependencies": {
     "@saas-reservas/contracts": "workspace:*",
     "@saas-reservas/domain": "workspace:*",
+    "@saas-reservas/integrations": "workspace:*",
     "@saas-reservas/tenant-context": "workspace:*",
-    "fastify": "^5.2.0"
+    "fastify": "^5.2.0",
+    "ioredis": "^5.11.1"
   }
 }

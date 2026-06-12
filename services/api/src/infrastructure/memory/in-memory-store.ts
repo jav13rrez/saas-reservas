@@ -255,4 +255,20 @@ export class InMemoryStore implements TenantRepository, CatalogRepository {
   ): void {
     this.allocations.push({ tenantId, resourceId, ...allocation });
   }
+
+  /** OccupancyRecorder port: persist confirmed booking occupancy (buffers included). */
+  recordBookingOccupancy(
+    tenantId: string,
+    providerId: string,
+    occupied: Interval,
+    resources: { resourceId: string; units: number }[],
+  ): void {
+    this.addProviderBusy(tenantId, providerId, occupied);
+    for (const resource of resources) {
+      this.addResourceAllocation(tenantId, resource.resourceId, {
+        ...occupied,
+        units: resource.units,
+      });
+    }
+  }
 }

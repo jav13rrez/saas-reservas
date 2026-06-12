@@ -4,9 +4,9 @@ Last updated: 2026-06-11
 
 ## Current State
 
-Implementation has started. Stack decisions are recorded as ADRs; Phase 1 setup (T001-T006), Phase 2 tenant-safe foundations (T007-T014), and Phase 3 User Story 1 (T015-T026) are complete. The first vertical slice works end to end: tenant setup, catalog, provider schedules, availability engine, public API, and a minimal Next.js admin UI, all test-covered (34 tests passing).
+Implementation has started. Stack decisions are recorded as ADRs; Phases 1-4 (T001-T040) are complete: tenant-safe foundations, User Story 1 (publishable bookable operation), and User Story 2 (transactional checkout with locks, pricing, payments, and webhook-driven confirmation). 58 tests passing across unit/integration/e2e, including suites against real PostgreSQL (RLS) and real Redis (locks).
 
-Known v1 simplifications: repositories are in-memory adapters behind ports (Drizzle/RLS persistence adapter pending in `packages/persistence`), and `/v1/admin/*` routes have no staff auth yet (identity tasks pending), so they are development-only.
+Known v1 simplifications: repositories are in-memory adapters behind ports (Drizzle/RLS persistence adapter pending in `packages/persistence`); `/v1/admin/*` routes have no staff auth yet (identity tasks pending) so they are development-only; checkout holds live in process memory (must move to persistence with the Drizzle adapter); customers are generated ids until the identity/customer registry tasks; and the gateway is the fake adapter — real Stripe/PayPal adapters implement the existing `PaymentGateway` port.
 
 Current branch:
 
@@ -74,6 +74,16 @@ Current clean baseline commit:
   - Tests: 17 unit (schedule resolution incl. DST and per-provider timezones; duration/capacity rules), 4 integration (shared resource with quantity 1 blocks competing services across providers, buffers included), 4 e2e over HTTP (single-provider widget omits selection and auto-assigns; second provider flips it to required; unknown hosts rejected; audit events recorded). Full suite: 34 passing.
 - All three US1 acceptance scenarios from `spec.md` are covered by automated tests.
 
+### 2026-06-12 (Phase 4 / User Story 2)
+
+- Completed T027-T040 (customer books, pays, and receives transactional confirmation), tests first:
+  - Domain: booking aggregate with the state machine (pending -> approved/rejected/expired; approved -> canceled/rescheduled; terminal states closed) in `packages/domain/src/bookings/booking.ts`; packages, coupons, cart transactions, and per-booking subpayments with reconcilability invariants in `payments/payment.ts`.
+  - Application: pricing service (base x attendees, extras with per-person multiplication, package then coupon discounts, taxes, percent/fixed deposits — integer minor units); checkout lock service with ownership tokens over a LockStore port; booking service with audited transitions; cart reconciliation service (one gateway charge per cart, exact per-booking refunds, derived cart status).
+  - Integrations: new `packages/integrations` with the `PaymentGateway` adapter boundary and a deterministic fake gateway (idempotent charges, failure injection).
+  - Infrastructure: Redis lock store (SET NX PX + compare-and-delete Lua) and in-memory equivalent; webhook idempotency processor (at-most-once per tenant+gateway, audited).
+  - Delivery: `POST /v1/public/checkout` (slot validation against the engine -> locks -> pending booking -> cart charge) and `POST /v1/public/payments/webhook` (idempotent approval/rejection + lock release + occupancy recording); `apps/booking-widget` Next.js app with the checkout feature (`next build` passes).
+  - Tests: 12 unit (duration formula, state machine, pricing), 8 integration (Redis lock concurrency/TTL/ownership/tenant-scoping against real Redis; cart reconciliation + webhook idempotency), 3 e2e over HTTP (pending -> webhook approval -> slot disappears from availability; declined charge -> rejected booking + lock release; off-schedule slot rejected). Full suite: 58 passing.
+
 ## Current Backlog
 
 Primary implementation backlog:
@@ -91,7 +101,7 @@ T001-T086
 Current next task:
 
 ```text
-T027 Add tests for total duration formula with extras and buffers (Phase 4 / User Story 2)
+T041 Add tests for minimum cancel/reschedule windows and rejected attempts (Phase 5 / User Story 3)
 ```
 
 ## Open Decisions

@@ -16,6 +16,10 @@ export default defineConfig({
         replacement: src("packages/domain/src/") + "$1.ts",
       },
       {
+        find: /^@saas-reservas\/integrations\/(.*)$/,
+        replacement: src("packages/integrations/src/") + "$1.ts",
+      },
+      {
         find: /^@saas-reservas\/tenant-context\/(.*)$/,
         replacement: src("packages/tenant-context/src/") + "$1.ts",
       },

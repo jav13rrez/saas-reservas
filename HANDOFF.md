@@ -6,9 +6,9 @@ Last updated: 2026-06-12
 
 This is the fastest resume document for Codex, Claude, or any future agent. Read this before making changes.
 
-Implementation has started: the stack is decided (ADR-0001..0007) and Phases 1-3 (T001-T026) are complete, including User Story 1 end to end (tenant setup -> catalog -> schedules -> public availability -> minimal admin UI). The next work is Phase 4, User Story 2 (T027-T040): customer books, pays, and receives transactional confirmation.
+Implementation has started: the stack is decided (ADR-0001..0007) and Phases 1-4 (T001-T040) are complete, including User Story 2 end to end (slot validation -> locks -> pending booking -> cart charge -> idempotent webhook confirmation -> occupancy). The next work is Phase 5, User Story 3 (T041-T052): staff and customers manage changes under tenant policies and privacy rules.
 
-Two deliberate v1 simplifications to keep in mind: repositories are in-memory adapters behind ports (the Drizzle/RLS persistence adapter for `packages/persistence` is the natural next infrastructure step), and `/v1/admin/*` routes have no staff auth yet (identity tasks pending) so they are development-only.
+Deliberate v1 simplifications to keep in mind: repositories are in-memory adapters behind ports (the Drizzle/RLS persistence adapter for `packages/persistence` is the natural next infrastructure step); `/v1/admin/*` routes have no staff auth yet (identity tasks pending) so they are development-only; checkout holds live in process memory and must move to persistence; customers are generated ids until the customer registry lands; the payment gateway is the fake adapter behind the real `PaymentGateway` port.
 
 ## Current Objective
 
@@ -21,7 +21,9 @@ Prepare and implement a SaaS-native multitenant booking platform inspired by Ame
 - Stack decisions recorded as ADR-0001 through ADR-0007 in `docs/adr/`: Next.js, Fastify, Drizzle, BullMQ, first-party cookie sessions, deferred AIProviderAdapter, Docker Compose for local dev.
 - T001-T006 complete: pnpm workspace (`pnpm-workspace.yaml`), root tooling (`package.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `vitest.config.ts`), and `packages/contracts` with `environment.ts` and `openapi.ts`.
 - T007-T014 complete: `infra/postgres/001-tenancy.sql` (RLS template + `apply_tenant_rls`), `infra/docker-compose.yml` (Postgres/Redis/MinIO), `packages/tenant-context` (Postgres tenant context, Redis keys, storage paths), `services/api` tenant resolver, `packages/domain` audit/event primitives, `services/worker` `runTenantJob` wrapper, and 9 passing RLS/worker integration tests.
-- T015-T026 complete (User Story 1): scheduling/catalog/tenancy domain modules in `packages/domain`, availability engine + availability/tenant-admin/catalog application services in `services/api/src/application`, Fastify API in `services/api/src/api/availability-routes.ts`, in-memory repository adapter in `services/api/src/infrastructure/memory`, and the Next.js admin app in `apps/admin` (builds with `next build`). 34 tests passing across unit/integration/e2e.
+- T015-T026 complete (User Story 1): scheduling/catalog/tenancy domain modules in `packages/domain`, availability engine + availability/tenant-admin/catalog application services in `services/api/src/application`, Fastify API in `services/api/src/api/availability-routes.ts`, in-memory repository adapter in `services/api/src/infrastructure/memory`, and the Next.js admin app in `apps/admin` (builds with `next build`).
+- T027-T040 complete (User Story 2): booking + payment domain (`packages/domain/src/bookings`, `payments`), pricing/lock/booking/cart-reconciliation services (`services/api/src/application`), `PaymentGateway` adapter boundary + fake gateway (`packages/integrations`), Redis lock store + webhook idempotency (`services/api/src/infrastructure`), checkout + webhook routes (`services/api/src/api/checkout-routes.ts`), and the `apps/booking-widget` Next.js checkout UI. 58 tests passing across unit/integration/e2e.
+- Redis integration tests need a Redis: `docker compose -f infra/docker-compose.yml up -d redis` (default `redis://127.0.0.1:6379`, override with `TEST_REDIS_URL`). They self-skip when unreachable.
 - Verification commands available and passing: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`.
 - Integration tests need PostgreSQL: `docker compose -f infra/docker-compose.yml up -d postgres`, then `TEST_DATABASE_URL=postgres://saas_admin:saas_admin@localhost:5432/saas_reservas pnpm test:integration` (default URL matches the compose service, so the env var is optional). Suites self-skip when no database is reachable.
 - Local reference folders exist but are ignored by Git: `reference/`, `archive/`, `.codex/`.
@@ -44,20 +46,20 @@ Recommended next steps:
 
 1. Merge the working branch `claude/optimistic-babbage-8vdefc` into `main` when the user approves.
 
-2. Start Phase 4 / User Story 2 (`T027`-`T040`), tests first (`T027`-`T031`): booking duration/pricing rules, Redis checkout locks, booking state machine, and cart/subpayment reconciliation; then booking/payment entities, lock service, booking service, pricing, payment adapter boundary, and checkout UI.
+2. Start Phase 5 / User Story 3 (`T041`-`T052`), tests first (`T041`-`T044`): cancel/reschedule policy windows, GDPR anonymization, and customer/staff panel flows.
 
-3. Consider building the Drizzle/RLS persistence adapter (`packages/persistence`) early in Phase 4 so booking and lock services run against real Postgres instead of the in-memory store.
+3. Strongly consider building the Drizzle/RLS persistence adapter (`packages/persistence`) before or during Phase 5: bookings, carts, subpayments, and checkout holds need durable, RLS-protected storage before anything ships beyond development.
 
 4. After each meaningful implementation session, update `PROGRESS.md`, `HANDOFF.md`, and `tasks.md`.
 
 ## Current Task Pointer
 
-Phases 1-3 (T001-T026) are complete.
+Phases 1-4 (T001-T040) are complete.
 
 Next task:
 
 ```text
-T027 Add tests for total duration formula with extras and buffers in tests/unit/bookings/booking-duration.test.ts
+T041 Add tests for minimum cancel/reschedule windows and rejected attempts in tests/unit/bookings/change-policy.test.ts
 ```
 
 ## Important Constraints

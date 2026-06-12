@@ -80,23 +80,23 @@ description: "Implementation task list for a multitenant Amelia-inspired booking
 
 ### Tests for User Story 2
 
-- [ ] T027 [P] [US2] Add tests for total duration formula with extras and buffers in `tests/unit/bookings/booking-duration.test.ts`
-- [ ] T028 [P] [US2] Add tests for pricing with attendees, extras, coupons, deposits, taxes, and packages in `tests/unit/payments/pricing-service.test.ts`
-- [ ] T029 [P] [US2] Add concurrency tests for Redis lock acquisition, rejection, TTL expiration, and release in `tests/integration/scheduling/redis-locks.test.ts`
-- [ ] T030 [P] [US2] Add booking state machine tests for Pending, Approved, Rejected, Expired, Canceled in `tests/unit/bookings/booking-state-machine.test.ts`
-- [ ] T031 [P] [US2] Add cart parent transaction and subpayment refund tests in `tests/integration/payments/cart-reconciliation.test.ts`
+- [x] T027 [P] [US2] Add tests for total duration formula with extras and buffers in `tests/unit/bookings/booking-duration.test.ts`
+- [x] T028 [P] [US2] Add tests for pricing with attendees, extras, coupons, deposits, taxes, and packages in `tests/unit/payments/pricing-service.test.ts`
+- [x] T029 [P] [US2] Add concurrency tests for Redis lock acquisition, rejection, TTL expiration, and release in `tests/integration/scheduling/redis-locks.test.ts`
+- [x] T030 [P] [US2] Add booking state machine tests for Pending, Approved, Rejected, Expired, Canceled in `tests/unit/bookings/booking-state-machine.test.ts`
+- [x] T031 [P] [US2] Add cart parent transaction and subpayment refund tests in `tests/integration/payments/cart-reconciliation.test.ts`
 
 ### Implementation for User Story 2
 
-- [ ] T032 [P] [US2] Implement Customer, Booking, BookingAttendee, BookingExtra, and BookingState entities in `packages/domain/src/bookings/booking.ts`
-- [ ] T033 [P] [US2] Implement Package, Coupon, CartTransaction, PaymentTransaction, and SubPayment entities in `packages/domain/src/payments/payment.ts`
-- [ ] T034 [US2] Implement Redis checkout lock service with tenant/provider/resource/time key composition in `services/api/src/application/scheduling/checkout-lock-service.ts`
-- [ ] T035 [US2] Implement booking application service for pending creation, approval, rejection, expiration, and audit in `services/api/src/application/bookings/booking-service.ts`
-- [ ] T036 [US2] Implement pricing service for standard booking, packages, coupons, deposits, and taxes in `services/api/src/application/payments/pricing-service.ts`
-- [ ] T037 [US2] Implement payment adapter interfaces and fake gateway for tests in `packages/integrations/src/payments/payment-gateway.ts`
-- [ ] T038 [US2] Implement Stripe/PayPal direct checkout adapter boundary and webhook idempotency model in `services/api/src/infrastructure/payments/payment-webhooks.ts`
-- [ ] T039 [US2] Implement cart reconciliation and partial refund service in `services/api/src/application/payments/cart-reconciliation-service.ts`
-- [ ] T040 [US2] Implement public booking checkout API and booking widget checkout UI in `apps/booking-widget/src/features/checkout/index.tsx`
+- [x] T032 [P] [US2] Implement Customer, Booking, BookingAttendee, BookingExtra, and BookingState entities in `packages/domain/src/bookings/booking.ts`
+- [x] T033 [P] [US2] Implement Package, Coupon, CartTransaction, PaymentTransaction, and SubPayment entities in `packages/domain/src/payments/payment.ts`
+- [x] T034 [US2] Implement Redis checkout lock service with tenant/provider/resource/time key composition in `services/api/src/application/scheduling/checkout-lock-service.ts`
+- [x] T035 [US2] Implement booking application service for pending creation, approval, rejection, expiration, and audit in `services/api/src/application/bookings/booking-service.ts`
+- [x] T036 [US2] Implement pricing service for standard booking, packages, coupons, deposits, and taxes in `services/api/src/application/payments/pricing-service.ts`
+- [x] T037 [US2] Implement payment adapter interfaces and fake gateway for tests in `packages/integrations/src/payments/payment-gateway.ts`
+- [x] T038 [US2] Implement Stripe/PayPal direct checkout adapter boundary and webhook idempotency model in `services/api/src/infrastructure/payments/payment-webhooks.ts`
+- [x] T039 [US2] Implement cart reconciliation and partial refund service in `services/api/src/application/payments/cart-reconciliation-service.ts`
+- [x] T040 [US2] Implement public booking checkout API and booking widget checkout UI in `apps/booking-widget/src/features/checkout/index.tsx`
 
 **Checkpoint**: Customer checkout is transactionally safe and payment-aware.
 
