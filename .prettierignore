@@ -1,0 +1,10 @@
+# Spec Kit owns the formatting of its own artifacts.
+.specify/
+.agents/
+specs/
+
+# Local reference material, never source code.
+reference/
+archive/
+
+pnpm-lock.yaml

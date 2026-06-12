@@ -1,0 +1,19 @@
+{
+  "name": "@saas-reservas/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./jobs/run-tenant-job": {
+      "types": "./dist/jobs/run-tenant-job.d.ts",
+      "default": "./dist/jobs/run-tenant-job.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build"
+  },
+  "dependencies": {
+    "@saas-reservas/tenant-context": "workspace:*"
+  }
+}

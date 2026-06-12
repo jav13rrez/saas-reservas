@@ -1,0 +1,137 @@
+/*
+ * Design tokens (docs/design-system.md, ADR-0008). Holded-inspired light UI.
+ * Tenant branding may override --ui-color-primary* at runtime; styles must
+ * always read the variables, never hardcode values.
+ */
+
+:root {
+  /* Color */
+  --ui-color-primary: #5a48f5;
+  --ui-color-primary-hover: #4937d8;
+  --ui-color-primary-soft: #eeebfe;
+  --ui-color-bg: #f7f8fa;
+  --ui-color-surface: #ffffff;
+  --ui-color-border: #e4e7ec;
+  --ui-color-text: #1f2733;
+  --ui-color-text-muted: #5f6b7a;
+  --ui-color-success: #15803d;
+  --ui-color-warning: #b45309;
+  --ui-color-danger: #b91c1c;
+
+  /* Typography */
+  --ui-font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --ui-text-sm: 13px;
+  --ui-text-base: 14px;
+  --ui-text-lg: 16px;
+  --ui-text-xl: 20px;
+
+  /* Spacing (8px rhythm) */
+  --ui-space-1: 4px;
+  --ui-space-2: 8px;
+  --ui-space-3: 12px;
+  --ui-space-4: 16px;
+  --ui-space-5: 20px;
+  --ui-space-6: 24px;
+  --ui-space-7: 32px;
+  --ui-space-8: 48px;
+
+  /* Radius and elevation */
+  --ui-radius-sm: 6px;
+  --ui-radius-md: 8px;
+  --ui-radius-lg: 12px;
+  --ui-shadow-overlay: 0 8px 24px rgb(31 39 51 / 0.12);
+}
+
+/* Base application chrome shared by every surface. */
+body {
+  margin: 0;
+  background: var(--ui-color-bg);
+  color: var(--ui-color-text);
+  font-family: var(--ui-font-sans);
+  font-size: var(--ui-text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1 {
+  font-size: var(--ui-text-xl);
+  font-weight: 600;
+  margin: 0 0 var(--ui-space-4);
+}
+
+h2 {
+  font-size: var(--ui-text-lg);
+  font-weight: 600;
+  margin: var(--ui-space-6) 0 var(--ui-space-3);
+}
+
+button {
+  font: inherit;
+  height: 36px;
+  padding: 0 var(--ui-space-4);
+  border-radius: var(--ui-radius-md);
+  border: 1px solid var(--ui-color-border);
+  background: var(--ui-color-surface);
+  color: var(--ui-color-text);
+  cursor: pointer;
+}
+
+button[type="submit"] {
+  background: var(--ui-color-primary);
+  border-color: var(--ui-color-primary);
+  color: #ffffff;
+}
+
+button[type="submit"]:hover {
+  background: var(--ui-color-primary-hover);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input,
+select {
+  font: inherit;
+  height: 36px;
+  padding: 0 var(--ui-space-3);
+  border-radius: var(--ui-radius-sm);
+  border: 1px solid var(--ui-color-border);
+  background: var(--ui-color-surface);
+  color: var(--ui-color-text);
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--ui-color-primary);
+  outline-offset: 1px;
+}
+
+label {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--ui-space-1);
+  color: var(--ui-color-text-muted);
+  font-size: var(--ui-text-sm);
+}
+
+fieldset {
+  border: 1px solid var(--ui-color-border);
+  border-radius: var(--ui-radius-lg);
+  background: var(--ui-color-surface);
+  padding: var(--ui-space-6);
+  margin: 0 0 var(--ui-space-4);
+}
+
+legend {
+  font-weight: 600;
+  padding: 0 var(--ui-space-2);
+}
+
+ul {
+  padding-left: var(--ui-space-5);
+}
