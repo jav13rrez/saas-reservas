@@ -23,6 +23,7 @@ Spec Kit is the product planning source of truth. `PLANNING.md`, `PROGRESS.md`, 
 - Update `PROGRESS.md` and `HANDOFF.md` before ending a meaningful session.
 - Update `tasks.md` when tasks are completed.
 - Record major architecture decisions under `docs/adr/`.
+- All UI work follows `docs/design-system.md` (ADR-0008): tokens from `packages/ui`, icons from `lucide-react` only, and no emojis in product UI or user-facing strings.
 - Do not treat `reference/` or `archive/` as source code.
 - Do not commit Amelia Premium source, Graphify heavy outputs, secrets, or local agent caches.
 - Ask before pushing, publishing, merging, deleting reference material, or changing credentials.

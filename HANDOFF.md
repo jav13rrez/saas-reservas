@@ -50,7 +50,9 @@ Recommended next steps:
 
 1. Merge the working branch `claude/optimistic-babbage-8vdefc` into `main` when the user approves.
 
-2. Start Phase 7 / User Story 5 (`T062`-`T073`), tests first: encrypted credential vault with redacted logs, calendar OAuth (platform and tenant-owned), and integration adapter contracts.
+2. Start Phase 7 / User Story 5 (`T062`-`T075`), tests first: encrypted credential vault with redacted logs, calendar OAuth (platform and tenant-owned), and integration adapter contracts.
+
+2b. UI work now follows the design system (ADR-0008, `docs/design-system.md`): tokens from `packages/ui`, Lucide icons only, no emojis. The existing admin/widget screens should be restyled to the system as they are next touched.
 
 3. Consider a small server bootstrap (`services/api/src/main.ts`) that loads `environment.ts`, builds the Drizzle adapters like `tests/integration/persistence/drizzle-checkout.test.ts` does, and starts Fastify — that makes the stack runnable outside tests.
 

@@ -86,6 +86,12 @@ Current clean baseline commit:
   - Delivery: `POST /v1/public/checkout` (slot validation against the engine -> locks -> pending booking -> cart charge) and `POST /v1/public/payments/webhook` (idempotent approval/rejection + lock release + occupancy recording); `apps/booking-widget` Next.js app with the checkout feature (`next build` passes).
   - Tests: 12 unit (duration formula, state machine, pricing), 8 integration (Redis lock concurrency/TTL/ownership/tenant-scoping against real Redis; cart reconciliation + webhook idempotency), 3 e2e over HTTP (pending -> webhook approval -> slot disappears from availability; declined charge -> rejected booking + lock release; off-schedule slot rejected). Full suite: 58 passing.
 
+### 2026-06-12 (design system)
+
+- Defined the product design system at the owner's direction: Holded-inspired light UI, Lucide-only iconography, and a hard no-emoji rule for product UI and user-facing strings. Recorded as ADR-0008 with the full guide in `docs/design-system.md`.
+- Implemented `packages/ui` with the tokens as code (`tokens.css` CSS custom properties + `tokens.ts` constants, including the booking/payment status color mapping). Both Next.js apps now import the tokens and `lucide-react` (Building2 in admin, CalendarDays in the widget); both build. Tenant branding overrides `--ui-color-primary` at runtime.
+- The rule is binding for future UI work and is written into `CLAUDE.md`/`AGENTS.md`; a future `assets/icons/` folder may add brand-owned icons behind the same conventions.
+
 ### 2026-06-12 (Phase 6 / User Story 4)
 
 - Completed T051-T061 (events, tickets, recurrence, waitlist), tests first:

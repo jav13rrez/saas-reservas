@@ -13,6 +13,8 @@ Read these files in order at the start of a new session:
 
 Before ending a meaningful session, update `PROGRESS.md` and `HANDOFF.md`. If tasks were completed, update `tasks.md`. If a major architecture decision was made, record it under `docs/adr/`.
 
+All UI work follows `docs/design-system.md` (ADR-0008): tokens from `packages/ui`, icons from `lucide-react` only, and no emojis in product UI or user-facing strings.
+
 Do not push, publish, merge, delete reference material, or change credentials without explicit user approval.
 
 ## graphify

@@ -8,6 +8,7 @@
  */
 
 import { useState } from "react";
+import { CalendarDays } from "lucide-react";
 
 interface SubmitEvent {
   preventDefault(): void;
@@ -112,7 +113,10 @@ export function Checkout() {
 
   return (
     <main>
-      <h1>Reserva tu cita</h1>
+      <h1 style={{ display: "flex", alignItems: "center", gap: "var(--ui-space-2)" }}>
+        <CalendarDays size={20} aria-hidden />
+        Reserva tu cita
+      </h1>
 
       <form onSubmit={(event) => void loadAvailability(event)}>
         <label>

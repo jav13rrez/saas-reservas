@@ -9,6 +9,7 @@
  */
 
 import { useState } from "react";
+import { Building2 } from "lucide-react";
 
 interface SubmitEvent {
   preventDefault(): void;
@@ -110,7 +111,10 @@ export function TenantSetup() {
 
   return (
     <main>
-      <h1>Configuración del tenant</h1>
+      <h1 style={{ display: "flex", alignItems: "center", gap: "var(--ui-space-2)" }}>
+        <Building2 size={20} aria-hidden />
+        Configuración del tenant
+      </h1>
       <form onSubmit={(event) => void handleSetup(event)}>
         <fieldset>
           <legend>Servicio</legend>

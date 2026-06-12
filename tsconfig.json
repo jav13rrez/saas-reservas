@@ -6,6 +6,7 @@
     { "path": "packages/integrations" },
     { "path": "packages/persistence" },
     { "path": "packages/tenant-context" },
+    { "path": "packages/ui" },
     { "path": "services/api" },
     { "path": "services/worker" }
   ]

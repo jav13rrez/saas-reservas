@@ -15,6 +15,7 @@ Use ADRs for decisions that affect framework choice, tenancy, database strategy,
 | [0005](0005-auth-session-model.md)           | First-Party Cookie Sessions With Split Staff/Customer Auth  | accepted | 2026-06-11 |
 | [0006](0006-ai-provider-adapter-deferred.md) | Reserve AIProviderAdapter Interface, Defer Implementation   | accepted | 2026-06-11 |
 | [0007](0007-local-dev-docker-compose.md)     | Docker Compose For Local Development, Cloud Target Deferred | accepted | 2026-06-11 |
+| [0008](0008-design-system.md)                | Design System — Holded-Inspired UI With Lucide Icons        | accepted | 2026-06-12 |
 
 ## Template
 
