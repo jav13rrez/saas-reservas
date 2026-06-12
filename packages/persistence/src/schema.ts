@@ -212,6 +212,7 @@ export const providerBusy = pgTable("provider_busy", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").notNull(),
   providerId: uuid("provider_id").notNull(),
+  bookingId: uuid("booking_id"),
   startAt: timestamp("start_at", { withTimezone: true, mode: "date" }).notNull(),
   endAt: timestamp("end_at", { withTimezone: true, mode: "date" }).notNull(),
 });
@@ -220,9 +221,21 @@ export const resourceAllocations = pgTable("resource_allocations", {
   id: uuid("id").primaryKey().defaultRandom(),
   tenantId: uuid("tenant_id").notNull(),
   resourceId: uuid("resource_id").notNull(),
+  bookingId: uuid("booking_id"),
   startAt: timestamp("start_at", { withTimezone: true, mode: "date" }).notNull(),
   endAt: timestamp("end_at", { withTimezone: true, mode: "date" }).notNull(),
   units: integer("units").notNull(),
+});
+
+export const customers = pgTable("customers", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  email: text("email").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  phone: text("phone"),
+  gdprStatus: text("gdpr_status").$type<"active" | "anonymized">().notNull(),
+  anonymizedAt: timestamp("anonymized_at", { withTimezone: true, mode: "date" }),
 });
 
 export const checkoutHolds = pgTable("checkout_holds", {

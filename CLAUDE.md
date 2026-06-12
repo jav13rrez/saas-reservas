@@ -37,7 +37,7 @@ Amelia/Graphify material is local reference only:
 
 ## Current Implementation Pointer
 
-Phases 1-4 (`T001`-`T040`) are complete and stack decisions live in `docs/adr/`. The next task is `T041` (Phase 5, User Story 3) in:
+Phases 1-5 (`T001`-`T050`) are complete and stack decisions live in `docs/adr/`. The next task is `T051` (Phase 6, User Story 4) in:
 
 ```text
 specs/001-saas-multitenant-booking/tasks.md

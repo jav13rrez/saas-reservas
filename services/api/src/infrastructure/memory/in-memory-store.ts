@@ -26,11 +26,13 @@ import type { ResourceAllocation } from "../../application/scheduling/availabili
 interface ProviderBusyEntry extends Interval {
   tenantId: string;
   providerId: string;
+  bookingId?: string;
 }
 
 interface AllocationEntry extends ResourceAllocation {
   tenantId: string;
   resourceId: string;
+  bookingId?: string;
 }
 
 export class InMemoryStore implements TenantRepository, CatalogRepository {
@@ -155,6 +157,14 @@ export class InMemoryStore implements TenantRepository, CatalogRepository {
     return Promise.resolve();
   }
 
+  findProviderById(tenantId: string, providerId: string): Promise<Provider | null> {
+    return Promise.resolve(
+      this.providers.find(
+        (provider) => provider.tenantId === tenantId && provider.id === providerId,
+      ) ?? null,
+    );
+  }
+
   findServiceById(tenantId: string, serviceId: string): Promise<Service | null> {
     return Promise.resolve(
       this.services.find((service) => service.tenantId === tenantId && service.id === serviceId) ??
@@ -262,13 +272,36 @@ export class InMemoryStore implements TenantRepository, CatalogRepository {
     providerId: string,
     occupied: Interval,
     resources: { resourceId: string; units: number }[],
+    bookingId?: string,
   ): void {
-    this.addProviderBusy(tenantId, providerId, occupied);
+    this.providerBusy.push({
+      tenantId,
+      providerId,
+      ...occupied,
+      ...(bookingId !== undefined ? { bookingId } : {}),
+    });
     for (const resource of resources) {
-      this.addResourceAllocation(tenantId, resource.resourceId, {
+      this.allocations.push({
+        tenantId,
+        resourceId: resource.resourceId,
         ...occupied,
         units: resource.units,
+        ...(bookingId !== undefined ? { bookingId } : {}),
       });
     }
+  }
+
+  /** OccupancyRecorder port: free a canceled/rescheduled booking's occupancy. */
+  releaseBookingOccupancy(tenantId: string, bookingId: string): void {
+    const keepBusy = this.providerBusy.filter(
+      (busy) => !(busy.tenantId === tenantId && busy.bookingId === bookingId),
+    );
+    this.providerBusy.length = 0;
+    this.providerBusy.push(...keepBusy);
+    const keepAllocations = this.allocations.filter(
+      (allocation) => !(allocation.tenantId === tenantId && allocation.bookingId === bookingId),
+    );
+    this.allocations.length = 0;
+    this.allocations.push(...keepAllocations);
   }
 }

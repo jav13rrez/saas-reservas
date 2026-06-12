@@ -26,6 +26,7 @@ const DOMAIN_TABLES = [
   "provider_schedules",
   "service_providers",
   "service_resources",
+  "customers",
   "bookings",
   "cart_transactions",
   "sub_payments",

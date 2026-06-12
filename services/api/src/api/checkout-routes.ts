@@ -37,7 +37,10 @@ export interface OccupancyRecorder {
     providerId: string,
     occupied: Interval,
     resources: { resourceId: string; units: number }[],
+    bookingId?: string,
   ): void | Promise<void>;
+  /** Frees the occupancy of a canceled/rescheduled booking. */
+  releaseBookingOccupancy(tenantId: string, bookingId: string): void | Promise<void>;
 }
 
 /** Provisional checkout hold awaiting the payment webhook. */
@@ -281,6 +284,7 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
           hold.providerId,
           hold.occupied,
           hold.resources,
+          hold.bookingId,
         );
       } else {
         await deps.bookings.reject(tenant.tenantId, hold.bookingId, SYSTEM_ACTOR);

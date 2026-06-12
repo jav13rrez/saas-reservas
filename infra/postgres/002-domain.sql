@@ -196,22 +196,41 @@ CREATE TABLE IF NOT EXISTS provider_busy (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL REFERENCES tenants(id),
     provider_id uuid NOT NULL,
+    -- Confirmed-booking occupancy is released by booking id on cancel/reschedule.
+    booking_id uuid,
     start_at timestamptz NOT NULL,
     end_at timestamptz NOT NULL
 );
 SELECT apply_tenant_rls('provider_busy');
+ALTER TABLE provider_busy ADD COLUMN IF NOT EXISTS booking_id uuid;
 CREATE INDEX IF NOT EXISTS idx_provider_busy_tenant_provider ON provider_busy (tenant_id, provider_id, start_at);
 
 CREATE TABLE IF NOT EXISTS resource_allocations (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL REFERENCES tenants(id),
     resource_id uuid NOT NULL,
+    booking_id uuid,
     start_at timestamptz NOT NULL,
     end_at timestamptz NOT NULL,
     units integer NOT NULL CHECK (units > 0)
 );
 SELECT apply_tenant_rls('resource_allocations');
+ALTER TABLE resource_allocations ADD COLUMN IF NOT EXISTS booking_id uuid;
 CREATE INDEX IF NOT EXISTS idx_resource_allocations_tenant_resource ON resource_allocations (tenant_id, resource_id, start_at);
+
+-- Customers (US3: portals and GDPR anonymization).
+CREATE TABLE IF NOT EXISTS customers (
+    id uuid PRIMARY KEY,
+    tenant_id uuid NOT NULL REFERENCES tenants(id),
+    email text NOT NULL,
+    first_name text NOT NULL,
+    last_name text NOT NULL,
+    phone text,
+    gdpr_status text NOT NULL DEFAULT 'active' CHECK (gdpr_status IN ('active', 'anonymized')),
+    anonymized_at timestamptz
+);
+SELECT apply_tenant_rls('customers');
+CREATE INDEX IF NOT EXISTS idx_customers_tenant_email ON customers (tenant_id, email);
 
 -- Provisional checkout holds awaiting the payment webhook.
 CREATE TABLE IF NOT EXISTS checkout_holds (

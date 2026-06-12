@@ -80,6 +80,13 @@ export class DrizzleCatalogRepository {
     await this.db.withTenant(link.tenantId, (tx) => tx.insert(serviceResources).values(link));
   }
 
+  async findProviderById(tenantId: string, providerId: string): Promise<Provider | null> {
+    const rows = await this.db.withTenant(tenantId, (tx) =>
+      tx.select().from(providers).where(eq(providers.id, providerId)).limit(1),
+    );
+    return rows[0] ?? null;
+  }
+
   async findServiceById(tenantId: string, serviceId: string): Promise<Service | null> {
     const rows = await this.db.withTenant(tenantId, (tx) =>
       tx.select().from(services).where(eq(services.id, serviceId)).limit(1),
@@ -200,11 +207,13 @@ export class DrizzleCatalogRepository {
     providerId: string,
     occupied: Interval,
     resourceDemands: { resourceId: string; units: number }[],
+    bookingId?: string,
   ): Promise<void> {
     await this.db.withTenant(tenantId, async (tx) => {
       await tx.insert(providerBusy).values({
         tenantId,
         providerId,
+        bookingId: bookingId ?? null,
         startAt: new Date(occupied.start),
         endAt: new Date(occupied.end),
       });
@@ -212,11 +221,20 @@ export class DrizzleCatalogRepository {
         await tx.insert(resourceAllocations).values({
           tenantId,
           resourceId: demand.resourceId,
+          bookingId: bookingId ?? null,
           startAt: new Date(occupied.start),
           endAt: new Date(occupied.end),
           units: demand.units,
         });
       }
+    });
+  }
+
+  /** OccupancyRecorder port: free a canceled/rescheduled booking's occupancy. */
+  async releaseBookingOccupancy(tenantId: string, bookingId: string): Promise<void> {
+    await this.db.withTenant(tenantId, async (tx) => {
+      await tx.delete(providerBusy).where(eq(providerBusy.bookingId, bookingId));
+      await tx.delete(resourceAllocations).where(eq(resourceAllocations.bookingId, bookingId));
     });
   }
 }

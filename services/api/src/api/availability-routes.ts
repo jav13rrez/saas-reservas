@@ -19,6 +19,7 @@ import {
   type TenantResolution,
 } from "../infrastructure/tenancy/tenant-resolver.js";
 import { registerCheckoutRoutes, type CheckoutDeps } from "./checkout-routes.js";
+import { registerPortalRoutes, type PortalDeps } from "./portal-routes.js";
 
 export interface AppDeps {
   platformBaseDomain: string;
@@ -30,6 +31,8 @@ export interface AppDeps {
   tenantTimezone(tenantId: string): Promise<string>;
   /** Checkout/payment wiring (US2); omit to expose catalog/availability only. */
   checkout?: Omit<CheckoutDeps, "availability" | "tenantTimezone">;
+  /** Customer/staff portal wiring (US3). */
+  portal?: PortalDeps;
 }
 
 interface RequestTenant {
@@ -261,6 +264,9 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       availability: deps.availability,
       tenantTimezone: (tenantId) => deps.tenantTimezone(tenantId),
     });
+  }
+  if (deps.portal !== undefined) {
+    registerPortalRoutes(app, deps.portal);
   }
 
   return app;

@@ -110,19 +110,19 @@ description: "Implementation task list for a multitenant Amelia-inspired booking
 
 ### Tests for User Story 3
 
-- [ ] T041 [P] [US3] Add tests for minimum cancel/reschedule windows and rejected attempts in `tests/unit/bookings/change-policy.test.ts`
-- [ ] T042 [P] [US3] Add tests for passwordless JWT nonce TTL, first-use revocation, replay rejection, and secure session creation in `tests/integration/identity/customer-passwordless.test.ts`
-- [ ] T043 [P] [US3] Add tests for GDPR anonymization preserving non-identifying booking/payment metrics in `tests/integration/privacy/gdpr-anonymization.test.ts`
-- [ ] T044 [P] [US3] Add tests for cancellation/refund event emission and audit records in `tests/integration/bookings/cancellation-audit.test.ts`
+- [x] T041 [P] [US3] Add tests for minimum cancel/reschedule windows and rejected attempts in `tests/unit/bookings/change-policy.test.ts`
+- [x] T042 [P] [US3] Add tests for passwordless JWT nonce TTL, first-use revocation, replay rejection, and secure session creation in `tests/integration/identity/customer-passwordless.test.ts`
+- [x] T043 [P] [US3] Add tests for GDPR anonymization preserving non-identifying booking/payment metrics in `tests/integration/privacy/gdpr-anonymization.test.ts`
+- [x] T044 [P] [US3] Add tests for cancellation/refund event emission and audit records in `tests/integration/bookings/cancellation-audit.test.ts`
 
 ### Implementation for User Story 3
 
-- [ ] T045 [US3] Implement cancel and reschedule policy engine in `services/api/src/application/bookings/change-policy-engine.ts`
-- [ ] T046 [US3] Implement customer passwordless access service with asymmetric JWT and one-time nonce in `services/api/src/application/identity/customer-passwordless-service.ts`
-- [ ] T047 [US3] Implement staff portal permission checks and provider calendar management services in `services/api/src/application/providers/provider-portal-service.ts`
-- [ ] T048 [US3] Implement cancellation and reschedule application services with payment/refund hooks in `services/api/src/application/bookings/booking-change-service.ts`
-- [ ] T049 [US3] Implement GDPR anonymization service for Customer, custom fields, and historical bookings in `services/api/src/application/privacy/gdpr-anonymization-service.ts`
-- [ ] T050 [US3] Implement customer portal and staff portal API surfaces in `services/api/src/api/portal-routes.ts`
+- [x] T045 [US3] Implement cancel and reschedule policy engine in `services/api/src/application/bookings/change-policy-engine.ts`
+- [x] T046 [US3] Implement customer passwordless access service with asymmetric JWT and one-time nonce in `services/api/src/application/identity/customer-passwordless-service.ts`
+- [x] T047 [US3] Implement staff portal permission checks and provider calendar management services in `services/api/src/application/providers/provider-portal-service.ts`
+- [x] T048 [US3] Implement cancellation and reschedule application services with payment/refund hooks in `services/api/src/application/bookings/booking-change-service.ts`
+- [x] T049 [US3] Implement GDPR anonymization service for Customer, custom fields, and historical bookings in `services/api/src/application/privacy/gdpr-anonymization-service.ts`
+- [x] T050 [US3] Implement customer portal and staff portal API surfaces in `services/api/src/api/portal-routes.ts`
 
 **Checkpoint**: Post-booking operations are policy-safe, auditable, and privacy-aware.
 

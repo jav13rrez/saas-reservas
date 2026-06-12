@@ -43,6 +43,7 @@ export interface CatalogRepository {
   linkResource(link: ServiceResource): Promise<void>;
 
   findServiceById(tenantId: string, serviceId: string): Promise<Service | null>;
+  findProviderById(tenantId: string, providerId: string): Promise<Provider | null>;
   listExtras(tenantId: string, serviceId: string, extraIds: string[]): Promise<Extra[]>;
   listActiveProvidersForService(tenantId: string, serviceId: string): Promise<Provider[]>;
   listScheduleEntries(tenantId: string, providerId: string): Promise<ProviderScheduleEntry[]>;

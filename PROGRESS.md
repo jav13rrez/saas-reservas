@@ -4,7 +4,7 @@ Last updated: 2026-06-11
 
 ## Current State
 
-Implementation has started. Stack decisions are recorded as ADRs; Phases 1-4 (T001-T040) are complete: tenant-safe foundations, User Story 1 (publishable bookable operation), and User Story 2 (transactional checkout with locks, pricing, payments, and webhook-driven confirmation). 58 tests passing across unit/integration/e2e, including suites against real PostgreSQL (RLS) and real Redis (locks).
+Implementation has started. Stack decisions are recorded as ADRs; Phases 1-5 (T001-T050) are complete: tenant-safe foundations, User Story 1 (publishable bookable operation), User Story 2 (transactional checkout with locks, pricing, payments, and webhook-driven confirmation), and User Story 3 (policy-guarded cancel/reschedule, passwordless customer portal, GDPR anonymization, staff portal with permissions). 84 tests passing across unit/integration/e2e, including suites against real PostgreSQL (RLS) and real Redis (locks).
 
 The Drizzle/RLS persistence adapter (`packages/persistence`) is built and verified: every repository port (tenants, catalog, bookings, carts, events/audit, webhook idempotency, checkout holds, occupancy) has a Postgres implementation that binds `app.current_tenant_id` per transaction, and the full checkout flow passes against real PostgreSQL with cross-tenant RLS proven. The in-memory adapters remain for fast tests and local dev without a database.
 
@@ -86,6 +86,17 @@ Current clean baseline commit:
   - Delivery: `POST /v1/public/checkout` (slot validation against the engine -> locks -> pending booking -> cart charge) and `POST /v1/public/payments/webhook` (idempotent approval/rejection + lock release + occupancy recording); `apps/booking-widget` Next.js app with the checkout feature (`next build` passes).
   - Tests: 12 unit (duration formula, state machine, pricing), 8 integration (Redis lock concurrency/TTL/ownership/tenant-scoping against real Redis; cart reconciliation + webhook idempotency), 3 e2e over HTTP (pending -> webhook approval -> slot disappears from availability; declined charge -> rejected booking + lock release; off-schedule slot rejected). Full suite: 58 passing.
 
+### 2026-06-12 (Phase 5 / User Story 3)
+
+- Completed T041-T050 (staff and customers manage changes under policies and privacy), tests first:
+  - Change policy engine (T045): pure decision over booking status, per-action minimum notice hours, and start time; out-of-window or started bookings are rejected without side effects.
+  - Booking change service (T048): policy -> state machine -> money -> occupancy. Cancel refunds the subpayment (via a PaymentSettlement port over cart reconciliation) and frees the slot; reschedule validates the new slot against the availability engine, marks the old booking rescheduled, creates the approved replacement, re-points the subpayment, and swaps occupancy. Occupancy is now keyed by booking id (`releaseBookingOccupancy`), with idempotent SQL migration updates.
+  - Customer passwordless access (T046): Ed25519-signed short-lived JWTs with one-time nonces (first-use revocation, replay/tamper/expiry rejection) exchanged for opaque HttpOnly+Secure session cookies, tenant-bound (ADR-0005).
+  - GDPR anonymization (T049): profile PII irreversibly replaced, bookings/payments metrics preserved, audited without leaking erased data, idempotent. `customers` table added to migration/schema with Drizzle repository methods.
+  - Provider portal service (T047): permission-checked self-service (manage-own-schedule, manage-own-bookings, view-customer-contact gating customer linkage).
+  - Portal API (T050): customer routes (access link dev-only, session redeem with Set-Cookie, list/cancel/reschedule own bookings, GDPR self-erasure) and staff routes (schedule + bookings; dev-only x-provider-id identification until staff auth lands).
+  - Tests: 5 unit (policy windows) + 13 integration (cancellation/refund audit incl. reschedule conflict, passwordless security properties, GDPR) + 5 e2e (full portal flow over HTTP). Full suite: 84 passing.
+
 ### 2026-06-12 (persistence adapter)
 
 - Built `packages/persistence`, the Drizzle/RLS adapter that replaces the in-memory stores for real deployments (ADR-0003):
@@ -112,7 +123,7 @@ T001-T086
 Current next task:
 
 ```text
-T041 Add tests for minimum cancel/reschedule windows and rejected attempts (Phase 5 / User Story 3)
+T051 Add event capacity, ticket category, and attendee limit tests (Phase 6 / User Story 4)
 ```
 
 ## Open Decisions

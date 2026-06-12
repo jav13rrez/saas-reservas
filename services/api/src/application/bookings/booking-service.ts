@@ -25,6 +25,8 @@ export interface BookingRepository {
   insertBooking(booking: Booking): Promise<void>;
   updateBooking(booking: Booking): Promise<void>;
   findBookingById(tenantId: string, bookingId: string): Promise<Booking | null>;
+  listBookingsForCustomer(tenantId: string, customerId: string): Promise<Booking[]>;
+  listBookingsForProvider(tenantId: string, providerId: string): Promise<Booking[]>;
 }
 
 export class BookingNotFoundError extends Error {
@@ -72,6 +74,10 @@ export class BookingService {
 
   cancel(tenantId: string, bookingId: string, actor: Actor): Promise<Booking> {
     return this.transition(tenantId, bookingId, "canceled", actor);
+  }
+
+  reschedule(tenantId: string, bookingId: string, actor: Actor): Promise<Booking> {
+    return this.transition(tenantId, bookingId, "rescheduled", actor);
   }
 
   private async transition(

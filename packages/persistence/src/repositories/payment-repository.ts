@@ -3,10 +3,10 @@
  */
 
 import { and, eq } from "drizzle-orm";
-import type { Booking } from "@saas-reservas/domain/bookings/booking";
+import type { Booking, Customer } from "@saas-reservas/domain/bookings/booking";
 import type { CartTransaction, SubPayment } from "@saas-reservas/domain/payments/payment";
 import type { TenantDb } from "../db.js";
-import { bookings, cartTransactions, subPayments } from "../schema.js";
+import { bookings, cartTransactions, customers, subPayments } from "../schema.js";
 
 export class DrizzlePaymentRepository {
   constructor(private readonly db: TenantDb) {}
@@ -30,13 +30,63 @@ export class DrizzlePaymentRepository {
       tx.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1),
     );
     const row = rows[0];
+    return row === undefined ? null : fromBookingRow(row);
+  }
+
+  async listBookingsForCustomer(tenantId: string, customerId: string): Promise<Booking[]> {
+    const rows = await this.db.withTenant(tenantId, (tx) =>
+      tx.select().from(bookings).where(eq(bookings.customerId, customerId)),
+    );
+    return rows.map(fromBookingRow);
+  }
+
+  async listBookingsForProvider(tenantId: string, providerId: string): Promise<Booking[]> {
+    const rows = await this.db.withTenant(tenantId, (tx) =>
+      tx.select().from(bookings).where(eq(bookings.providerId, providerId)),
+    );
+    return rows.map(fromBookingRow);
+  }
+
+  // --- CustomerRepository ---
+
+  async insertCustomer(customer: Customer): Promise<void> {
+    await this.db.withTenant(customer.tenantId, (tx) =>
+      tx.insert(customers).values({ ...customer, phone: customer.phone ?? null }),
+    );
+  }
+
+  async updateCustomer(customer: Customer): Promise<void> {
+    await this.db.withTenant(customer.tenantId, (tx) =>
+      tx
+        .update(customers)
+        .set({
+          email: customer.email,
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          phone: customer.phone ?? null,
+          gdprStatus: customer.gdprStatus,
+          anonymizedAt: customer.gdprStatus === "anonymized" ? new Date() : null,
+        })
+        .where(eq(customers.id, customer.id)),
+    );
+  }
+
+  async findCustomerById(tenantId: string, customerId: string): Promise<Customer | null> {
+    const rows = await this.db.withTenant(tenantId, (tx) =>
+      tx.select().from(customers).where(eq(customers.id, customerId)).limit(1),
+    );
+    const row = rows[0];
     if (row === undefined) {
       return null;
     }
     return {
-      ...row,
-      startAt: row.startAt.toISOString(),
-      endAt: row.endAt.toISOString(),
+      id: row.id,
+      tenantId: row.tenantId,
+      email: row.email,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      ...(row.phone !== null ? { phone: row.phone } : {}),
+      gdprStatus: row.gdprStatus,
     };
   }
 
@@ -99,6 +149,14 @@ export class DrizzlePaymentRepository {
     );
     return rows[0] ?? null;
   }
+}
+
+function fromBookingRow(row: typeof bookings.$inferSelect): Booking {
+  return {
+    ...row,
+    startAt: row.startAt.toISOString(),
+    endAt: row.endAt.toISOString(),
+  };
 }
 
 function toBookingRow(booking: Booking): typeof bookings.$inferInsert {
