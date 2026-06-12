@@ -6,7 +6,9 @@ Last updated: 2026-06-12
 
 This is the fastest resume document for Codex, Claude, or any future agent. Read this before making changes.
 
-Implementation has started: the stack is decided (ADR-0001..0007), the Phase 1 workspace skeleton (T001-T006) and the Phase 2 tenant-safe foundations (T007-T014) are in place. The next work is Phase 3, User Story 1 (T015-T026): tenant publishes a complete bookable operation.
+Implementation has started: the stack is decided (ADR-0001..0007) and Phases 1-3 (T001-T026) are complete, including User Story 1 end to end (tenant setup -> catalog -> schedules -> public availability -> minimal admin UI). The next work is Phase 4, User Story 2 (T027-T040): customer books, pays, and receives transactional confirmation.
+
+Two deliberate v1 simplifications to keep in mind: repositories are in-memory adapters behind ports (the Drizzle/RLS persistence adapter for `packages/persistence` is the natural next infrastructure step), and `/v1/admin/*` routes have no staff auth yet (identity tasks pending) so they are development-only.
 
 ## Current Objective
 
@@ -19,6 +21,7 @@ Prepare and implement a SaaS-native multitenant booking platform inspired by Ame
 - Stack decisions recorded as ADR-0001 through ADR-0007 in `docs/adr/`: Next.js, Fastify, Drizzle, BullMQ, first-party cookie sessions, deferred AIProviderAdapter, Docker Compose for local dev.
 - T001-T006 complete: pnpm workspace (`pnpm-workspace.yaml`), root tooling (`package.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `vitest.config.ts`), and `packages/contracts` with `environment.ts` and `openapi.ts`.
 - T007-T014 complete: `infra/postgres/001-tenancy.sql` (RLS template + `apply_tenant_rls`), `infra/docker-compose.yml` (Postgres/Redis/MinIO), `packages/tenant-context` (Postgres tenant context, Redis keys, storage paths), `services/api` tenant resolver, `packages/domain` audit/event primitives, `services/worker` `runTenantJob` wrapper, and 9 passing RLS/worker integration tests.
+- T015-T026 complete (User Story 1): scheduling/catalog/tenancy domain modules in `packages/domain`, availability engine + availability/tenant-admin/catalog application services in `services/api/src/application`, Fastify API in `services/api/src/api/availability-routes.ts`, in-memory repository adapter in `services/api/src/infrastructure/memory`, and the Next.js admin app in `apps/admin` (builds with `next build`). 34 tests passing across unit/integration/e2e.
 - Verification commands available and passing: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`.
 - Integration tests need PostgreSQL: `docker compose -f infra/docker-compose.yml up -d postgres`, then `TEST_DATABASE_URL=postgres://saas_admin:saas_admin@localhost:5432/saas_reservas pnpm test:integration` (default URL matches the compose service, so the env var is optional). Suites self-skip when no database is reachable.
 - Local reference folders exist but are ignored by Git: `reference/`, `archive/`, `.codex/`.
@@ -41,20 +44,20 @@ Recommended next steps:
 
 1. Merge the working branch `claude/optimistic-babbage-8vdefc` into `main` when the user approves.
 
-2. Start Phase 3 / User Story 1 (`T015`-`T026`), tests first (`T015`-`T018`): provider schedules with timezones, service duration/buffer/extras rules, shared resource conflicts, and the single-provider widget scenario; then domain entities, application services, availability engine v1, APIs, and minimal admin UI.
+2. Start Phase 4 / User Story 2 (`T027`-`T040`), tests first (`T027`-`T031`): booking duration/pricing rules, Redis checkout locks, booking state machine, and cart/subpayment reconciliation; then booking/payment entities, lock service, booking service, pricing, payment adapter boundary, and checkout UI.
 
-3. T026 introduces the first Next.js app under `apps/admin` (ADR-0001); scaffold it as a workspace package when that task starts.
+3. Consider building the Drizzle/RLS persistence adapter (`packages/persistence`) early in Phase 4 so booking and lock services run against real Postgres instead of the in-memory store.
 
 4. After each meaningful implementation session, update `PROGRESS.md`, `HANDOFF.md`, and `tasks.md`.
 
 ## Current Task Pointer
 
-Phases 1 and 2 (T001-T014) are complete.
+Phases 1-3 (T001-T026) are complete.
 
 Next task:
 
 ```text
-T015 Add tests for provider schedule, breaks, days off, special days, and timezone handling in tests/unit/scheduling/provider-schedule.test.ts
+T027 Add tests for total duration formula with extras and buffers in tests/unit/bookings/booking-duration.test.ts
 ```
 
 ## Important Constraints

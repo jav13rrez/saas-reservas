@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./audit/events": {
-      "types": "./dist/audit/events.d.ts",
-      "default": "./dist/audit/events.js"
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
     }
   },
   "scripts": {

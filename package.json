@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
+    "@saas-reservas/api": "workspace:*",
     "@saas-reservas/contracts": "workspace:*",
     "@saas-reservas/domain": "workspace:*",
     "@saas-reservas/tenant-context": "workspace:*",
@@ -30,6 +31,7 @@
     "pg": "^8.13.0",
     "eslint": "^9.39.0",
     "eslint-config-prettier": "^10.1.0",
+    "fastify": "^5.2.0",
     "prettier": "^3.6.0",
     "typescript": "^5.9.0",
     "typescript-eslint": "^8.46.0",

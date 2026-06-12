@@ -52,21 +52,21 @@ description: "Implementation task list for a multitenant Amelia-inspired booking
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Add tests for provider schedule, breaks, days off, special days, and timezone handling in `tests/unit/scheduling/provider-schedule.test.ts`
-- [ ] T016 [P] [US1] Add tests for service duration, buffers, extras duration, and capacity constraints in `tests/unit/catalog/service-rules.test.ts`
-- [ ] T017 [P] [US1] Add tests for shared resource blocking across competing services in `tests/integration/scheduling/resource-conflicts.test.ts`
-- [ ] T018 [P] [US1] Add tests for single-provider widget behavior omitting provider selection in `tests/e2e/booking-widget-single-provider.test.ts`
+- [x] T015 [P] [US1] Add tests for provider schedule, breaks, days off, special days, and timezone handling in `tests/unit/scheduling/provider-schedule.test.ts`
+- [x] T016 [P] [US1] Add tests for service duration, buffers, extras duration, and capacity constraints in `tests/unit/catalog/service-rules.test.ts`
+- [x] T017 [P] [US1] Add tests for shared resource blocking across competing services in `tests/integration/scheduling/resource-conflicts.test.ts`
+- [x] T018 [P] [US1] Add tests for single-provider widget behavior omitting provider selection in `tests/e2e/booking-widget-single-provider.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T019 [P] [US1] Implement Tenant, TenantDomain, branding, locale, timezone, and policy entities in `packages/domain/src/tenancy/tenant.ts`
-- [ ] T020 [P] [US1] Implement Provider, ProviderSchedule, day off, special day, and staff permission entities in `packages/domain/src/providers/provider.ts`
-- [ ] T021 [P] [US1] Implement Category, Service, Extra, Resource, ServiceProvider, and ServiceResource entities in `packages/domain/src/catalog/service.ts`
-- [ ] T022 [US1] Implement tenant admin services for tenant setup, domain config, branding, and policy management in `services/api/src/application/tenancy/tenant-admin-service.ts`
-- [ ] T023 [US1] Implement catalog services for categories, services, extras, providers, and resources in `services/api/src/application/catalog/catalog-service.ts`
-- [ ] T024 [US1] Implement availability engine v1 with provider schedule, buffers, resources, capacity, and timezone support in `services/api/src/application/scheduling/availability-engine.ts`
-- [ ] T025 [US1] Implement public availability API and admin catalog API in `services/api/src/api/availability-routes.ts`
-- [ ] T026 [US1] Implement minimal admin setup UI and booking widget availability view in `apps/admin/src/features/tenant-setup/index.tsx`
+- [x] T019 [P] [US1] Implement Tenant, TenantDomain, branding, locale, timezone, and policy entities in `packages/domain/src/tenancy/tenant.ts`
+- [x] T020 [P] [US1] Implement Provider, ProviderSchedule, day off, special day, and staff permission entities in `packages/domain/src/providers/provider.ts`
+- [x] T021 [P] [US1] Implement Category, Service, Extra, Resource, ServiceProvider, and ServiceResource entities in `packages/domain/src/catalog/service.ts`
+- [x] T022 [US1] Implement tenant admin services for tenant setup, domain config, branding, and policy management in `services/api/src/application/tenancy/tenant-admin-service.ts`
+- [x] T023 [US1] Implement catalog services for categories, services, extras, providers, and resources in `services/api/src/application/catalog/catalog-service.ts`
+- [x] T024 [US1] Implement availability engine v1 with provider schedule, buffers, resources, capacity, and timezone support in `services/api/src/application/scheduling/availability-engine.ts`
+- [x] T025 [US1] Implement public availability API and admin catalog API in `services/api/src/api/availability-routes.ts`
+- [x] T026 [US1] Implement minimal admin setup UI and booking widget availability view in `apps/admin/src/features/tenant-setup/index.tsx`
 
 **Checkpoint**: Tenant inventory is publishable and availability respects core rules.
 

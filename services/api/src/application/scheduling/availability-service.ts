@@ -1,0 +1,125 @@
+/**
+ * Availability application service: assembles the engine input for one tenant,
+ * service, date, and provider, applying the single-provider auto-selection rule
+ * (spec US1 scenario 2).
+ */
+
+import type { Provider } from "@saas-reservas/domain/providers/provider";
+import {
+  parseIsoDate,
+  wallTimeToUtcMs,
+  type Interval,
+} from "@saas-reservas/domain/scheduling/time";
+import type { CatalogRepository } from "../catalog/catalog-service.js";
+import { computeAvailableSlots, type AvailableSlot } from "./availability-engine.js";
+
+const DAY_MS = 86_400_000;
+
+export interface AvailabilityQuery {
+  tenantId: string;
+  serviceId: string;
+  /** "YYYY-MM-DD" in the scheduling time zone. */
+  date: string;
+  providerId?: string;
+  extraIds?: string[];
+  /** Tenant default time zone, used when the provider has none. */
+  tenantTimezone: string;
+}
+
+export type AvailabilityResult =
+  | { ok: true; provider: Provider; providerSelection: "auto" | "explicit"; slots: AvailableSlot[] }
+  | { ok: false; reason: "service-not-found" | "provider-required" | "provider-not-assigned" };
+
+export interface WidgetConfig {
+  serviceId: string;
+  /** Hidden when exactly one active provider serves the service (US1 scenario 2). */
+  providerSelection: "hidden" | "required";
+  providers: { id: string; displayName: string }[];
+}
+
+export class AvailabilityService {
+  constructor(private readonly catalog: CatalogRepository) {}
+
+  async widgetConfig(tenantId: string, serviceId: string): Promise<WidgetConfig | null> {
+    const service = await this.catalog.findServiceById(tenantId, serviceId);
+    if (service?.status !== "active") {
+      return null;
+    }
+    const providers = await this.catalog.listActiveProvidersForService(tenantId, serviceId);
+    return {
+      serviceId,
+      providerSelection: providers.length === 1 ? "hidden" : "required",
+      providers: providers.map((provider) => ({
+        id: provider.id,
+        displayName: provider.displayName,
+      })),
+    };
+  }
+
+  async availability(query: AvailabilityQuery): Promise<AvailabilityResult> {
+    const service = await this.catalog.findServiceById(query.tenantId, query.serviceId);
+    if (service?.status !== "active") {
+      return { ok: false, reason: "service-not-found" };
+    }
+    const providers = await this.catalog.listActiveProvidersForService(
+      query.tenantId,
+      query.serviceId,
+    );
+
+    let provider: Provider | undefined;
+    let providerSelection: "auto" | "explicit";
+    if (query.providerId !== undefined) {
+      provider = providers.find((candidate) => candidate.id === query.providerId);
+      providerSelection = "explicit";
+      if (provider === undefined) {
+        return { ok: false, reason: "provider-not-assigned" };
+      }
+    } else if (providers.length === 1) {
+      [provider] = providers;
+      providerSelection = "auto";
+    } else {
+      return { ok: false, reason: "provider-required" };
+    }
+    if (provider === undefined) {
+      return { ok: false, reason: "provider-required" };
+    }
+
+    const timezone = provider.timezone || query.tenantTimezone;
+    const selectedExtras = await this.catalog.listExtras(
+      query.tenantId,
+      query.serviceId,
+      query.extraIds ?? [],
+    );
+    const scheduleEntries = await this.catalog.listScheduleEntries(query.tenantId, provider.id);
+
+    // Cover the full local day plus slack for time zone offsets.
+    const dayStart = wallTimeToUtcMs(parseIsoDate(query.date), 0, timezone);
+    const range: Interval = { start: dayStart - DAY_MS, end: dayStart + 2 * DAY_MS };
+
+    const providerBusy = await this.catalog.listProviderBusy(query.tenantId, provider.id, range);
+    const demands = await this.catalog.listResourceDemands(query.tenantId, query.serviceId);
+    const resources = await Promise.all(
+      demands.map(async (demand) => ({
+        resourceId: demand.resource.id,
+        resourceQuantity: demand.resource.quantity,
+        unitsRequired: demand.units,
+        existingAllocations: await this.catalog.listResourceAllocations(
+          query.tenantId,
+          demand.resource.id,
+          range,
+        ),
+      })),
+    );
+
+    const slots = computeAvailableSlots({
+      date: query.date,
+      timezone,
+      service,
+      selectedExtras,
+      scheduleEntries,
+      providerBusy,
+      resources,
+    });
+    return { ok: true, provider, providerSelection, slots };
+  }
+}

@@ -6,19 +6,29 @@ const src = (path: string): string => fileURLToPath(new URL(path, import.meta.ur
 
 export default defineConfig({
   resolve: {
-    alias: {
-      "@saas-reservas/contracts/environment": src("packages/contracts/src/environment.ts"),
-      "@saas-reservas/contracts/openapi": src("packages/contracts/src/openapi.ts"),
-      "@saas-reservas/domain/audit/events": src("packages/domain/src/audit/events.ts"),
-      "@saas-reservas/tenant-context/redis-keys": src("packages/tenant-context/src/redis-keys.ts"),
-      "@saas-reservas/tenant-context/storage-paths": src(
-        "packages/tenant-context/src/storage-paths.ts",
-      ),
-      "@saas-reservas/tenant-context": src("packages/tenant-context/src/tenant-context.ts"),
-      "@saas-reservas/worker/jobs/run-tenant-job": src(
-        "services/worker/src/jobs/run-tenant-job.ts",
-      ),
-    },
+    alias: [
+      {
+        find: /^@saas-reservas\/contracts\/(.*)$/,
+        replacement: src("packages/contracts/src/") + "$1.ts",
+      },
+      {
+        find: /^@saas-reservas\/domain\/(.*)$/,
+        replacement: src("packages/domain/src/") + "$1.ts",
+      },
+      {
+        find: /^@saas-reservas\/tenant-context\/(.*)$/,
+        replacement: src("packages/tenant-context/src/") + "$1.ts",
+      },
+      {
+        find: "@saas-reservas/tenant-context",
+        replacement: src("packages/tenant-context/src/tenant-context.ts"),
+      },
+      {
+        find: /^@saas-reservas\/worker\/(.*)$/,
+        replacement: src("services/worker/src/") + "$1.ts",
+      },
+      { find: /^@saas-reservas\/api\/(.*)$/, replacement: src("services/api/src/") + "$1.ts" },
+    ],
   },
   test: {
     setupFiles: ["./tests/setup.ts"],

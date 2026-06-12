@@ -4,7 +4,9 @@ Last updated: 2026-06-11
 
 ## Current State
 
-Implementation has started. Stack decisions are recorded as ADRs, Phase 1 setup (T001-T006) and Phase 2 tenant-safe foundations (T007-T014) are complete: tenancy SQL with RLS template, tenant-context package (Postgres context, Redis keys, storage paths), request tenant resolver, audit/event primitives, worker job wrapper, and passing RLS/worker integration tests.
+Implementation has started. Stack decisions are recorded as ADRs; Phase 1 setup (T001-T006), Phase 2 tenant-safe foundations (T007-T014), and Phase 3 User Story 1 (T015-T026) are complete. The first vertical slice works end to end: tenant setup, catalog, provider schedules, availability engine, public API, and a minimal Next.js admin UI, all test-covered (34 tests passing).
+
+Known v1 simplifications: repositories are in-memory adapters behind ports (Drizzle/RLS persistence adapter pending in `packages/persistence`), and `/v1/admin/*` routes have no staff auth yet (identity tasks pending), so they are development-only.
 
 Current branch:
 
@@ -62,6 +64,16 @@ Current clean baseline commit:
   - `services/worker/src/jobs/run-tenant-job.ts`: job wrapper that validates `tenantId` and binds tenant context before any handler query.
   - Integration tests `tenant-rls.test.ts` and `worker-tenant-context.test.ts`: 9 tests proving RLS fail-closed behavior, cross-tenant read/write/update/delete blocking, context binding before handler execution, and job transaction rollback. Verified green against a local PostgreSQL 16 instance; suites self-skip with a notice when no database is reachable.
 
+### 2026-06-12 (Phase 3 / User Story 1)
+
+- Completed T015-T026 (tenant publishes a complete bookable operation), tests first:
+  - Domain: scheduling time primitives with Intl-based DST-safe timezone conversion (`packages/domain/src/scheduling/time.ts`); provider schedules with weekly windows, breaks, day-off and special-day overrides (`providers/provider.ts`); catalog entities with duration/buffer/capacity rules (`catalog/service.ts`); tenant aggregate with branding, locale, timezone, and booking policies (`tenancy/tenant.ts`).
+  - Application: availability engine v1 (pure function over windows, buffers, extras, provider busy intervals, and shared resource allocations), availability service with single-provider auto-selection, tenant admin service, and catalog service, all emitting domain events + audit records through an EventSink port.
+  - Delivery: Fastify API (`services/api/src/api/availability-routes.ts`) with per-request tenant resolution from the Host header (platform/admin/public route groups), and a minimal Next.js 15 admin app (`apps/admin`) with the tenant-setup feature and widget availability preview; `next build` passes.
+  - Infrastructure: in-memory repository adapter implementing the tenant and catalog ports for tests and local dev.
+  - Tests: 17 unit (schedule resolution incl. DST and per-provider timezones; duration/capacity rules), 4 integration (shared resource with quantity 1 blocks competing services across providers, buffers included), 4 e2e over HTTP (single-provider widget omits selection and auto-assigns; second provider flips it to required; unknown hosts rejected; audit events recorded). Full suite: 34 passing.
+- All three US1 acceptance scenarios from `spec.md` are covered by automated tests.
+
 ## Current Backlog
 
 Primary implementation backlog:
@@ -79,7 +91,7 @@ T001-T086
 Current next task:
 
 ```text
-T015 Add tests for provider schedule, breaks, days off, special days, and timezone handling (Phase 3 / User Story 1)
+T027 Add tests for total duration formula with extras and buffers (Phase 4 / User Story 2)
 ```
 
 ## Open Decisions
