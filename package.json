@@ -1,0 +1,44 @@
+{
+  "name": "saas-reservas",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Multitenant booking SaaS (modular monolith): apps, API, workers, and shared packages.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "typecheck": "tsc --build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:integration": "vitest run --project integration",
+    "test:contract": "vitest run --project contract",
+    "test:e2e": "vitest run --project e2e"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@saas-reservas/api": "workspace:*",
+    "@saas-reservas/contracts": "workspace:*",
+    "@saas-reservas/domain": "workspace:*",
+    "@saas-reservas/integrations": "workspace:*",
+    "@saas-reservas/persistence": "workspace:*",
+    "@saas-reservas/tenant-context": "workspace:*",
+    "@saas-reservas/worker": "workspace:*",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.0",
+    "drizzle-orm": "^0.44.0",
+    "eslint": "^9.39.0",
+    "eslint-config-prettier": "^10.1.0",
+    "fastify": "^5.2.0",
+    "ioredis": "^5.11.1",
+    "pg": "^8.13.0",
+    "prettier": "^3.6.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^3.2.0"
+  }
+}

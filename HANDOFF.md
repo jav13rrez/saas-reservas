@@ -1,12 +1,16 @@
 # Handoff
 
-Last updated: 2026-06-11
+Last updated: 2026-06-13
 
 ## Read This First
 
 This is the fastest resume document for Codex, Claude, or any future agent. Read this before making changes.
 
-The project is ready to start implementation, but source code has not started yet.
+Phases 1-7 (T001-T075) are complete. User Story 5 (premium integrations) is fully implemented: encrypted credential vault with envelope/KMS-style key management, calendar OAuth gateway (platform and tenant-owned modes), WhatsApp Cloud API integration, email/SMS message adapters, video meeting adapter boundary, Stripe Connect account management and application fee model, external calendar webhook receiver (Google + Microsoft) with idempotency, attachment pipeline (MIME + size + quota + antivirus + signed URLs), and outbound webhook dispatcher with HMAC signatures and exponential backoff retry. The calendar webhook routes are wired into `buildApp` as an optional `calendarWebhooks` dep. 168 tests pass (172 total; 4 skip without Redis/Postgres docker services). Lint and Prettier pass clean.
+
+The Drizzle/RLS persistence adapter is DONE: `packages/persistence` implements every repository port against PostgreSQL with per-transaction tenant context, verified end to end by `tests/integration/persistence/drizzle-checkout.test.ts`. In-memory adapters remain for fast tests/dev.
+
+Remaining v1 simplifications: `/v1/admin/*` routes have no staff auth yet (identity tasks pending) so they are development-only; customers are generated ids until the customer registry lands; the payment gateway is the fake adapter behind the real `PaymentGateway` port; there is no production server bootstrap yet wiring the Drizzle adapters (compose them like the persistence test does).
 
 ## Current Objective
 
@@ -14,10 +18,18 @@ Prepare and implement a SaaS-native multitenant booking platform inspired by Ame
 
 ## Current Repo State
 
-- Branch: `main`
-- Clean baseline commit: `7d6842e Initial clean project baseline`
+- Branch state: PR #1 merged everything into `main` (merge commit `149d4c0`, 2026-06-12); the working branch `claude/optimistic-babbage-8vdefc` is in sync with `main`. New work continues on the working branch and reaches `main` via PR with user approval.
 - Remote: `origin https://github.com/jav13rrez/saas-reservas.git`
-- Push status: dry-run was successful, but the final real push had not been done when this handoff was written.
+- Stack decisions recorded as ADR-0001 through ADR-0008 in `docs/adr/`: Next.js, Fastify, Drizzle, BullMQ, first-party cookie sessions, deferred AIProviderAdapter, Docker Compose for local dev, and the Holded/Lucide design system (`docs/design-system.md`).
+- T001-T006 complete: pnpm workspace (`pnpm-workspace.yaml`), root tooling (`package.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `vitest.config.ts`), and `packages/contracts` with `environment.ts` and `openapi.ts`.
+- T007-T014 complete: `infra/postgres/001-tenancy.sql` (RLS template + `apply_tenant_rls`), `infra/docker-compose.yml` (Postgres/Redis/MinIO), `packages/tenant-context` (Postgres tenant context, Redis keys, storage paths), `services/api` tenant resolver, `packages/domain` audit/event primitives, `services/worker` `runTenantJob` wrapper, and 9 passing RLS/worker integration tests.
+- T015-T026 complete (User Story 1): scheduling/catalog/tenancy domain modules in `packages/domain`, availability engine + availability/tenant-admin/catalog application services in `services/api/src/application`, Fastify API in `services/api/src/api/availability-routes.ts`, in-memory repository adapter in `services/api/src/infrastructure/memory`, and the Next.js admin app in `apps/admin` (builds with `next build`).
+- T027-T040 complete (User Story 2): booking + payment domain (`packages/domain/src/bookings`, `payments`), pricing/lock/booking/cart-reconciliation services (`services/api/src/application`), `PaymentGateway` adapter boundary + fake gateway (`packages/integrations`), Redis lock store + webhook idempotency (`services/api/src/infrastructure`), checkout + webhook routes (`services/api/src/api/checkout-routes.ts`), and the `apps/booking-widget` Next.js checkout UI.
+- T041-T050 complete (User Story 3): change policy engine + booking change service (cancel with refund + freed occupancy; reschedule with slot validation, subpayment reassignment, occupancy swap), Ed25519 passwordless customer access with one-time nonces and HttpOnly sessions, GDPR anonymization preserving metrics, permission-checked provider portal service, and customer/staff portal routes (`services/api/src/api/portal-routes.ts`).
+- T051-T061 complete (User Story 4): events domain (`packages/domain/src/events`), event pricing/waitlist/recurring services and event store port (`services/api/src/application/events`), recurrence conflict resolver (`application/scheduling`), and event routes (`services/api/src/api/event-routes.ts`). Events persistence is in-memory behind ports (Drizzle tables pending). 110 tests passing across unit/integration/e2e.
+- Redis integration tests need a Redis: `docker compose -f infra/docker-compose.yml up -d redis` (default `redis://127.0.0.1:6379`, override with `TEST_REDIS_URL`). They self-skip when unreachable.
+- Verification commands available and passing: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`.
+- Integration tests need PostgreSQL: `docker compose -f infra/docker-compose.yml up -d postgres`, then `TEST_DATABASE_URL=postgres://saas_admin:saas_admin@localhost:5432/saas_reservas pnpm test:integration` (default URL matches the compose service, so the env var is optional). Suites self-skip when no database is reachable.
 - Local reference folders exist but are ignored by Git: `reference/`, `archive/`, `.codex/`.
 
 ## What Matters Most
@@ -36,35 +48,22 @@ Do not treat `reference/` or `archive/` as source code. They are local research 
 
 Recommended next steps:
 
-1. Push the clean baseline if the user wants it on GitHub:
+1. Start Phase 8 (T076–T086): billing plan + feature flags, operational dashboards, audit search APIs, demo tenant seeds, async worker hardening, booking notification orchestrator, payment reconciliation worker, calendar sync worker, videomeeting provisioning service, final ADRs, and spec acceptance validation.
 
-   ```bash
-   git push -u origin main
-   ```
+2. Consider a small server bootstrap (`services/api/src/main.ts`) that loads `environment.ts`, builds the Drizzle adapters like `tests/integration/persistence/drizzle-checkout.test.ts` does, and starts Fastify — that makes the stack runnable outside tests.
 
-2. Close the first architecture decisions before coding:
+3. Drizzle migration for the events context and the integration context (credential blobs, oauth tokens, calendar mappings, webhook subscriptions, attachment metadata) is a known follow-up; all ports currently use in-memory adapters.
 
-   - Next.js vs alternative frontend shell.
-   - Fastify vs NestJS.
-   - ORM/migrations strategy.
-   - Redis queue library.
-   - Auth/session model.
-   - AI/model-provider abstraction timing.
-
-3. Record those decisions as ADRs under `docs/adr/`.
-
-4. Start `T001` through `T006` from `tasks.md`.
-
-5. After each meaningful implementation session, update `PROGRESS.md`, `HANDOFF.md`, and `tasks.md`.
+4. After each meaningful implementation session, update `PROGRESS.md`, `HANDOFF.md`, and `tasks.md`.
 
 ## Current Task Pointer
 
-Implementation has not started.
+Phases 1-7 (T001-T075) are complete.
 
 Next task:
 
 ```text
-T001 Create target workspace structure and placeholders in apps/admin/.gitkeep, services/api/src/.gitkeep, services/worker/src/.gitkeep, packages/domain/src/.gitkeep, and infra/postgres/.gitkeep
+T076 Add tenant billing plan, feature flag, quota, and usage event model in packages/domain/src/billing/billing.ts
 ```
 
 ## Important Constraints
