@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./jobs/run-tenant-job": {
-      "types": "./dist/jobs/run-tenant-job.d.ts",
-      "default": "./dist/jobs/run-tenant-job.js"
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
     }
   },
   "scripts": {

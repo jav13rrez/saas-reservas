@@ -163,23 +163,23 @@ description: "Implementation task list for a multitenant Amelia-inspired booking
 
 ### Tests for User Story 5
 
-- [ ] T062 [P] [US5] Add tests verifying encrypted credential storage and redacted logs in `tests/integration/security/credential-vault.test.ts`
-- [ ] T063 [P] [US5] Add calendar OAuth platform-mode and tenant-owned OAuth contract tests in `tests/contract/integrations/calendar-oauth.test.ts`
-- [ ] T064 [P] [US5] Add external calendar webhook idempotency and reconciliation tests in `tests/integration/integrations/calendar-webhooks.test.ts`
-- [ ] T065 [P] [US5] Add WhatsApp health check, template mapping, and dispatch tests in `tests/contract/integrations/whatsapp-cloud.test.ts`
-- [ ] T066 [P] [US5] Add attachment MIME, size, quota, malware-scan, and signed URL tests in `tests/integration/files/attachment-pipeline.test.ts`
+- [x] T062 [P] [US5] Add tests verifying encrypted credential storage and redacted logs in `tests/integration/security/credential-vault.test.ts`
+- [x] T063 [P] [US5] Add calendar OAuth platform-mode and tenant-owned OAuth contract tests in `tests/contract/integrations/calendar-oauth.test.ts`
+- [x] T064 [P] [US5] Add external calendar webhook idempotency and reconciliation tests in `tests/integration/integrations/calendar-webhooks.test.ts`
+- [x] T065 [P] [US5] Add WhatsApp health check, template mapping, and dispatch tests in `tests/contract/integrations/whatsapp-cloud.test.ts`
+- [x] T066 [P] [US5] Add attachment MIME, size, quota, malware-scan, and signed URL tests in `tests/integration/files/attachment-pipeline.test.ts`
 
 ### Implementation for User Story 5
 
-- [ ] T067 [US5] Implement encrypted credential vault abstraction and KMS-compatible interface in `packages/integrations/src/security/credential-vault.ts`
-- [ ] T068 [US5] Implement Stripe Connect-style account connection and application fee model in `services/api/src/application/payments/stripe-connect-service.ts`
-- [ ] T069 [US5] Implement calendar OAuth gateway with platform and tenant-owned credential modes in `packages/integrations/src/calendar/calendar-oauth-gateway.ts`
-- [ ] T070 [US5] Implement external calendar mapping and webhook receiver for Google/Microsoft changes in `services/api/src/api/calendar-webhook-routes.ts`
-- [ ] T071 [US5] Implement videomeeting adapter boundary for Meet, Zoom, and Teams in `packages/integrations/src/meetings/meeting-provider.ts`
-- [ ] T072 [US5] Implement WhatsApp Cloud API integration health check, template sync, and placeholder mapping in `packages/integrations/src/notifications/whatsapp-cloud.ts`
-- [ ] T073 [US5] Implement email/SMS notification adapter boundaries in `packages/integrations/src/notifications/message-provider.ts`
-- [ ] T074 [US5] Implement attachment validation, antivirus scan boundary, quota enforcement, and object storage persistence in `services/api/src/application/files/attachment-service.ts`
-- [ ] T075 [US5] Implement outbound webhook subscriptions and retry policy in `services/worker/src/jobs/outbound-webhook-dispatcher.ts`
+- [x] T067 [US5] Implement encrypted credential vault abstraction and KMS-compatible interface in `packages/integrations/src/security/credential-vault.ts`
+- [x] T068 [US5] Implement Stripe Connect-style account connection and application fee model in `services/api/src/application/payments/stripe-connect-service.ts`
+- [x] T069 [US5] Implement calendar OAuth gateway with platform and tenant-owned credential modes in `packages/integrations/src/calendar/calendar-oauth-gateway.ts`
+- [x] T070 [US5] Implement external calendar mapping and webhook receiver for Google/Microsoft changes in `services/api/src/api/calendar-webhook-routes.ts`
+- [x] T071 [US5] Implement videomeeting adapter boundary for Meet, Zoom, and Teams in `packages/integrations/src/meetings/meeting-provider.ts`
+- [x] T072 [US5] Implement WhatsApp Cloud API integration health check, template sync, and placeholder mapping in `packages/integrations/src/notifications/whatsapp-cloud.ts`
+- [x] T073 [US5] Implement email/SMS notification adapter boundaries in `packages/integrations/src/notifications/message-provider.ts`
+- [x] T074 [US5] Implement attachment validation, antivirus scan boundary, quota enforcement, and object storage persistence in `services/api/src/application/files/attachment-service.ts`
+- [x] T075 [US5] Implement outbound webhook subscriptions and retry policy in `services/worker/src/jobs/outbound-webhook-dispatcher.ts`
 
 **Checkpoint**: Premium integrations are tenant-scoped, secure, and observable.
 

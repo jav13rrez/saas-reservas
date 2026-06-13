@@ -1,12 +1,12 @@
 # Handoff
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 ## Read This First
 
 This is the fastest resume document for Codex, Claude, or any future agent. Read this before making changes.
 
-Implementation has started: the stack is decided (ADR-0001..0007) and Phases 1-6 (T001-T061) are complete, including User Story 4 end to end (events with shared/per-ticket capacity, early-bird and occupancy pricing, sellout -> waitlist -> TTL-token promotion -> claim, and this-only/this-and-future series propagation). The next work is Phase 7, User Story 5 (T062-T073): premium integrations with encrypted credentials.
+Phases 1-7 (T001-T075) are complete. User Story 5 (premium integrations) is fully implemented: encrypted credential vault with envelope/KMS-style key management, calendar OAuth gateway (platform and tenant-owned modes), WhatsApp Cloud API integration, email/SMS message adapters, video meeting adapter boundary, Stripe Connect account management and application fee model, external calendar webhook receiver (Google + Microsoft) with idempotency, attachment pipeline (MIME + size + quota + antivirus + signed URLs), and outbound webhook dispatcher with HMAC signatures and exponential backoff retry. The calendar webhook routes are wired into `buildApp` as an optional `calendarWebhooks` dep. 168 tests pass (172 total; 4 skip without Redis/Postgres docker services). Lint and Prettier pass clean.
 
 The Drizzle/RLS persistence adapter is DONE: `packages/persistence` implements every repository port against PostgreSQL with per-transaction tenant context, verified end to end by `tests/integration/persistence/drizzle-checkout.test.ts`. In-memory adapters remain for fast tests/dev.
 
@@ -48,22 +48,22 @@ Do not treat `reference/` or `archive/` as source code. They are local research 
 
 Recommended next steps:
 
-1. Start Phase 7 / User Story 5 (`T062`-`T075`), tests first: encrypted credential vault with redacted logs, calendar OAuth (platform and tenant-owned), and integration adapter contracts.
+1. Start Phase 8 (T076–T086): billing plan + feature flags, operational dashboards, audit search APIs, demo tenant seeds, async worker hardening, booking notification orchestrator, payment reconciliation worker, calendar sync worker, videomeeting provisioning service, final ADRs, and spec acceptance validation.
 
-2. UI work now follows the design system (ADR-0008, `docs/design-system.md`): tokens from `packages/ui`, Lucide icons only, no emojis. The existing admin/widget screens should be restyled to the system as they are next touched.
+2. Consider a small server bootstrap (`services/api/src/main.ts`) that loads `environment.ts`, builds the Drizzle adapters like `tests/integration/persistence/drizzle-checkout.test.ts` does, and starts Fastify — that makes the stack runnable outside tests.
 
-3. Consider a small server bootstrap (`services/api/src/main.ts`) that loads `environment.ts`, builds the Drizzle adapters like `tests/integration/persistence/drizzle-checkout.test.ts` does, and starts Fastify — that makes the stack runnable outside tests.
+3. Drizzle migration for the events context and the integration context (credential blobs, oauth tokens, calendar mappings, webhook subscriptions, attachment metadata) is a known follow-up; all ports currently use in-memory adapters.
 
 4. After each meaningful implementation session, update `PROGRESS.md`, `HANDOFF.md`, and `tasks.md`.
 
 ## Current Task Pointer
 
-Phases 1-6 (T001-T061) are complete.
+Phases 1-7 (T001-T075) are complete.
 
 Next task:
 
 ```text
-T062 Add tests verifying encrypted credential storage and redacted logs in tests/integration/security/credential-vault.test.ts
+T076 Add tenant billing plan, feature flag, quota, and usage event model in packages/domain/src/billing/billing.ts
 ```
 
 ## Important Constraints

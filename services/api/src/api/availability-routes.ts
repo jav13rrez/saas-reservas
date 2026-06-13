@@ -21,6 +21,10 @@ import {
 import { registerCheckoutRoutes, type CheckoutDeps } from "./checkout-routes.js";
 import { registerEventRoutes, type EventDeps } from "./event-routes.js";
 import { registerPortalRoutes, type PortalDeps } from "./portal-routes.js";
+import {
+  registerCalendarWebhookRoutes,
+  type CalendarWebhookDeps,
+} from "./calendar-webhook-routes.js";
 
 export interface AppDeps {
   platformBaseDomain: string;
@@ -36,6 +40,8 @@ export interface AppDeps {
   portal?: PortalDeps;
   /** Events/tickets/waitlist wiring (US4). */
   events?: EventDeps;
+  /** External calendar webhook receiver (US5); omit to disable the routes. */
+  calendarWebhooks?: CalendarWebhookDeps;
 }
 
 interface RequestTenant {
@@ -273,6 +279,9 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   }
   if (deps.events !== undefined) {
     registerEventRoutes(app, deps.events);
+  }
+  if (deps.calendarWebhooks !== undefined) {
+    registerCalendarWebhookRoutes(app, deps.calendarWebhooks);
   }
 
   return app;

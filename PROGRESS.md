@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-06-12
+Last updated: 2026-06-13
 
 ## Current State
 
@@ -128,6 +128,20 @@ Current clean baseline commit:
   - Checkout routes now use a `HoldStore` port (in-memory default, Drizzle implementation) instead of a process-local Map, so webhooks arriving after a restart still settle bookings.
   - Integration test `tests/integration/persistence/drizzle-checkout.test.ts`: the full US1+US2 flow over HTTP against real PostgreSQL — tenant setup, catalog, availability, checkout, idempotent webhook approval, persisted occupancy removing the slot, audit trail per tenant, and RLS proving a booking id is invisible under another tenant's context. Full suite: 61 passing.
 
+### 2026-06-13 (Phase 7 / User Story 5)
+
+- Completed T062–T075 (premium integrations operate securely and at scale), tests first:
+  - Credential vault (T067/T062): `packages/integrations/src/security/credential-vault.ts` — AES-256-GCM envelope encryption, per-tenant/provider/key scoping, `InMemoryKmsAdapter` XOR-wraps DEK, `InMemoryVaultStorage`, tamper detection via GCM auth tag, and `redactedRef` for log-safe references. 14 integration tests.
+  - Calendar OAuth gateway (T069/T063): `packages/integrations/src/calendar/calendar-oauth-gateway.ts` — platform-shared and tenant-owned credential modes, authorization URL construction, code exchange, token refresh with fallback to stored refresh token, revocation, and `FakeHttpAdapter`. 9 contract tests.
+  - WhatsApp Cloud (T072/T065): `packages/integrations/src/notifications/whatsapp-cloud.ts` — health check, template sync, message dispatch with placeholder substitution, and `FakeWhatsAppHttp`. 9 contract tests.
+  - Message provider (T073): `packages/integrations/src/notifications/message-provider.ts` — `MessageProvider` interface + `FakeMessageProvider` with capture and failure injection.
+  - Video meeting adapter (T071): `packages/integrations/src/meetings/meeting-provider.ts` — `MeetingProvider` interface + `FakeMeetingProvider` for Google Meet, Zoom, and Teams.
+  - Stripe Connect (T068): `services/api/src/application/payments/stripe-connect-service.ts` — Express/Standard connected account creation with onboarding link, account status polling, basis-point application fee calculation, and `FakeStripeHttp`. 10 contract tests.
+  - Calendar webhook routes (T070/T064): `services/api/src/api/calendar-webhook-routes.ts` — Google sync handshake + HMAC-signed channel-token validation; Microsoft validation handshake + clientState verification; idempotency via `NotificationIdempotencyStore`; wired into `buildApp` as optional `calendarWebhooks` dep. 10 integration tests.
+  - Attachment service (T074/T066): `services/api/src/application/files/attachment-service.ts` — ordered pipeline (MIME → size → quota → antivirus → upload), `tenants/{id}/attachments/...` storage paths, filename sanitization, signed URL generation, deletion with quota decrement, `FakeAntivirusAdapter`, `FakeStorageAdapter`, `InMemoryQuotaStore`. 12 integration tests.
+  - Outbound webhook dispatcher (T075): `services/worker/src/jobs/outbound-webhook-dispatcher.ts` — HMAC-SHA256 `X-Signature-256` header, exponential backoff (3 attempts × 4× factor), tenant+event-scoped subscription store, `FakeHttpDispatcher`. 10 contract tests. Worker package.json updated to wildcard export.
+  - Full suite: 168 passing, 4 skipped (Redis/Postgres not available in CI container — by design). Lint and Prettier clean.
+
 ## Current Backlog
 
 Primary implementation backlog:
@@ -145,7 +159,7 @@ T001-T086
 Current next task:
 
 ```text
-T062 Add tests verifying encrypted credential storage and redacted logs (Phase 7 / User Story 5)
+T076 Add tenant billing plan, feature flag, quota, and usage event model in packages/domain/src/billing/billing.ts
 ```
 
 ## Open Decisions
