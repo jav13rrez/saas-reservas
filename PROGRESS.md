@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-06-11
+Last updated: 2026-06-12
 
 ## Current State
 
@@ -85,6 +85,10 @@ Current clean baseline commit:
   - Infrastructure: Redis lock store (SET NX PX + compare-and-delete Lua) and in-memory equivalent; webhook idempotency processor (at-most-once per tenant+gateway, audited).
   - Delivery: `POST /v1/public/checkout` (slot validation against the engine -> locks -> pending booking -> cart charge) and `POST /v1/public/payments/webhook` (idempotent approval/rejection + lock release + occupancy recording); `apps/booking-widget` Next.js app with the checkout feature (`next build` passes).
   - Tests: 12 unit (duration formula, state machine, pricing), 8 integration (Redis lock concurrency/TTL/ownership/tenant-scoping against real Redis; cart reconciliation + webhook idempotency), 3 e2e over HTTP (pending -> webhook approval -> slot disappears from availability; declined charge -> rejected booking + lock release; off-schedule slot rejected). Full suite: 58 passing.
+
+### 2026-06-12 (merge to main)
+
+- Opened and merged PR #1 with the owner's approval: all work from Phases 1-6 (8 commits — ADRs, foundations, US1-US4, Drizzle/RLS persistence, design system) is now on `main` (merge commit `149d4c0`). The working branch stays in sync with `main`; future work merges via PR.
 
 ### 2026-06-12 (design system)
 

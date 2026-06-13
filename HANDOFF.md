@@ -18,9 +18,9 @@ Prepare and implement a SaaS-native multitenant booking platform inspired by Ame
 
 ## Current Repo State
 
-- Working branch: `claude/optimistic-babbage-8vdefc` (branched from `main` at `7d6842e`, plus the cross-agent docs commit `a36a6e1`).
+- Branch state: PR #1 merged everything into `main` (merge commit `149d4c0`, 2026-06-12); the working branch `claude/optimistic-babbage-8vdefc` is in sync with `main`. New work continues on the working branch and reaches `main` via PR with user approval.
 - Remote: `origin https://github.com/jav13rrez/saas-reservas.git`
-- Stack decisions recorded as ADR-0001 through ADR-0007 in `docs/adr/`: Next.js, Fastify, Drizzle, BullMQ, first-party cookie sessions, deferred AIProviderAdapter, Docker Compose for local dev.
+- Stack decisions recorded as ADR-0001 through ADR-0008 in `docs/adr/`: Next.js, Fastify, Drizzle, BullMQ, first-party cookie sessions, deferred AIProviderAdapter, Docker Compose for local dev, and the Holded/Lucide design system (`docs/design-system.md`).
 - T001-T006 complete: pnpm workspace (`pnpm-workspace.yaml`), root tooling (`package.json`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `vitest.config.ts`), and `packages/contracts` with `environment.ts` and `openapi.ts`.
 - T007-T014 complete: `infra/postgres/001-tenancy.sql` (RLS template + `apply_tenant_rls`), `infra/docker-compose.yml` (Postgres/Redis/MinIO), `packages/tenant-context` (Postgres tenant context, Redis keys, storage paths), `services/api` tenant resolver, `packages/domain` audit/event primitives, `services/worker` `runTenantJob` wrapper, and 9 passing RLS/worker integration tests.
 - T015-T026 complete (User Story 1): scheduling/catalog/tenancy domain modules in `packages/domain`, availability engine + availability/tenant-admin/catalog application services in `services/api/src/application`, Fastify API in `services/api/src/api/availability-routes.ts`, in-memory repository adapter in `services/api/src/infrastructure/memory`, and the Next.js admin app in `apps/admin` (builds with `next build`).
@@ -48,11 +48,9 @@ Do not treat `reference/` or `archive/` as source code. They are local research 
 
 Recommended next steps:
 
-1. Merge the working branch `claude/optimistic-babbage-8vdefc` into `main` when the user approves.
+1. Start Phase 7 / User Story 5 (`T062`-`T075`), tests first: encrypted credential vault with redacted logs, calendar OAuth (platform and tenant-owned), and integration adapter contracts.
 
-2. Start Phase 7 / User Story 5 (`T062`-`T075`), tests first: encrypted credential vault with redacted logs, calendar OAuth (platform and tenant-owned), and integration adapter contracts.
-
-2b. UI work now follows the design system (ADR-0008, `docs/design-system.md`): tokens from `packages/ui`, Lucide icons only, no emojis. The existing admin/widget screens should be restyled to the system as they are next touched.
+2. UI work now follows the design system (ADR-0008, `docs/design-system.md`): tokens from `packages/ui`, Lucide icons only, no emojis. The existing admin/widget screens should be restyled to the system as they are next touched.
 
 3. Consider a small server bootstrap (`services/api/src/main.ts`) that loads `environment.ts`, builds the Drizzle adapters like `tests/integration/persistence/drizzle-checkout.test.ts` does, and starts Fastify — that makes the stack runnable outside tests.
 
