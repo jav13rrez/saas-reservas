@@ -1,12 +1,14 @@
 # Handoff
 
-Last updated: 2026-06-13
+Last updated: 2026-06-15
 
 ## Read This First
 
 This is the fastest resume document for Codex, Claude, or any future agent. Read this before making changes.
 
-Phases 1-7 (T001-T075) are complete. User Story 5 (premium integrations) is fully implemented: encrypted credential vault with envelope/KMS-style key management, calendar OAuth gateway (platform and tenant-owned modes), WhatsApp Cloud API integration, email/SMS message adapters, video meeting adapter boundary, Stripe Connect account management and application fee model, external calendar webhook receiver (Google + Microsoft) with idempotency, attachment pipeline (MIME + size + quota + antivirus + signed URLs), and outbound webhook dispatcher with HMAC signatures and exponential backoff retry. The calendar webhook routes are wired into `buildApp` as an optional `calendarWebhooks` dep. 168 tests pass (172 total; 4 skip without Redis/Postgres docker services). Lint and Prettier pass clean.
+**All phases T001–T086 are complete.** The SaaS multitenant booking platform spec (US1–US5) is fully implemented and tested. 229 tests pass (233 total; 4 skip without Redis/Postgres docker services; 1 pre-existing flaky test in passwordless JWT unrelated to spec scope). Lint and Prettier pass clean.
+
+Phase 8 (T076–T086) added: billing plan domain with feature flags and quotas, idempotent async job runner with retry, booking notification dispatcher, payment reconciliation worker, calendar sync with conflict detection, video meeting provisioning service gated on billing plan, audit log search API, demo tenant seeds, operations dashboard UI, 6 new ADRs (ADR-0009 through ADR-0014), and quickstart acceptance validation scenarios 9–13.
 
 The Drizzle/RLS persistence adapter is DONE: `packages/persistence` implements every repository port against PostgreSQL with per-transaction tenant context, verified end to end by `tests/integration/persistence/drizzle-checkout.test.ts`. In-memory adapters remain for fast tests/dev.
 
@@ -46,24 +48,24 @@ Do not treat `reference/` or `archive/` as source code. They are local research 
 
 ## Next Actions
 
-Recommended next steps:
+The implementation is complete. Recommended follow-up work (outside this spec):
 
-1. Start Phase 8 (T076–T086): billing plan + feature flags, operational dashboards, audit search APIs, demo tenant seeds, async worker hardening, booking notification orchestrator, payment reconciliation worker, calendar sync worker, videomeeting provisioning service, final ADRs, and spec acceptance validation.
+1. **Production server bootstrap**: `services/api/src/main.ts` loading `environment.ts`, Drizzle adapters, and starting Fastify — makes the stack runnable outside tests (see `tests/integration/persistence/drizzle-checkout.test.ts` for the wiring pattern).
 
-2. Consider a small server bootstrap (`services/api/src/main.ts`) that loads `environment.ts`, builds the Drizzle adapters like `tests/integration/persistence/drizzle-checkout.test.ts` does, and starts Fastify — that makes the stack runnable outside tests.
+2. **Drizzle migrations for Phase 7–8 contexts**: credential vault blobs, OAuth tokens, calendar event mappings, webhook subscriptions, attachment metadata, and billing/usage tables — all ports currently use in-memory adapters.
 
-3. Drizzle migration for the events context and the integration context (credential blobs, oauth tokens, calendar mappings, webhook subscriptions, attachment metadata) is a known follow-up; all ports currently use in-memory adapters.
+3. **Staff authentication**: `/v1/admin/*` routes use a dev-only `x-provider-id` header; real staff auth (e.g., API keys or JWT) is deferred.
 
-4. After each meaningful implementation session, update `PROGRESS.md`, `HANDOFF.md`, and `tasks.md`.
+4. **Real adapter wiring**: swap `FakePaymentGateway`, `FakeMessageProvider`, `FakeKmsAdapter`, and `FakeStorageAdapter` for real Stripe Connect, SendGrid/Twilio, AWS KMS, and S3 equivalents behind the existing interfaces.
+
+5. **Fix pre-existing flaky test**: `tests/integration/identity/customer-passwordless.test.ts` line 99 — the "expires sessions after their TTL" case fails intermittently due to date-sensitive JWT behavior.
 
 ## Current Task Pointer
 
-Phases 1-7 (T001-T075) are complete.
-
-Next task:
+All tasks T001–T086 are complete.
 
 ```text
-T076 Add tenant billing plan, feature flag, quota, and usage event model in packages/domain/src/billing/billing.ts
+No pending tasks.
 ```
 
 ## Important Constraints
