@@ -494,24 +494,77 @@ Observaciones:
 
 ## Locations
 
-[pendiente — compartir captura]
+**Revisado: 2026-06-16** (lista + ficha New Location).
 
-Preguntas clave:
-- ¿Qué campos tiene una Location? (nombre, dirección, timezone, teléfono, foto…)
-- ¿Se asignan Employees a la Location desde aquí o desde la ficha del Employee?
-- ¿Hay mapa embebido?
+### Lista
+
+```
+Locations
+├── Toolbar: [Search locations] · [icono filtro] · [···] · [ + ]
+├── cols: [✓] | ID | NAME (pin) | ADDRESS | PHONE | VISIBILITY | ···
+└── ejemplos: "Empire State Plaza", "34th Street", "Zoom Meeting / Online"
+```
+
+### Ficha (New Location) — tab única Details
+
+```
+· Upload image
+· Name *        (Translate)
+· Phone number  (selector país)
+· Address       (con integración Google Maps si hay API key en ajustes)
+· Description   (Translate)
+· botones: Close | Save
+```
+
+Observaciones:
+- **Una Location puede ser online** ("Zoom Meeting / Online", Address = "Online"). La sede no es
+  solo física → encaja con servicios/eventos virtuales. Nuestro `Location` asume sitio físico.
+- **No hay campo timezone en el modal** de este ejemplo (Amelia lo gestiona global o por empleado).
+  Nuestro `Location` sí tiene `timezone?` — divergencia menor; lo nuestro es más explícito.
+- **Address con Google Maps** (requiere API key). Detalle de integración, no esencial ahora.
+- **No se asignan Employees/Resources desde la Location** — la relación se define desde el otro lado
+  (Employee.location, Resource.locations). Coherente con el patrón "el hub declara sus relaciones".
+- Estructura mínima (solo Details), como Resource.
 
 ---
 
 ## Customers
 
-[pendiente — compartir captura]
+**Revisado: 2026-06-16** (lista + ficha New customer).
 
-Preguntas clave:
-- ¿Qué campos tiene la ficha de un Customer?
-- ¿Historial de reservas dentro de la ficha?
-- ¿Hay notas internas o tags?
-- ¿Cómo se busca/filtra?
+### Lista
+
+```
+Customers
+├── Toolbar: [Search customers] · [icono filtro] · [···] · [ + ]
+├── cols: [✓] | ID | NAME | PHONE | EMAIL | NOTE | LAST BOOKING | ···
+│   ├── NOTE = botón "+" para añadir nota inline desde la tabla
+│   └── LAST BOOKING = fecha de la última reserva (o "-")
+└── paginación: Total 39, 10/page
+```
+
+### Ficha (New customer) — tab única Details
+
+```
+· First name *  |  Last name *
+· Phone number (selector país)  |  Email
+· Date of birth  |  Gender (dropdown)
+· WordPress user (dropdown)  |  Notification language (dropdown)
+· Note (internal)
+· botones: Close | Save
+```
+
+Observaciones / ideas a robar:
+- **LAST BOOKING en la lista** — métrica de actividad del cliente muy útil. No la tenemos.
+- **Nota inline desde la tabla** (botón "+") además de la Note interna en la ficha.
+- **Notification language por cliente** — idioma de sus notificaciones. Encaja con i18n.
+- **WordPress user** vincula al cliente con una cuenta (acceso al portal de cliente). Nuestro
+  equivalente: acceso passwordless Ed25519 (ya en backend).
+- Campos extra que no tenemos: **Date of birth, Gender** (y Custom Fields para lo demás).
+- Solo nombre + email son los mínimos; el resto opcional. Nuestra ficha de Cliente cubre
+  name/email/phone; faltarían birth/gender/idioma/nota y el "last booking" en la lista.
+- **Email obligatorio NO marcado con `*`** aquí (solo First/Last name tienen `*`). Amelia permite
+  cliente sin email (p.ej. walk-ins). Nosotros lo exigimos.
 
 ---
 
@@ -566,9 +619,31 @@ Preguntas clave:
 
 ---
 
+## Decisiones pendientes (para tratar al cerrar el barrido)
+
+1. **⭐ Modelo de recursos: ¿migrar al "hub" de Amelia?** (ver Catalog → Resources)
+   Hoy: `service.resourceId` (1→1) + `resource.locationId` (1→1) + `provider.resourceIds` (modelo B).
+   Amelia: el Recurso declara `Services[] × Locations[] × Employees[]` (con "All" por defecto) +
+   partición de cantidad `shared / per-service / per-location` + uso en group booking.
+   **Implicaciones a explicar al dueño antes de decidir** (pendiente de conversación).
+2. **Category como entidad** (no texto libre) que filtra servicios en el modal de reserva.
+3. **Scheduling por proveedor** (Work hours / Days off / Special days) en el admin.
+4. **Capacidad min/max por servicio** (group booking) y reservas con varios clientes.
+5. **Location online/virtual** (no solo física) y **Location elegible explícita** en la reserva.
+
 ## Observaciones transversales
 
 *(Se irán añadiendo a medida que veamos más pantallas)*
+
+- **Patrón "el hub declara sus relaciones":** las relaciones N:M (resource↔service↔location↔
+  employee) se editan desde la entidad "central" de cada caso, con "All" como default, no desde
+  ambos lados con checkboxes. Reduce fricción de configuración.
+- **Estructura de modales consistente:** image + Name + Color + "Show on website" + Description
+  (Text/HTML, i18n) se repite en Service, Event, Package, Employee, Location. Vale la pena un
+  componente de formulario común.
+- **Toolbar de lista consistente:** Search + (date range) + filtro + acciones masivas (···) + "+".
+- **"Note (internal)"** en casi todas las entidades (cita, empleado, cliente, servicio).
+- **i18n por campo** ("Translate") es transversal.
 
 - Los **Resources están dentro de Catalog**, no son top-level. Decisión consciente nuestra de
   separarlos por la importancia del constraint de capacidad física.
