@@ -47,6 +47,13 @@ export interface AvailabilityInput {
   /** Existing bookings of this provider as UTC intervals including their buffers. */
   providerBusy: Interval[];
   resources: ResourceDemand[];
+  /**
+   * Resources the selected provider is eligible to use (model B). When set and
+   * non-empty, the provider may only use these resources; if the service
+   * demands a resource the provider is not eligible for, no slots are offered.
+   * Omit (or pass empty) to treat the provider as unconstrained.
+   */
+  providerEligibleResourceIds?: string[];
   /** Candidate step; defaults to the customer-facing appointment duration. */
   slotStepMinutes?: number;
 }
@@ -67,6 +74,16 @@ function resourcesAvailable(occupied: Interval, demands: ResourceDemand[]): bool
 }
 
 export function computeAvailableSlots(input: AvailabilityInput): AvailableSlot[] {
+  // Model B: a provider constrained by eligibility cannot serve a service that
+  // demands a resource they are not eligible for, so it has zero availability.
+  const eligible = input.providerEligibleResourceIds;
+  if (eligible !== undefined && eligible.length > 0) {
+    const allowed = new Set(eligible);
+    if (!input.resources.every((demand) => allowed.has(demand.resourceId))) {
+      return [];
+    }
+  }
+
   const windows = resolveWorkingWindows(input.scheduleEntries, input.date, input.timezone);
   if (windows.length === 0) {
     return [];

@@ -24,6 +24,7 @@ import {
   resourceAllocations,
   resources,
   categories,
+  providerResources,
   serviceProviders,
   serviceResources,
   services,
@@ -78,6 +79,31 @@ export class DrizzleCatalogRepository {
 
   async linkResource(link: ServiceResource): Promise<void> {
     await this.db.withTenant(link.tenantId, (tx) => tx.insert(serviceResources).values(link));
+  }
+
+  async setProviderResources(
+    tenantId: string,
+    providerId: string,
+    resourceIds: string[],
+  ): Promise<void> {
+    await this.db.withTenant(tenantId, async (tx) => {
+      await tx.delete(providerResources).where(eq(providerResources.providerId, providerId));
+      if (resourceIds.length > 0) {
+        await tx
+          .insert(providerResources)
+          .values(resourceIds.map((resourceId) => ({ tenantId, providerId, resourceId })));
+      }
+    });
+  }
+
+  async listProviderEligibleResourceIds(tenantId: string, providerId: string): Promise<string[]> {
+    const rows = await this.db.withTenant(tenantId, (tx) =>
+      tx
+        .select({ resourceId: providerResources.resourceId })
+        .from(providerResources)
+        .where(eq(providerResources.providerId, providerId)),
+    );
+    return rows.map((row) => row.resourceId);
   }
 
   async findProviderById(tenantId: string, providerId: string): Promise<Provider | null> {
@@ -173,7 +199,12 @@ export class DrizzleCatalogRepository {
         .from(serviceResources)
         .innerJoin(resources, eq(serviceResources.resourceId, resources.id))
         .where(and(eq(serviceResources.serviceId, serviceId), eq(resources.status, "active")));
-      return rows;
+      // Normalize nullable location_id (DB) to the optional domain shape.
+      return rows.map((row) => {
+        const { locationId, ...rest } = row.resource;
+        const resource: Resource = locationId === null ? rest : { ...rest, locationId };
+        return { resource, units: row.units };
+      });
     });
   }
 
