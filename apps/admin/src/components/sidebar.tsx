@@ -22,6 +22,8 @@ import {
   BarChart2,
   ScrollText,
   Settings,
+  Boxes,
+  MapPin,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -54,6 +56,8 @@ const SECTIONS: NavSection[] = [
     title: "Catálogo",
     items: [
       { href: "/services", label: "Servicios", icon: Package },
+      { href: "/resources", label: "Recursos", icon: Boxes },
+      { href: "/locations", label: "Ubicaciones", icon: MapPin },
       { href: "/providers", label: "Proveedores", icon: UserCog },
       { href: "/customers", label: "Clientes", icon: Contact },
     ],

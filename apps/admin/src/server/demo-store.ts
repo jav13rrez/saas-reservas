@@ -1,5 +1,6 @@
 /**
- * In-memory data store for the admin console's Servicios and Reservas screens.
+ * In-memory data store for the admin console's Servicios, Reservas, Recursos and
+ * Ubicaciones screens.
  *
  * This mirrors the operations dashboard's approach: the canonical domain logic
  * lives in packages/domain and services/api, but those require the Fastify
@@ -8,10 +9,38 @@
  * this process-local store. State persists for the life of the dev server and
  * is stashed on globalThis so it survives hot-module reloads.
  *
+ * It implements the resource model end to end so the "4 therapists / 2 rooms"
+ * constraint is observable: a service may demand units of a resource (a pool
+ * with a quantity at a location), and a booking is rejected when it would
+ * exceed the resource's concurrent capacity. Mirrors model B/C from
+ * docs/analysis/resources-model-review.md.
+ *
  * Money is stored in minor units (cents). Times are ISO-8601 strings.
  */
 
 import { randomUUID } from "node:crypto";
+
+export type StoreResult<T> = { ok: true; value: T } | { ok: false; error: string };
+
+// ---------------------------------------------------------------------------
+// Entities
+// ---------------------------------------------------------------------------
+
+export interface AdminLocation {
+  id: string;
+  name: string;
+  timezone?: string;
+  address?: string;
+  active: boolean;
+}
+
+export interface AdminResource {
+  id: string;
+  name: string;
+  quantity: number;
+  locationId?: string;
+  active: boolean;
+}
 
 export interface AdminService {
   id: string;
@@ -21,6 +50,9 @@ export interface AdminService {
   bufferAfterMinutes: number;
   priceAmount: number;
   currency: string;
+  /** Optional resource demand: each booking consumes `resourceUnits` of it. */
+  resourceId?: string;
+  resourceUnits?: number;
   active: boolean;
 }
 
@@ -41,9 +73,15 @@ export interface AdminBooking {
 }
 
 interface DemoData {
+  locations: AdminLocation[];
+  resources: AdminResource[];
   services: AdminService[];
   bookings: AdminBooking[];
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function isoAt(daysFromNow: number, hour: number, minute = 0): string {
   const d = new Date();
@@ -56,7 +94,49 @@ function addMinutes(iso: string, minutes: number): string {
   return new Date(new Date(iso).getTime() + minutes * 60_000).toISOString();
 }
 
+function intervalsOverlap(aStart: string, aEnd: string, bStart: string, bEnd: string): boolean {
+  return aStart < bEnd && bStart < aEnd;
+}
+
+// ---------------------------------------------------------------------------
+// Seed
+// ---------------------------------------------------------------------------
+
 function seed(): DemoData {
+  const sedeCentro: AdminLocation = {
+    id: randomUUID(),
+    name: "Sede Centro",
+    timezone: "Europe/Madrid",
+    address: "Calle Mayor 1",
+    active: true,
+  };
+  const sedeNorte: AdminLocation = {
+    id: randomUUID(),
+    name: "Sede Norte",
+    timezone: "Europe/Madrid",
+    active: true,
+  };
+  const locations: AdminLocation[] = [sedeCentro, sedeNorte];
+
+  // Two therapy rooms at Sede Centro: the bottleneck in the classic example.
+  const salaTerapia: AdminResource = {
+    id: randomUUID(),
+    name: "Sala de terapia",
+    quantity: 2,
+    locationId: sedeCentro.id,
+    active: true,
+  };
+  const resources: AdminResource[] = [
+    salaTerapia,
+    {
+      id: randomUUID(),
+      name: "Box de tratamiento",
+      quantity: 1,
+      locationId: sedeNorte.id,
+      active: true,
+    },
+  ];
+
   const services: AdminService[] = [
     {
       id: randomUUID(),
@@ -70,12 +150,14 @@ function seed(): DemoData {
     },
     {
       id: randomUUID(),
-      name: "Sesión de seguimiento",
-      category: "General",
+      name: "Sesión de terapia",
+      category: "Terapia",
       durationMinutes: 45,
       bufferAfterMinutes: 10,
       priceAmount: 6000,
       currency: "EUR",
+      resourceId: salaTerapia.id,
+      resourceUnits: 1,
       active: true,
     },
     {
@@ -90,7 +172,7 @@ function seed(): DemoData {
     },
   ];
 
-  const [consulta, seguimiento] = services;
+  const [consulta, terapia] = services;
   const bookings: AdminBooking[] = [];
 
   if (consulta !== undefined) {
@@ -109,40 +191,24 @@ function seed(): DemoData {
       createdAt: isoAt(-1, 9),
     });
   }
-  if (seguimiento !== undefined) {
+  if (terapia !== undefined) {
     const startAt = isoAt(2, 16, 30);
     bookings.push({
       id: randomUUID(),
-      serviceId: seguimiento.id,
-      serviceName: seguimiento.name,
+      serviceId: terapia.id,
+      serviceName: terapia.name,
       customerName: "Marcos Gil",
       customerEmail: "marcos@example.com",
       startAt,
-      endAt: addMinutes(startAt, seguimiento.durationMinutes),
+      endAt: addMinutes(startAt, terapia.durationMinutes),
       status: "confirmed",
-      priceAmount: seguimiento.priceAmount,
-      currency: seguimiento.currency,
+      priceAmount: terapia.priceAmount,
+      currency: terapia.currency,
       createdAt: isoAt(-2, 14),
     });
   }
-  if (consulta !== undefined) {
-    const startAt = isoAt(-3, 11);
-    bookings.push({
-      id: randomUUID(),
-      serviceId: consulta.id,
-      serviceName: consulta.name,
-      customerName: "Sofía Navarro",
-      customerEmail: "sofia@example.com",
-      startAt,
-      endAt: addMinutes(startAt, consulta.durationMinutes),
-      status: "cancelled",
-      priceAmount: consulta.priceAmount,
-      currency: consulta.currency,
-      createdAt: isoAt(-5, 10),
-    });
-  }
 
-  return { services, bookings };
+  return { locations, resources, services, bookings };
 }
 
 const globalForStore = globalThis as typeof globalThis & {
@@ -152,6 +218,108 @@ const globalForStore = globalThis as typeof globalThis & {
 function data(): DemoData {
   globalForStore.__saasDemoStore ??= seed();
   return globalForStore.__saasDemoStore;
+}
+
+// ---------------------------------------------------------------------------
+// Locations
+// ---------------------------------------------------------------------------
+
+export function listLocations(): AdminLocation[] {
+  return [...data().locations];
+}
+
+export function findLocation(id: string): AdminLocation | undefined {
+  return data().locations.find((l) => l.id === id);
+}
+
+export interface CreateLocationInput {
+  name: string;
+  timezone: string;
+  address: string;
+}
+
+export function createLocation(input: CreateLocationInput): StoreResult<AdminLocation> {
+  const name = input.name.trim();
+  if (name === "") {
+    return { ok: false, error: "El nombre de la ubicación es obligatorio." };
+  }
+  const timezone = input.timezone.trim();
+  if (timezone !== "") {
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+    } catch {
+      return { ok: false, error: "Zona horaria IANA no válida." };
+    }
+  }
+  const address = input.address.trim();
+  const location: AdminLocation = {
+    id: randomUUID(),
+    name,
+    active: true,
+    ...(timezone !== "" ? { timezone } : {}),
+    ...(address !== "" ? { address } : {}),
+  };
+  data().locations.unshift(location);
+  return { ok: true, value: location };
+}
+
+export function setLocationActive(id: string, active: boolean): StoreResult<AdminLocation> {
+  const location = findLocation(id);
+  if (location === undefined) {
+    return { ok: false, error: "Ubicación no encontrada." };
+  }
+  location.active = active;
+  return { ok: true, value: location };
+}
+
+// ---------------------------------------------------------------------------
+// Resources
+// ---------------------------------------------------------------------------
+
+export function listResources(): AdminResource[] {
+  return [...data().resources];
+}
+
+export function findResource(id: string): AdminResource | undefined {
+  return data().resources.find((r) => r.id === id);
+}
+
+export interface CreateResourceInput {
+  name: string;
+  quantity: number;
+  locationId: string;
+}
+
+export function createResource(input: CreateResourceInput): StoreResult<AdminResource> {
+  const name = input.name.trim();
+  if (name === "") {
+    return { ok: false, error: "El nombre del recurso es obligatorio." };
+  }
+  if (!Number.isInteger(input.quantity) || input.quantity < 1) {
+    return { ok: false, error: "La cantidad debe ser un entero de al menos 1." };
+  }
+  const locationId = input.locationId.trim();
+  if (locationId !== "" && findLocation(locationId) === undefined) {
+    return { ok: false, error: "La ubicación seleccionada no existe." };
+  }
+  const resource: AdminResource = {
+    id: randomUUID(),
+    name,
+    quantity: input.quantity,
+    active: true,
+    ...(locationId !== "" ? { locationId } : {}),
+  };
+  data().resources.unshift(resource);
+  return { ok: true, value: resource };
+}
+
+export function setResourceActive(id: string, active: boolean): StoreResult<AdminResource> {
+  const resource = findResource(id);
+  if (resource === undefined) {
+    return { ok: false, error: "Recurso no encontrado." };
+  }
+  resource.active = active;
+  return { ok: true, value: resource };
 }
 
 // ---------------------------------------------------------------------------
@@ -173,9 +341,9 @@ export interface CreateServiceInput {
   bufferAfterMinutes: number;
   priceAmount: number;
   currency: string;
+  resourceId: string;
+  resourceUnits: number;
 }
-
-export type StoreResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
 export function createService(input: CreateServiceInput): StoreResult<AdminService> {
   const name = input.name.trim();
@@ -188,6 +356,25 @@ export function createService(input: CreateServiceInput): StoreResult<AdminServi
   if (!Number.isFinite(input.priceAmount) || input.priceAmount < 0) {
     return { ok: false, error: "El precio no puede ser negativo." };
   }
+  const resourceId = input.resourceId.trim();
+  let demand: { resourceId: string; resourceUnits: number } | undefined;
+  if (resourceId !== "") {
+    const resource = findResource(resourceId);
+    if (resource === undefined) {
+      return { ok: false, error: "El recurso seleccionado no existe." };
+    }
+    const units = Number.isFinite(input.resourceUnits) ? Math.round(input.resourceUnits) : 1;
+    if (units < 1) {
+      return { ok: false, error: "Las unidades de recurso deben ser al menos 1." };
+    }
+    if (units > resource.quantity) {
+      return {
+        ok: false,
+        error: `El servicio pide ${String(units)} unidades pero el recurso solo tiene ${String(resource.quantity)}.`,
+      };
+    }
+    demand = { resourceId, resourceUnits: units };
+  }
   const service: AdminService = {
     id: randomUUID(),
     name,
@@ -197,6 +384,7 @@ export function createService(input: CreateServiceInput): StoreResult<AdminServi
     priceAmount: Math.round(input.priceAmount),
     currency: input.currency.trim() === "" ? "EUR" : input.currency.trim().toUpperCase(),
     active: true,
+    ...(demand ?? {}),
   };
   data().services.unshift(service);
   return { ok: true, value: service };
@@ -212,7 +400,7 @@ export function setServiceActive(id: string, active: boolean): StoreResult<Admin
 }
 
 // ---------------------------------------------------------------------------
-// Bookings
+// Bookings (with resource-capacity enforcement)
 // ---------------------------------------------------------------------------
 
 export function listBookings(): AdminBooking[] {
@@ -224,6 +412,28 @@ export interface CreateBookingInput {
   customerName: string;
   customerEmail: string;
   startAt: string;
+}
+
+/**
+ * Units of `resourceId` already committed by confirmed bookings overlapping
+ * [start, end). Sums across every service that demands the same resource — the
+ * resource is the shared bottleneck regardless of service or provider.
+ */
+function unitsInUse(resourceId: string, start: string, end: string): number {
+  let used = 0;
+  for (const booking of data().bookings) {
+    if (booking.status !== "confirmed") {
+      continue;
+    }
+    const service = findService(booking.serviceId);
+    if (service?.resourceId !== resourceId || service.resourceUnits === undefined) {
+      continue;
+    }
+    if (intervalsOverlap(start, end, booking.startAt, booking.endAt)) {
+      used += service.resourceUnits;
+    }
+  }
+  return used;
 }
 
 export function createBooking(input: CreateBookingInput): StoreResult<AdminBooking> {
@@ -244,6 +454,26 @@ export function createBooking(input: CreateBookingInput): StoreResult<AdminBooki
     return { ok: false, error: "La fecha y hora de inicio no son válidas." };
   }
   const startAt = start.toISOString();
+  const endAt = addMinutes(startAt, service.durationMinutes);
+
+  // Resource-capacity check (the "4 therapists / 2 rooms" constraint).
+  if (service.resourceId !== undefined && service.resourceUnits !== undefined) {
+    const resource = findResource(service.resourceId);
+    if (resource === undefined) {
+      return { ok: false, error: "El recurso del servicio ya no existe." };
+    }
+    if (!resource.active) {
+      return { ok: false, error: `El recurso "${resource.name}" está inactivo.` };
+    }
+    const used = unitsInUse(resource.id, startAt, endAt);
+    if (used + service.resourceUnits > resource.quantity) {
+      return {
+        ok: false,
+        error: `Sin capacidad de "${resource.name}" en ese horario (${String(used)}/${String(resource.quantity)} en uso).`,
+      };
+    }
+  }
+
   const booking: AdminBooking = {
     id: randomUUID(),
     serviceId: service.id,
@@ -251,7 +481,7 @@ export function createBooking(input: CreateBookingInput): StoreResult<AdminBooki
     customerName,
     customerEmail,
     startAt,
-    endAt: addMinutes(startAt, service.durationMinutes),
+    endAt,
     status: "confirmed",
     priceAmount: service.priceAmount,
     currency: service.currency,

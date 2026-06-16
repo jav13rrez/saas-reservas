@@ -24,6 +24,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     bufferAfterMinutes: number;
     priceAmount: number;
     currency: string;
+    resourceId: string;
+    resourceUnits: number;
   }>;
 
   const result = createService({
@@ -33,6 +35,8 @@ export async function POST(request: Request): Promise<NextResponse> {
     bufferAfterMinutes: typeof input.bufferAfterMinutes === "number" ? input.bufferAfterMinutes : 0,
     priceAmount: typeof input.priceAmount === "number" ? input.priceAmount : NaN,
     currency: typeof input.currency === "string" ? input.currency : "EUR",
+    resourceId: typeof input.resourceId === "string" ? input.resourceId : "",
+    resourceUnits: typeof input.resourceUnits === "number" ? input.resourceUnits : 1,
   });
 
   if (!result.ok) {
