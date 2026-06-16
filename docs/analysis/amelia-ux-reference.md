@@ -347,9 +347,11 @@ Special days: jornadas con horario especial
 ```
 
 Observaciones / ideas a robar:
-- **MUY IMPORTANTE — no hay tab "Resources" en el empleado.** En Amelia los recursos NO se asignan
-  al empleado; la elegibilidad proveedor↔recurso es una **extensión nuestra (modelo B, ADR-0015)**
-  que va más allá de Amelia. Confirma que nuestra decisión es un añadido consciente, no una copia.
+- **No hay tab "Resources" en el empleado** — pero OJO: esto NO significa que Amelia no ligue
+  recursos a empleados. **Sí lo hace**, solo que la relación se configura **desde el Recurso**
+  (selector *Employees* en la ficha de Resource — ver Catalog → Resources). Corrección de una
+  conclusión previa: nuestro modelo B (elegibilidad proveedor↔recurso) **coincide con Amelia**, con
+  la dirección de configuración invertida (`provider.resourceIds` vs `resource.employeeIds`).
 - **Scheduling propio del empleado** (Work hours / Days off / Special days) que **nosotros aún no
   tenemos**. Hoy nuestra disponibilidad se calcula en el motor (backend) pero el admin no expone la
   edición del horario por proveedor. Brecha clara para una iteración.
@@ -381,29 +383,112 @@ Comparativa rápida con nuestra ficha de Proveedor:
 
 ## Catalog
 
-[pendiente — compartir capturas: Services y Resources]
+**Revisado: 2026-06-16** (fichas New service, New package, New resource).
 
-### Services
+Catalog agrupa Services, Packages y Resources (cada uno con su propia lista + modal).
 
-Preguntas clave:
-- ¿Ficha de un Service: qué tabs tiene?
-- ¿Cómo se asignan Employees al servicio?
-- ¿Dónde se configura la duración, buffer before/after, precio?
-- ¿Hay campo de capacidad (min/max attendees)?
-- ¿Extras vinculados al servicio?
-- ¿Hay campo de Category?
+### Services — ficha (New service)
 
-### Resources (dentro de Catalog)
+```
+Tabs izquierda: [ Details | Pricing & duration | Extras | Gallery | Settings ]
 
-Preguntas clave:
-- ¿Cómo se crea un Resource? (nombre, cantidad/quantity)
-- ¿Se vincula el Resource al Service aquí o en la ficha del Service?
-- ¿Hay campo de Location en el Resource?
-- ¿Aparece alguna vista de ocupación del recurso?
+Details:
+  · Upload image
+  · Name *        (Translate)
+  · Color *       (#1a84ee)   ← color del servicio (alimenta el calendario)
+  · Category *    (dropdown)
+  · Employees *   (dropdown)  ← qué empleados prestan el servicio (varios)
+  · [toggle] Show on website
+  · Recurring appointments (dropdown, default Disabled)
+  · [toggle] Limit appointments per customer
+  · Description (Text/HTML)
+  · botones: Close | Save
 
-### Packages
+Pricing & duration: precio, duración, buffer before/after, capacidad (min/max)
+Extras:             add-ons del servicio (Extra: nombre, duración, precio, multiply by people)
+Gallery / Settings
+```
 
-[pendiente]
+Observaciones:
+- **Employees se asigna desde el Servicio** (además de desde el Employee → tab Services). Relación
+  N:M editable desde ambos lados. Nosotros lo hacemos solo desde el proveedor (serviceIds checkboxes).
+- **Color por servicio** → otra confirmación para colorear el calendario de forma estable.
+- **Category obligatoria** — el catálogo se organiza por categorías (y la categoría filtra en el
+  modal de New Appointment). Nosotros tenemos `category` como texto libre en el servicio, no como
+  entidad con su propia gestión.
+- **Pricing & duration en tab aparte**: precio + duración + buffers + **capacidad min/max** (group).
+  Nuestro servicio ya tiene duración/buffer/precio inline; falta capacidad min/max.
+- **Recurring appointments** y **Limit per customer**: políticas por servicio que no tenemos.
+
+### Resources — ficha (New resource)  ⭐ CLAVE — CORRIGE NOTA PREVIA
+
+```
+Tab: Details (única)
+
+  · Name *
+  · Quantity (stepper, default 1)
+  · [toggle] Enable resource usage for a group booking
+  · Scope (radio):
+      ( ) Quantity is shared       ← cantidad = UN pool compartido entre:
+            · Services  (dropdown, default "All services")
+            · Locations (dropdown, default "All locations")
+            · Employees (dropdown, default "All employees")   ← !!!
+      ( ) Quantity per service     ← la cantidad se replica por cada servicio
+      ( ) Quantity per location    ← la cantidad se replica por cada ubicación
+  · botones: Close | Save
+```
+
+**CORRECCIÓN IMPORTANTE a la nota de Employees:** dije que "Amelia no liga recursos a empleados".
+**Es inexacto.** El vínculo existe, pero se configura **desde el Recurso** (selector *Employees*),
+no desde la ficha del Empleado. Es decir: la elegibilidad proveedor↔recurso **SÍ existe en Amelia**
+— justo lo que intuyó el dueño del proyecto. Nuestro modelo B no es un invento ajeno a Amelia, sino
+la misma idea con la **dirección de configuración invertida** (nosotros: `provider.resourceIds`;
+Amelia: `resource.employeeIds`).
+
+El modelo de recursos de Amelia es, de hecho, **más rico** que el nuestro:
+
+| Concepto | Amelia | Nosotros (hoy) |
+| --- | --- | --- |
+| Pool con cantidad | Sí (Quantity) | Sí (quantity) |
+| Resource ↔ Services | Selector *Services* (multi / All) | `service.resourceId` (1 servicio→1 recurso) |
+| Resource ↔ Locations | Selector *Locations* (multi / All) | `resource.locationId` (1 recurso→1 sede) |
+| Resource ↔ Employees (elegibilidad) | Selector *Employees* (multi / All) | `provider.resourceIds` (desde el proveedor) |
+| Partición de cantidad | **shared / per-service / per-location** | Solo "shared" implícito |
+| Uso en group booking | Toggle (consume N o 1) | No (1 reserva = 1 unidad) |
+
+Ideas a robar / decisiones:
+- **Configurar el recurso como hub** que declara a la vez Services × Locations × Employees a los que
+  aplica, con "All" como default, es más potente y centralizado que dispersar la relación. Posible
+  refactor: que nuestro Recurso tenga `serviceIds[]`, `locationIds[]`, `providerIds[]`.
+- **shared vs per-service vs per-location**: partición de la cantidad. Ej.: "2 salas compartidas
+  entre todos los servicios" (shared) vs "2 toallas por servicio" (per-service). Diferencia sutil
+  pero real. Anotar como mejora futura; nuestro caso "4 terapeutas / 2 salas" es "shared".
+- **Group booking usage**: si una reserva de grupo de 5 personas consume 5 unidades o 1.
+- Resource tiene **una sola tab** (Details) — es la entidad más simple en estructura pero la más
+  rica en lógica de scope.
+
+### Packages — ficha (New package)
+
+```
+Tabs izquierda: [ Details | Services | Pricing | Gallery | Settings ]
+
+Details:
+  · Upload image
+  · Name *      (Translate)
+  · Color *     (#1a84ee)
+  · Duration (dropdown, default Unlimited)   ← validez del paquete
+  · [toggle] Limit package purchases per customer
+  · Description (Text/HTML)
+
+Services: qué servicios/cuántas sesiones incluye el paquete
+Pricing:  precio del paquete (con posible descuento sobre la suma)
+Gallery / Settings
+```
+
+Observaciones:
+- Package = bono de varias sesiones de uno o varios servicios, con **validez temporal** (Duration).
+  Coincide con nuestra entidad `Package` del data-model (validity_days, rules). UI no construida.
+- Mismo patrón visual que Service/Event (image, name, color, show on website, description).
 
 ---
 
