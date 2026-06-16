@@ -916,14 +916,16 @@ Observaciones / ideas a robar:
 
 ## Decisiones pendientes (para tratar al cerrar el barrido)
 
-1. **⭐ Modelo de recursos: ¿migrar al "hub" de Amelia?** (ver Catalog → Resources)
-   Hoy: `service.resourceId` (1→1) + `resource.locationId` (1→1) + `provider.resourceIds` (modelo B).
-   Amelia: el Recurso declara `Services[] × Locations[] × Employees[]` (con "All" por defecto) +
-   partición de cantidad `shared / per-service / per-location` + uso en group booking.
-   **Implicaciones a explicar al dueño antes de decidir** (pendiente de conversación).
+1. **✅ Modelo de recursos: migrado al "hub" (parcial).** Ver `docs/adr/0016-resource-hub-model.md`.
+   Adoptado: el Recurso declara `locationIds[] × serviceIds[] × employeeIds[]` (vacío = "cualquiera").
+   `service.resourceId` y `provider.resourceIds` eliminados (una sola fuente de verdad en el recurso).
+   **Diferido a propósito** (registrado por si un tenant lo pide): partición de cantidad
+   `shared / per-service / per-location` y uso en **group booking**. De momento la capacidad es
+   simple: cada reserva consume 1 unidad de cada recurso que aplica a su servicio.
 2. **Category como entidad** (no texto libre) que filtra servicios en el modal de reserva.
 3. **Scheduling por proveedor** (Work hours / Days off / Special days) en el admin.
-4. **Capacidad min/max por servicio** (group booking) y reservas con varios clientes.
+4. **Capacidad min/max por servicio** (group booking) y reservas con varios clientes — ligado al
+   punto diferido de la decisión 1.
 5. **Location online/virtual** (no solo física) y **Location elegible explícita** en la reserva.
 
 ## Observaciones transversales

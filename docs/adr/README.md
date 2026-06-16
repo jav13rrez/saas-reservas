@@ -16,6 +16,8 @@ Use ADRs for decisions that affect framework choice, tenancy, database strategy,
 | [0006](0006-ai-provider-adapter-deferred.md) | Reserve AIProviderAdapter Interface, Defer Implementation   | accepted | 2026-06-11 |
 | [0007](0007-local-dev-docker-compose.md)     | Docker Compose For Local Development, Cloud Target Deferred | accepted | 2026-06-11 |
 | [0008](0008-design-system.md)                | Design System — Holded-Inspired UI With Lucide Icons        | accepted | 2026-06-12 |
+| [0015](0015-resource-model-locations-eligibility.md) | Resource Model — Locations And Provider Eligibility | accepted | 2026-06-16 |
+| [0016](0016-resource-hub-model.md)           | Resource Hub Model — Partial Amelia Alignment               | accepted | 2026-06-16 |
 
 ## Template
 

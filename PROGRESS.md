@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-06-13
+Last updated: 2026-06-16
 
 ## Current State
 
@@ -158,6 +158,12 @@ Current clean baseline commit:
   - Quickstart acceptance (T086): `specs/001-saas-multitenant-booking/quickstart.md` extended with Scenarios 9–13 (billing feature gates, worker idempotency, payment reconciliation, calendar sync conflict detection, credential vault); acceptance status table for all 13 scenarios.
   - Full suite: 229 passing, 4 skipped (Redis/Postgres not available in CI — by design); 1 pre-existing failure in `customer-passwordless.test.ts` (date-sensitive JWT test unrelated to Phase 8). Lint and Prettier clean.
   - **All T001–T086 complete. The SaaS multitenant booking spec (US1–US5) is fully implemented.**
+
+### 2026-06-16 (Amelia UX sweep + admin connected chain + resource hub model)
+
+- Wired the admin console's full assignment chain end to end in the process-local demo store (`apps/admin`): Ubicaciones → Recursos → Proveedores → Servicios → Reservas → Clientes → Calendario, all backed by Next.js route handlers so the console runs with a single `pnpm dev`. Customers became first-class; bookings carry `customerId` + `providerId`; the Calendario screen renders a weekly grid grouped by provider.
+- Completed a full sweep of the Amelia Premium admin console and recorded it as a permanent UX reference (`docs/analysis/amelia-ux-reference.md`): all 14+ areas including Dashboard, Calendar, Bookings, Employees, Events, Catalog (Services/Resources/Packages), Locations, Customers, Finance, Notifications, Customize, Custom Fields, Features & Integrations, and Settings (General/Company/Payments/Bookings/Roles & permissions).
+- **Migrated the admin resource model to a hub (ADR-0016):** `AdminResource` now declares `locationIds[]`/`serviceIds[]`/`employeeIds[]` (empty = "any"); `AdminService` dropped `resourceId`/`resourceUnits` and `AdminProvider` dropped `resourceIds` — eligibility lives only on the resource (single source of truth). `createBooking` allocates an eligible, location-compatible resource with spare capacity (1 unit/booking). Recursos screen rebuilt as the hub config page; Proveedores/Servicios dropped their resource controls. `tsc --noEmit` clean. Quantity partition and group booking deferred on purpose (registered in the reference doc's "Decisiones pendientes" and ADR-0016). Scope is the admin demo store; the canonical domain/persistence layer (ADR-0015) still needs the matching migration.
 
 ## Current Backlog
 
