@@ -19,15 +19,15 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
   const input = body as Partial<{
     serviceId: string;
-    customerName: string;
-    customerEmail: string;
+    providerId: string;
+    customerId: string;
     startAt: string;
   }>;
 
   const result = createBooking({
     serviceId: typeof input.serviceId === "string" ? input.serviceId : "",
-    customerName: typeof input.customerName === "string" ? input.customerName : "",
-    customerEmail: typeof input.customerEmail === "string" ? input.customerEmail : "",
+    providerId: typeof input.providerId === "string" ? input.providerId : "",
+    customerId: typeof input.customerId === "string" ? input.customerId : "",
     startAt: typeof input.startAt === "string" ? input.startAt : "",
   });
 

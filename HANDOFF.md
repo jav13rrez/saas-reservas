@@ -4,7 +4,9 @@ Last updated: 2026-06-16
 
 ## Post-Spec Work (2026-06-16): Admin Console + Resource Model B/C
 
-Beyond T001–T086, the admin console (`apps/admin`) gained a sidebar shell with product areas, and **Servicios / Reservas / Recursos / Ubicaciones** are functional screens backed by process-local Next.js route handlers (`apps/admin/src/server/demo-store.ts`) so the console runs with a single `pnpm dev` (no Fastify needed). The API proxy is narrowed to `/api/v1/*` so it does not shadow these handlers.
+Beyond T001–T086, the admin console (`apps/admin`) gained a sidebar shell with product areas, and **Servicios / Reservas / Recursos / Ubicaciones / Proveedores / Clientes / Calendario** are functional screens backed by process-local Next.js route handlers (`apps/admin/src/server/demo-store.ts`) so the console runs with a single `pnpm dev` (no Fastify needed). The API proxy is narrowed to `/api/v1/*` so it does not shadow these handlers.
+
+The full assignment chain is now wired end to end in the admin demo store: `Ubicación -> Recurso -> Proveedor -> Servicio -> Reserva -> Cliente`. A provider (`AdminProvider`) is assigned locations (`locationIds`), eligible resources (`resourceIds`, model B: empty = unconstrained) and the services they deliver (`serviceIds`); the Proveedores screen edits all three with checkbox groups. Customers (`AdminCustomer`) are first-class (Clientes screen) and bookings link a `customerId` + `providerId`. `createBooking` rejects a booking unless the provider delivers the service, is eligible for the demanded resource, works at the resource's location, the resource has spare capacity, and the provider is not already busy — all verified via the API. The Calendario screen renders a weekly grid of confirmed bookings grouped by provider. (This is admin-demo-store wiring; the Fastify `/v1/admin/*` provider/customer/eligibility routes remain the productionization step.)
 
 The resource model was extended to **model B (provider-resource eligibility) + model C (multi-site locations)** per ADR-0015:
 

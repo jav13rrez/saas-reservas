@@ -1,8 +1,12 @@
 "use client";
 
 /**
- * Reservas screen. Lists bookings and lets the operator create a booking for
- * an active service or cancel an existing one, talking to /api/bookings.
+ * Reservas screen. Creates a booking by chaining the assignment model:
+ * service -> provider (only those who deliver it) -> customer -> start time.
+ * The store rejects the booking if the provider is not eligible for the
+ * service's resource, does not work at its location, the resource is at
+ * capacity, or the provider is already busy. Talks to /api/bookings,
+ * /api/services, /api/providers and /api/customers.
  *
  * Styling reads design tokens; icons from lucide-react only. No emojis.
  */
@@ -16,11 +20,25 @@ interface AdminService {
   name: string;
   active: boolean;
 }
-
+interface AdminProvider {
+  id: string;
+  name: string;
+  serviceIds: string[];
+  active: boolean;
+}
+interface AdminCustomer {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
 interface AdminBooking {
   id: string;
   serviceId: string;
   serviceName: string;
+  providerId: string;
+  providerName: string;
+  customerId: string;
   customerName: string;
   customerEmail: string;
   startAt: string;
@@ -40,29 +58,42 @@ const CELL: React.CSSProperties = {
 export function Bookings() {
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [services, setServices] = useState<AdminService[]>([]);
+  const [providers, setProviders] = useState<AdminProvider[]>([]);
+  const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [serviceId, setServiceId] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
+  const [providerId, setProviderId] = useState("");
+  const [customerId, setCustomerId] = useState("");
   const [startAt, setStartAt] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const activeServices = useMemo(() => services.filter((s) => s.active), [services]);
+  const activeCustomers = useMemo(() => customers.filter((c) => c.active), [customers]);
+  // Only providers who are active and deliver the selected service.
+  const eligibleProviders = useMemo(
+    () => providers.filter((p) => p.active && p.serviceIds.includes(serviceId)),
+    [providers, serviceId],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [bRes, sRes] = await Promise.all([fetch("/api/bookings"), fetch("/api/services")]);
-      if (!bRes.ok || !sRes.ok) {
-        throw new Error("No se pudo cargar reservas o servicios.");
+      const [bRes, sRes, pRes, cRes] = await Promise.all([
+        fetch("/api/bookings"),
+        fetch("/api/services"),
+        fetch("/api/providers"),
+        fetch("/api/customers"),
+      ]);
+      if (!bRes.ok || !sRes.ok || !pRes.ok || !cRes.ok) {
+        throw new Error("No se pudo cargar la información de reservas.");
       }
-      const bBody = (await bRes.json()) as { items: AdminBooking[] };
-      const sBody = (await sRes.json()) as { items: AdminService[] };
-      setBookings(bBody.items);
-      setServices(sBody.items);
+      setBookings(((await bRes.json()) as { items: AdminBooking[] }).items);
+      setServices(((await sRes.json()) as { items: AdminService[] }).items);
+      setProviders(((await pRes.json()) as { items: AdminProvider[] }).items);
+      setCustomers(((await cRes.json()) as { items: AdminCustomer[] }).items);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error inesperado");
     } finally {
@@ -81,6 +112,20 @@ export function Bookings() {
     }
   }, [activeServices, serviceId]);
 
+  // Keep the provider selection valid for the chosen service.
+  useEffect(() => {
+    if (!eligibleProviders.some((p) => p.id === providerId)) {
+      setProviderId(eligibleProviders[0]?.id ?? "");
+    }
+  }, [eligibleProviders, providerId]);
+
+  // Default the customer selector to the first active customer.
+  useEffect(() => {
+    if (customerId === "" && activeCustomers.length > 0) {
+      setCustomerId(activeCustomers[0]?.id ?? "");
+    }
+  }, [activeCustomers, customerId]);
+
   async function handleCreate(event: { preventDefault(): void }) {
     event.preventDefault();
     setSubmitting(true);
@@ -91,8 +136,8 @@ export function Bookings() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           serviceId,
-          customerName,
-          customerEmail,
+          providerId,
+          customerId,
           startAt: new Date(startAt).toISOString(),
         }),
       });
@@ -100,8 +145,6 @@ export function Bookings() {
       if (!res.ok) {
         throw new Error(body.error ?? `Creación falló con ${String(res.status)}`);
       }
-      setCustomerName("");
-      setCustomerEmail("");
       setStartAt("");
       await load();
     } catch (e) {
@@ -129,14 +172,19 @@ export function Bookings() {
     }
   }
 
+  const canSubmit =
+    serviceId !== "" && providerId !== "" && customerId !== "" && startAt !== "" && !submitting;
+
   return (
     <section>
       <h1 style={{ display: "flex", alignItems: "center", gap: "var(--ui-space-2)" }}>
         <CalendarCheck size={20} aria-hidden />
         Reservas
       </h1>
-      <p style={{ color: "var(--ui-color-text-muted)", maxWidth: 640 }}>
-        Agenda de citas del tenant. Crea una reserva para un servicio activo o cancélala.
+      <p style={{ color: "var(--ui-color-text-muted)", maxWidth: 680 }}>
+        Agenda de citas del tenant. Elige servicio, proveedor (solo los que lo prestan) y cliente.
+        La reserva se rechaza si el proveedor no es elegible para el recurso, no trabaja en su
+        ubicación, no hay capacidad o el proveedor ya está ocupado.
       </p>
 
       <form
@@ -168,27 +216,42 @@ export function Bookings() {
           </select>
         </label>
         <label>
-          Cliente
-          <input
-            value={customerName}
+          Proveedor
+          <select
+            value={providerId}
             onChange={(e) => {
-              setCustomerName(e.target.value);
+              setProviderId(e.target.value);
             }}
             required
-            placeholder="Nombre y apellidos"
-          />
+            style={{ minWidth: 180 }}
+          >
+            {eligibleProviders.length === 0 && (
+              <option value="">Ningún proveedor presta este servicio</option>
+            )}
+            {eligibleProviders.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
-          Email
-          <input
-            type="email"
-            value={customerEmail}
+          Cliente
+          <select
+            value={customerId}
             onChange={(e) => {
-              setCustomerEmail(e.target.value);
+              setCustomerId(e.target.value);
             }}
             required
-            placeholder="cliente@example.com"
-          />
+            style={{ minWidth: 200 }}
+          >
+            {activeCustomers.length === 0 && <option value="">No hay clientes</option>}
+            {activeCustomers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} ({c.email})
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           Inicio
@@ -203,7 +266,7 @@ export function Bookings() {
         </label>
         <button
           type="submit"
-          disabled={submitting || activeServices.length === 0}
+          disabled={!canSubmit}
           style={{ display: "inline-flex", alignItems: "center", gap: "var(--ui-space-2)" }}
         >
           <Plus size={16} aria-hidden />
@@ -249,6 +312,7 @@ export function Bookings() {
             <tr style={{ color: "var(--ui-color-text-muted)", fontSize: "var(--ui-text-sm)" }}>
               <th style={CELL}>Inicio</th>
               <th style={CELL}>Servicio</th>
+              <th style={CELL}>Proveedor</th>
               <th style={CELL}>Cliente</th>
               <th style={CELL}>Importe</th>
               <th style={CELL}>Estado</th>
@@ -260,6 +324,7 @@ export function Bookings() {
               <tr key={b.id}>
                 <td style={CELL}>{formatDateTime(b.startAt)}</td>
                 <td style={CELL}>{b.serviceName}</td>
+                <td style={CELL}>{b.providerName}</td>
                 <td style={CELL}>
                   <div>{b.customerName}</div>
                   <div

@@ -1,0 +1,59 @@
+import { NextResponse } from "next/server";
+import { updateProvider, type UpdateProviderInput } from "@/server/demo-store";
+
+/**
+ * PATCH /api/providers/:id  -> update a provider's profile, assignments
+ *                              (locations/resources/services) or active state.
+ * Any subset of fields may be sent.
+ */
+
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ id: string }> },
+): Promise<NextResponse> {
+  const { id } = await context.params;
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Cuerpo JSON inválido." }, { status: 400 });
+  }
+  const raw = body as Partial<{
+    name: string;
+    email: string;
+    timezone: string;
+    locationIds: unknown;
+    resourceIds: unknown;
+    serviceIds: unknown;
+    active: boolean;
+  }>;
+
+  const patch: UpdateProviderInput = {};
+  if (typeof raw.name === "string") {
+    patch.name = raw.name;
+  }
+  if (typeof raw.email === "string") {
+    patch.email = raw.email;
+  }
+  if (typeof raw.timezone === "string") {
+    patch.timezone = raw.timezone;
+  }
+  if (raw.locationIds !== undefined) {
+    patch.locationIds = raw.locationIds;
+  }
+  if (raw.resourceIds !== undefined) {
+    patch.resourceIds = raw.resourceIds;
+  }
+  if (raw.serviceIds !== undefined) {
+    patch.serviceIds = raw.serviceIds;
+  }
+  if (typeof raw.active === "boolean") {
+    patch.active = raw.active;
+  }
+
+  const result = updateProvider(id, patch);
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+  return NextResponse.json(result.value);
+}
