@@ -174,10 +174,66 @@ Observaciones / ideas a robar:
   confirmar al ver el detalle.
 - Rango por defecto **amplio (1 año)** en listados, frente al mensual del dashboard.
 
-Pendiente (importante para alinear nuestra pantalla Reservas):
-- El **modal "+ New Appointment"**: orden de selectores (service → employee → customer → fecha).
+### Modales "+ New booking" (revisado 2026-06-16)
+
+El botón `+` abre un modal distinto según el tipo. Layout común: breadcrumb arriba
+(`Bookings > New …`), panel izquierdo con tabs + "Tips & suggestions", formulario a la derecha,
+botones `Close` / `Book` abajo a la derecha. Los campos con `*` rojo son obligatorios.
+
+**New appointment** (el importante para nuestra pantalla Reservas):
+
+```
+Tabs izquierda: [ Details | Customers ]      ← cliente va en su PROPIA tab
+Details (formulario, en este orden):
+  1. Category            (dropdown, OPCIONAL — filtra los servicios)
+  2. Service *           (dropdown)
+  3. Employee *          (dropdown)
+  4. Date *  |  Time *   (en la misma fila)
+  5. Location *          (dropdown)
+  6. [✓] Notify the customer(s)     ← decide si se envían notificaciones
+  7. Note (internal)     (textarea — nota interna, no visible al cliente)
+Customers (tab aparte): selección de cliente(s) → admite varios (group booking)
+```
+
+Orden Amelia: **Category → Service → Employee → Date → Time → Location → (Customers en tab) → Note**.
+Nuestro orden actual: Service → Provider → Customer → Start.
+
+Diferencias a considerar:
+- **Category como primer filtro** (opcional) para acotar la lista de servicios. No lo tenemos;
+  encaja con agrupar el catálogo por categorías.
+- **Location es un campo explícito** del appointment. Nosotros la derivamos del recurso; Amelia
+  deja elegirla (un servicio/empleado puede estar en varias sedes).
+- **Cliente en una tab aparte** y admite **varios** (reserva de grupo) + botón inline para crear
+  cliente nuevo (ver package/event abajo). Nosotros: un solo cliente en un `select` en la misma fila.
+- **`Notify the customer(s)`**: toggle para enviar o no las notificaciones de esa reserva. Útil
+  para altas manuales sin spamear. Anotar para cuando tengamos notificaciones.
+- **`Note (internal)`**: nota interna por reserva. No la tenemos.
+- **Date y Time separados**, no un `datetime-local` único como el nuestro. Time es un dropdown
+  (probablemente con los slots disponibles ya calculados por el motor, no texto libre).
+
+**New package booking** (más simple):
+
+```
+1. Package *
+2. Customer *            (+ botón "Customer" para crear cliente nuevo inline)
+3. [✓] Notify the customer(s)
+```
+
+**New event booking**:
+
+```
+1. Event *
+2. Attendee *           (+ botón "Attendee" para crear asistente nuevo inline)
+```
+
+Patrón a robar: **botón "+ Customer/Attendee" pegado al dropdown** para crear la entidad sin salir
+del modal. Y **cada tipo de booking tiene su propio modal** con sus campos (coherente con tablas y
+tabs separadas).
+
+Pendiente:
 - Acciones del menú "···" por fila (editar, cancelar, status, eliminar).
-- Los **status** de una cita (no se ven como columna aquí; ¿están dentro del detalle o como filtro?).
+- Los **status** de una cita (no como columna; ¿en el detalle o como filtro?).
+- Cómo es el `Time` dropdown: ¿muestra solo slots libres según disponibilidad del empleado?
 
 ---
 
