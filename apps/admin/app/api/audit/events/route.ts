@@ -39,7 +39,6 @@ interface AuditLogEntry {
   occurredAt: string;
 }
 
-
 function mockEntries(tenantId: string): AuditLogEntry[] {
   const base = new Date("2026-06-15T10:00:00.000Z");
   const entries: [AuditEventType, ActorType, string, string?][] = [

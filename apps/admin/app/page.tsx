@@ -1,5 +1,5 @@
-import { TenantSetup } from "@/features/tenant-setup";
+import { Dashboard } from "@/features/dashboard";
 
 export default function AdminHome() {
-  return <TenantSetup />;
+  return <Dashboard />;
 }
