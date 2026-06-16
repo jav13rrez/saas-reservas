@@ -239,27 +239,143 @@ Pendiente:
 
 ## Events
 
-[pendiente — compartir captura]
+**Revisado: 2026-06-16** (lista + ficha "New Event").
 
-Preguntas clave:
-- ¿Diferencia visual con Bookings?
-- ¿Capacidad/aforo visible en tabla?
-- ¿Hay lista de asistentes por evento?
+### Lista
+
+```
+Events
+├── Toolbar: [Search events] · [rango fechas] · [icono filtro] · [···] · [ + ]
+├── Tabla
+│   ├── cols: [✓] | ID | DATE & TIME | NAME (avatar) | STATUS (dropdown) | BOOKED | ORGANIZER | ···
+│   ├── STATUS editable inline con color: Open (verde) / Closed (gris) / Full (morado) / Canceled (rojo)
+│   ├── BOOKED = aforo "0 / 15", "100 / 100" (reservados / capacidad)
+│   └── ORGANIZER (persona responsable)
+└── paginación: Total 379, 10/page
+```
+
+### Ficha (New Event) — modal con tabs
+
+```
+Tabs izquierda: [ Details | Pricing | Recurring | Gallery | Settings ]
+
+Details:
+  · Upload image
+  · Name *            (Translate)
+  · Color *           (#1a84ee)  ← color del evento en el calendario
+  · [toggle] Show on website
+  · Start date – End date | Start time | End time
+  · [+ Add Date]      ← un evento puede tener varias fechas/sesiones
+  · [✓] Booking opens immediately      (si no, se define cuándo abre)
+  · [✓] Booking closes when event starts
+  · Location (dropdown)
+  · Custom address
+  · Organizer (dropdown)
+  · Staff (dropdown)   ← empleados que atienden el evento (varios)
+  · Tags (dropdown)
+  · Description (Text/HTML)
+  · botones: Close | Save
+
+Pricing:   tipos de entrada / precios (TicketType, dynamic pricing)
+Recurring: recurrencia (cada instancia es un registro independiente)
+Gallery:   imágenes
+Settings:  ajustes adicionales del evento
+```
+
+Observaciones / ideas a robar:
+- **STATUS de evento como dropdown coloreado e inline** (Open/Closed/Full/Canceled). El nuestro de
+  reservas es solo confirmed/cancelled; los eventos necesitan más estados (aforo lleno, cerrado).
+- **BOOKED = reservados / capacidad** visible en la tabla — el aforo es protagonista, coherente con
+  el KPI "occupancy en asientos" del dashboard.
+- **Color por evento** (campo explícito) → alimenta el color del calendario. Refuerza la nota de
+  Calendar de asignar color estable.
+- **`+ Add Date`**: un evento con múltiples sesiones/fechas. Más rico que un único start/end.
+- **Booking window**: "opens immediately" + "closes when event starts" — ventana de reserva
+  configurable. Útil para nuestro modelo de eventos (US4, ya implementado en backend).
+- **Staff (varios)** y **Organizer (uno)** son roles distintos en el evento.
+- Coincide con nuestro dominio de eventos (US4: TicketType, waitlist, recurrencia). La UI de Eventos
+  nuestra es placeholder; esto da el mapa para construirla.
+
+Diferencia con Appointments: el evento es **uno-a-muchos** (capacidad/aforo, varios asistentes,
+ticket types), mientras la cita es 1:1 (cliente↔slot de empleado). Por eso tablas, modales y
+estados distintos — justifica mantener Reservas y Eventos como áreas separadas.
 
 ---
 
 ## Employees
 
-[pendiente — compartir captura]
+**Revisado: 2026-06-16** (lista + ficha "New employee").
 
-Preguntas clave:
-- ¿Ficha del employee: qué tabs o secciones tiene?
-- ¿Cómo se asignan Services? (checkboxes, multi-select, drag…)
-- ¿Cómo se asignan Locations?
-- ¿Horario semanal: days off, working hours, breaks?
-- ¿Hay campo de zona horaria por employee?
-- ¿Aparece alguna referencia a Resources aquí o solo en Catalog?
-- ¿Photo/avatar?
+### Lista
+
+```
+Employees
+├── Toolbar: [Search employees] · [icono filtro] · derecha [··· acciones masivas] · [ + ]
+├── Tabla
+│   ├── cols: [✓] | ID | NAME (avatar, sortable) | VISIBILITY | AVAILABILITY | PHONE | EMAIL | ···
+│   ├── VISIBILITY  = badge "Visible" (verde)         → del toggle "Show on website"
+│   ├── AVAILABILITY = badge "Available" (verde)      → estado derivado de work hours/days off
+│   └── flechas ◀ ▶ scroll horizontal de columnas
+└── paginación: Total 14, 10/page
+```
+
+### Ficha (New / Edit employee) — modal con tabs
+
+```
+Tabs izquierda: [ Details | Services | Work hours | Days off | Special days ]
+
+Details:
+  · Upload image (avatar)
+  · First name *      (con opción Translate i18n)
+  · Last name *       (Translate)
+  · Email *
+  · [toggle] Show on website            ← controla VISIBILITY de la lista
+  · Phone number (con selector de país/bandera)
+  · Badge (dropdown)                    ← etiqueta/insignia del empleado
+  · Location (dropdown)                 ← UNA ubicación en este ejemplo
+  · Time zone (dropdown, default UTC)
+  · Employee panel password (campo con ojo)   ← acceso al portal de empleado
+  · WordPress user (dropdown)           ← vincula a un usuario WP existente
+  · Description (editor Text/HTML, toolbar rich, Translate)
+  · Note (internal)
+  · botones: Close | Save
+
+Services:     (tab aparte) asignación de servicios que presta + override de precio/duración por empleado
+Work hours:   horario semanal del empleado
+Days off:     días libres / vacaciones
+Special days: jornadas con horario especial
+```
+
+Observaciones / ideas a robar:
+- **MUY IMPORTANTE — no hay tab "Resources" en el empleado.** En Amelia los recursos NO se asignan
+  al empleado; la elegibilidad proveedor↔recurso es una **extensión nuestra (modelo B, ADR-0015)**
+  que va más allá de Amelia. Confirma que nuestra decisión es un añadido consciente, no una copia.
+- **Scheduling propio del empleado** (Work hours / Days off / Special days) que **nosotros aún no
+  tenemos**. Hoy nuestra disponibilidad se calcula en el motor (backend) pero el admin no expone la
+  edición del horario por proveedor. Brecha clara para una iteración.
+- **Services en tab aparte**, no checkboxes inline como hicimos. Y probablemente permite **override
+  de precio/duración por empleado** (Amelia lo hace). Nosotros: serviceIds como checkboxes simples.
+- **Una Location (singular)** en la ficha de este ejemplo (gym de una sede). Confirmar si admite
+  varias — el spec sí ("providers may work at one or more locations").
+- **Portal de empleado** integrado: `Employee panel password` + `WordPress user`. Nuestro
+  equivalente: portal de proveedor con permisos (ya existe en backend).
+- **Show on website** (visibilidad pública) separado de activo/inactivo. Distinción útil: un
+  empleado puede estar activo internamente pero oculto del widget.
+- **i18n por campo** ("Translate") y **Note interna** y **avatar** — detalles de madurez del producto.
+
+Comparativa rápida con nuestra ficha de Proveedor:
+| Campo Amelia | ¿Lo tenemos? |
+| --- | --- |
+| Nombre/email/timezone | Sí |
+| Avatar | No |
+| Show on website (visibilidad) | No (solo active) |
+| Badge | No |
+| Location(s) | Sí (multi, checkboxes) |
+| Services (con override precio/duración) | Parcial (solo asignación, sin override) |
+| Work hours / Days off / Special days | **No** |
+| Resources elegibles | **Sí (extensión nuestra; Amelia no lo tiene)** |
+| Panel password / WP user | Backend sí, UI no |
+| Description / Note interna | No |
 
 ---
 
