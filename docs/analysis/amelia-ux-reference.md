@@ -6,7 +6,9 @@ Estas observaciones guían el diseño de nuestras pantallas de admin, no son có
 **Método:** capturas compartidas por el propietario del proyecto, anotadas aquí en forma de árbol y
 notas de campo. Se actualiza en sesiones sucesivas.
 
-**Estado:** en progreso — secciones marcadas con `[pendiente]` aún no revisadas.
+**Estado:** barrido del menú completado (2026-06-16). Revisadas todas las áreas salvo
+**Features & Integrations** y los sub-tabs de **Settings** (Payments / Bookings / Roles &
+permissions / Company), que quedan como único pendiente de capturas.
 
 ---
 
@@ -700,24 +702,73 @@ Implicación para nosotros:
 
 ## Custom Fields
 
-[pendiente]
+**Revisado: 2026-06-16**.
+
+```
+Custom Fields
+├── Tabs: [ Booking | Customer ]      ← campos extra para la reserva vs para el cliente
+├── [+ Custom field]
+└── Lista de campos (drag-handle para reordenar):
+    · "First time in our Gym?" (ID 1) — tipo: Radio button
+    · "Additional note for Trainer" (ID 3) — tipo: Text area
+    · cada uno con acciones: editar / duplicar / borrar
+```
+
+Observaciones:
+- **Campos custom para Booking y para Customer** (dos ámbitos). Reordenables (drag).
+- Tipos de campo (Radio button, Text area, …) — formularios dinámicos sin tocar código.
+- Coincide con nuestra entidad `FileAttachment.custom_field_id` y los placeholders "Custom fields"
+  de Notifications. No tenemos UI ni modelo de definición de custom fields todavía.
+- Para un SaaS multi-tenant esto es relevante: cada tenant define sus propios campos.
 
 ---
 
 ## Features & Integrations
 
-[pendiente]
+[pendiente — no revisado en el barrido]
+
+Esperado (por conocimiento de Amelia, a confirmar con captura): pasarelas de pago (Stripe, PayPal,
+Mollie, Razorpay, WooCommerce), calendarios (Google, Outlook/Microsoft, Apple), videollamada
+(Zoom, Google Meet, MS Teams), Zapier/webhooks, analytics, lecciones (LMS). Nuestro lado: todo vía
+adapters (`PaymentGateway`, `MessageProvider`, calendar sync, etc.) ya definidos como puertos.
 
 ---
 
 ## Settings
 
-[pendiente — compartir captura]
+**Revisado: 2026-06-16** (solo sub-tab General; el resto pendiente).
 
-Preguntas clave:
-- ¿Datos generales del tenant (nombre, logo, timezone, moneda)?
-- ¿Configuración de pagos (gateway)?
-- ¿Política de cancelación?
+Settings es un panel con sub-secciones (nav izquierda):
+**General · Activation · Company · Payments · Bookings · Notifications · Roles & permissions**.
+
+### General (revisado)
+
+```
+· Default time slot step (30min…)         ← granularidad de los slots de disponibilidad
+· Default phone country code (por IP…)
+· [toggle] Show booking slots in client's time zone
+· [toggle] Show "Add To Calendar" option to customers
+· Default back-end page (Dashboard…)
+· Default number of items per page on the front end (9)
+· Redirect URL after booking
+· Minimum time required before booking (Disabled…)       ← política de antelación
+· Minimum time required before canceling (Disabled…)
+· Minimum time required before rescheduling (Disabled…)
+· Period available for booking in advance (365 días)     ← ventana futura reservable
+· Languages (i18n)
+· Save
+```
+
+Observaciones / ideas a robar:
+- **Slot step** (p.ej. 30min) — granularidad del motor de disponibilidad. Nosotros lo calculamos;
+  habría que exponerlo como ajuste del tenant.
+- **Políticas de tiempo**: mínimo antes de reservar/cancelar/reagendar + ventana de antelación
+  (365 días). Coincide con nuestro motor de políticas de cambio (US3, ya en backend). Falta UI.
+- **Mostrar slots en el huso del cliente**, **Add to Calendar**, **redirect tras reservar** —
+  ajustes del widget público.
+- **Sub-tabs pendientes que SÍ nos importan**: **Payments** (gateway, moneda, depósitos),
+  **Bookings** (reglas globales), **Roles & permissions** (clave para staff auth multi-tenant),
+  **Company** (nombre, logo, timezone, moneda → branding del tenant).
 
 ---
 
