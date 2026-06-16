@@ -570,12 +570,56 @@ Observaciones / ideas a robar:
 
 ## Finance
 
-[pendiente — compartir captura]
+**Revisado: 2026-06-16** (Transactions, Invoices, Coupons + modal New coupon).
 
-Preguntas clave:
-- ¿Listado de transacciones o resumen por período?
-- ¿Hay exportación?
-- ¿Gestión de reembolsos?
+Tres tabs: **Transactions | Invoices | Coupons**.
+
+### Transactions (tab)
+
+```
+├── Toolbar: [rango fechas] · [icono filtro] · [···]
+├── cols: ID | PAYMENT DATE | CUSTOMER | EMPLOYEES (avatar) | BOOKING (servicio + fecha/hora) | STATUS
+│   ├── BOOKING = a qué reserva pertenece el pago (servicio + cuándo)
+│   └── STATUS = badge (p.ej. "Pending") con color/icono
+└── paginación: Total 58, 10/page
+```
+
+### Invoices (tab)
+
+- Mismo layout de lista con rango de fechas + filtro. Vacío → empty state "No results found".
+- Las facturas son un artefacto aparte de las transacciones (un pago puede generar factura).
+
+### Coupons (tab)
+
+```
+Empty state: "No coupons yet" + botón [+ Coupon]
+
+Modal New coupon (tabs: Details | Notification):
+  · Code *                       ← código del cupón
+  · Discount type (dropdown: Percentage amount / Fixed)
+  · Percentage amount (%) (stepper)
+  · Usage limit (stepper)  + [✓] No usage limit
+  · Maximum usage per customer (stepper) + [✓] No limit per customer
+  · Start date  |  Expiration date
+  · Services (dropdown multi)    ← a qué servicios aplica
+  · Events (dropdown multi)
+  · Packages (dropdown multi)
+  · (tab Notification: aviso asociado al cupón)
+```
+
+Observaciones / ideas a robar:
+- **Finance = Transactions + Invoices + Coupons** en un solo área con tabs. Nuestro "Facturación"
+  es placeholder; este es el mapa.
+- **Transaction enlaza pago ↔ reserva ↔ cliente ↔ empleado** — trazabilidad completa. Coincide con
+  nuestro dominio (`PaymentTransaction`, `CartTransaction` en data-model, ya en backend).
+- **Status de pago** (Pending, …) como en nuestro `PaymentTransaction.status`.
+- **Invoices separadas de Transactions** — alineado con `PaymentTransaction` vs documento factura.
+- **Coupons** coincide con nuestra entidad `Coupon` (code, discount_type, discount_value, usage_limit,
+  starts_at/ends_at). Amelia añade: límite por cliente, y aplicabilidad por Services/Events/Packages.
+  UI no construida en nuestro lado.
+- **Cupón con tab Notification** — puede disparar un aviso. Detalle.
+
+Nuestro estado: el dominio de pagos/cupones existe en backend (US2, US8). Falta la UI de Finance.
 
 ---
 
