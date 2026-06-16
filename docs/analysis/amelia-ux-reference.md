@@ -134,14 +134,50 @@ Preguntas pendientes:
 
 ## Bookings
 
-[pendiente — compartir captura]
+**Revisado: 2026-06-16** (listados; falta el modal "New Appointment").
 
-Preguntas clave:
-- ¿Vista de lista o de tabla? ¿Qué columnas?
-- Modal "New Appointment": orden de los selectores (service → employee → customer → fecha/hora, u otro orden)
-- ¿Hay búsqueda/filtros en la tabla? (por status, por employee, por fechas)
-- ¿Acciones por fila? (ver detalle, cancelar, reagendar)
-- ¿Status badges? (Pending / Approved / Canceled / No-show…)
+Tres tabs, igual que el Dashboard pero añadiendo Packages:
+
+```
+Bookings
+├── Tabs: [ Appointments | Packages | Events ]
+├── Toolbar (común a las 3 tabs)
+│   ├── [Search bookings] · [rango de fechas Jun 16 2026 – Jun 16 2027] · [icono filtro]
+│   └── derecha: [ ··· acciones masivas ] · [ + ]
+│   └── nota: rango por defecto = 1 año completo (no 1 mes como el Dashboard)
+├── Appointments (tabla)
+│   ├── cols: [✓] | ID | DATE | TIME | CUSTOMER | SERVICE | TYPE (icono) | ··· (acciones fila)
+│   ├── ID numérico corto (99, 55, 95…)
+│   ├── CUSTOMER puede ser múltiple ("BAW Media, John Doe") → reserva de grupo
+│   ├── columnas ordenables (flechas ↕ en ID, CUSTOMER, SERVICE)
+│   ├── flechas ◀ ▶ para hacer scroll horizontal de columnas (hay más de las visibles)
+│   └── paginación: "Total 23", selector 10/page, páginas + "Go to"
+├── Packages (tabla)
+│   └── mismo layout; aquí vacío → empty state "No results found / Try adjusting your search or filters"
+└── Events (tabla)
+    ├── cols: [✓] | CODE | DATE | TIME | ATTENDEE | EVENT | ··· (acciones)
+    ├── CODE = hash corto (38dec, 9364f…) en vez de ID numérico
+    └── ATTENDEE en vez de CUSTOMER, EVENT en vez de SERVICE
+```
+
+Observaciones / ideas a robar:
+- **Selección masiva** (checkbox por fila + acciones "···" arriba) — útil para cancelar/exportar
+  en lote. Hoy no lo tenemos.
+- **Búsqueda + rango de fechas + filtro avanzado** siempre presentes. Nuestra tabla de Reservas no
+  tiene búsqueda ni filtros aún → mejora clara.
+- **Columnas ordenables** (sort por cliente/servicio/ID).
+- **Reservas de grupo**: un appointment puede tener varios clientes. Nuestro modelo actual es
+  1 reserva = 1 cliente; anotar como diferencia (capacidad de servicio min/max → group booking).
+- **Appointments vs Events son tablas distintas** con columnas distintas (ID vs CODE, Customer vs
+  Attendee). Coherente con tenerlos como áreas separadas.
+- **TYPE** como columna (icono): probablemente online/in-person, o individual/grupo. Pendiente
+  confirmar al ver el detalle.
+- Rango por defecto **amplio (1 año)** en listados, frente al mensual del dashboard.
+
+Pendiente (importante para alinear nuestra pantalla Reservas):
+- El **modal "+ New Appointment"**: orden de selectores (service → employee → customer → fecha).
+- Acciones del menú "···" por fila (editar, cancelar, status, eliminar).
+- Los **status** de una cita (no se ven como columna aquí; ¿están dentro del detalle o como filtro?).
 
 ---
 
