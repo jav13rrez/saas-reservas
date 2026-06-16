@@ -41,6 +41,8 @@ export interface CatalogRepository {
   ): Promise<void>;
   assignProvider(link: ServiceProvider): Promise<void>;
   linkResource(link: ServiceResource): Promise<void>;
+  /** Replace the set of resources a provider is eligible to use (model B). */
+  setProviderResources(tenantId: string, providerId: string, resourceIds: string[]): Promise<void>;
 
   findServiceById(tenantId: string, serviceId: string): Promise<Service | null>;
   findProviderById(tenantId: string, providerId: string): Promise<Provider | null>;
@@ -57,6 +59,8 @@ export interface CatalogRepository {
     resourceId: string,
     range: Interval,
   ): Promise<ResourceAllocation[]>;
+  /** Resources a provider is eligible to use; empty means unconstrained (model B). */
+  listProviderEligibleResourceIds(tenantId: string, providerId: string): Promise<string[]>;
 }
 
 export class CatalogService {
@@ -191,6 +195,23 @@ export class CatalogService {
       {
         resourceId: input.resourceId,
       },
+    );
+  }
+
+  async setProviderResources(input: {
+    tenantId: string;
+    providerId: string;
+    resourceIds: string[];
+    actor: Actor;
+  }): Promise<void> {
+    await this.catalog.setProviderResources(input.tenantId, input.providerId, input.resourceIds);
+    await this.audit(
+      input.tenantId,
+      input.actor,
+      "catalog.provider-resources-updated",
+      "provider",
+      input.providerId,
+      { resourceCount: input.resourceIds.length },
     );
   }
 

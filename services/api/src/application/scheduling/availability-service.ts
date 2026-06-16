@@ -97,6 +97,10 @@ export class AvailabilityService {
     const range: Interval = { start: dayStart - DAY_MS, end: dayStart + 2 * DAY_MS };
 
     const providerBusy = await this.catalog.listProviderBusy(query.tenantId, provider.id, range);
+    const eligibleResourceIds = await this.catalog.listProviderEligibleResourceIds(
+      query.tenantId,
+      provider.id,
+    );
     const demands = await this.catalog.listResourceDemands(query.tenantId, query.serviceId);
     const resources = await Promise.all(
       demands.map(async (demand) => ({
@@ -119,6 +123,7 @@ export class AvailabilityService {
       scheduleEntries,
       providerBusy,
       resources,
+      providerEligibleResourceIds: eligibleResourceIds,
     });
     return { ok: true, provider, providerSelection, slots };
   }

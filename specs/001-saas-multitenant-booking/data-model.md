@@ -57,11 +57,24 @@
 - Relationships: belongs to `Service`
 - Validation: package bookings may hide extras and force service base duration depending on package rules.
 
+### Location
+
+- Fields: `id`, `tenant_id`, `name`, `timezone`, `address`, `status`
+- Relationships: has many `Resource`; providers may work at one or more locations
+- Validation: name required; timezone (when set) must be a valid IANA zone.
+- Status: implemented (ADR-0015) — domain `Location`, `locations` table, RLS.
+
 ### Resource
 
-- Fields: `id`, `tenant_id`, `name`, `quantity`, `scope`, `location_id`, `status`
-- Relationships: associated to services through `ServiceResource`
-- Validation: quantity must be positive; resource allocation is backend-only and not customer-selectable.
+- Fields: `id`, `tenant_id`, `name`, `quantity`, `location_id`, `status`
+- Relationships: belongs to `Location` (optional); associated to services through `ServiceResource`; associated to eligible providers through `ProviderResource`
+- Validation: quantity must be a positive integer; resource allocation is backend-only and not customer-selectable.
+
+### ProviderResource
+
+- Fields: `tenant_id`, `provider_id`, `resource_id`
+- Relationships: links a `Provider` to a `Resource` they are eligible to use (model B, ADR-0015)
+- Semantics: a provider with no rows is unconstrained (may use any resource); when rows exist, the provider may use only the listed resources. A service that demands a resource the provider cannot use yields zero availability for that provider.
 
 ## Booking And Payments
 

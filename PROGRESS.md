@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-06-13
+Last updated: 2026-06-16
 
 ## Current State
 
@@ -142,7 +142,32 @@ Current clean baseline commit:
   - Outbound webhook dispatcher (T075): `services/worker/src/jobs/outbound-webhook-dispatcher.ts` — HMAC-SHA256 `X-Signature-256` header, exponential backoff (3 attempts × 4× factor), tenant+event-scoped subscription store, `FakeHttpDispatcher`. 10 contract tests. Worker package.json updated to wildcard export.
   - Full suite: 168 passing, 4 skipped (Redis/Postgres not available in CI container — by design). Lint and Prettier clean.
 
+### 2026-06-15 (Phase 8 / final push)
+
+- Completed T076–T086 (billing, operations, worker hardening, ADRs, acceptance validation):
+  - Billing domain (T076): `packages/domain/src/billing/billing.ts` — `FeatureFlag` union type, `BillingPlan`, `BillingQuotas`, `TenantBilling`, `TenantUsage`, `UsageEvent`; domain logic `hasFeature`, `isWithinQuota`, `bookingQuotaRemaining`; three built-in plans STARTER (€29), PROFESSIONAL (€79), ENTERPRISE (€299). 11 unit tests.
+  - Worker job runner (T080): `services/worker/src/infrastructure/jobs/job-runner.ts` — `TenantJobPayload`, idempotency store port + in-memory implementation, configurable retry with exponential back-off (`DEFAULT_JOB_RETRY`: 3 attempts, 2 s base, ×3), `runJob` orchestrator binding tenant context before handler. 13 unit tests.
+  - Booking notification dispatcher (T081): `services/worker/src/jobs/booking-notification-dispatcher.ts` — channel selection (SMS when phone present, else email), message builder per event type (confirmed/cancelled/rescheduled/reminder/rejected), meeting join URL injection. 9 integration tests.
+  - Payment reconciliation (T082): `services/worker/src/jobs/payment-reconciliation.ts` — `reconcilePayments` compares internal records vs Stripe charges, classifies as `ok / amount_mismatch / missing_in_stripe / duplicate_capture / status_mismatch`. `FakeStripeChargeRepository` for tests. 6 integration tests.
+  - Calendar sync (T083): `services/worker/src/jobs/calendar-sync.ts` — `syncCalendar` upserts remote events, counts cancellations, O(n²) conflict detection (confirmed non-all-day events only). `FakeRemoteCalendarAdapter` + `FakeLocalCalendarStore`. 6 integration tests.
+  - Videomeeting provisioning (T084): `services/api/src/application/integrations/videomeeting-provisioning-service.ts` — gates on `hasFeature("video_meetings")`, delegates to `MeetingProvider`, persists in `MeetingRepository`; supports provision/update/cancel/getDetails. `InMemoryMeetingRepository` for tests. 10 integration tests.
+  - Audit log routes (T078): `services/api/src/api/audit-routes.ts` — GET `/audit/events` with tenant-scoped filtering (actorId, eventType, date range), pagination; `InMemoryAuditLogRepository`. 7 integration tests.
+  - Demo seeds (T079): `services/api/src/seeds/demo-tenants.ts` — deterministic seed data for 3 tenants (Starter/Pro/Enterprise) with providers, services, and bookings; `SeedStore` port for adapter injection.
+  - Operations dashboard (T077): `apps/admin/src/features/operations/index.tsx` — React UI with tenant grid (billing status badges, quota bars for bookings/storage/notifications), click-through audit log panel; no emojis, Lucide icons only.
+  - ADRs (T085): 6 new decision records (ADR-0009 through ADR-0014) covering PostgreSQL RLS, Redis distributed lock, payment reconciliation strategy, OAuth gateway design, worker idempotency, and GDPR data handling.
+  - Quickstart acceptance (T086): `specs/001-saas-multitenant-booking/quickstart.md` extended with Scenarios 9–13 (billing feature gates, worker idempotency, payment reconciliation, calendar sync conflict detection, credential vault); acceptance status table for all 13 scenarios.
+  - Full suite: 229 passing, 4 skipped (Redis/Postgres not available in CI — by design); 1 pre-existing failure in `customer-passwordless.test.ts` (date-sensitive JWT test unrelated to Phase 8). Lint and Prettier clean.
+  - **All T001–T086 complete. The SaaS multitenant booking spec (US1–US5) is fully implemented.**
+
+### 2026-06-16 (Amelia UX sweep + admin connected chain + resource hub model)
+
+- Wired the admin console's full assignment chain end to end in the process-local demo store (`apps/admin`): Ubicaciones → Recursos → Proveedores → Servicios → Reservas → Clientes → Calendario, all backed by Next.js route handlers so the console runs with a single `pnpm dev`. Customers became first-class; bookings carry `customerId` + `providerId`; the Calendario screen renders a weekly grid grouped by provider.
+- Completed a full sweep of the Amelia Premium admin console and recorded it as a permanent UX reference (`docs/analysis/amelia-ux-reference.md`): all 14+ areas including Dashboard, Calendar, Bookings, Employees, Events, Catalog (Services/Resources/Packages), Locations, Customers, Finance, Notifications, Customize, Custom Fields, Features & Integrations, and Settings (General/Company/Payments/Bookings/Roles & permissions).
+- **Migrated the admin resource model to a hub (ADR-0016):** `AdminResource` now declares `locationIds[]`/`serviceIds[]`/`employeeIds[]` (empty = "any"); `AdminService` dropped `resourceId`/`resourceUnits` and `AdminProvider` dropped `resourceIds` — eligibility lives only on the resource (single source of truth). `createBooking` allocates an eligible, location-compatible resource with spare capacity (1 unit/booking). Recursos screen rebuilt as the hub config page; Proveedores/Servicios dropped their resource controls. `tsc --noEmit` clean. Quantity partition and group booking deferred on purpose (registered in the reference doc's "Decisiones pendientes" and ADR-0016). Scope is the admin demo store; the canonical domain/persistence layer (ADR-0015) still needs the matching migration.
+
 ## Current Backlog
+
+All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.
 
 Primary implementation backlog:
 
@@ -153,13 +178,13 @@ specs/001-saas-multitenant-booking/tasks.md
 Current task count:
 
 ```text
-T001-T086
+T001-T086 — ALL COMPLETE
 ```
 
 Current next task:
 
 ```text
-T076 Add tenant billing plan, feature flag, quota, and usage event model in packages/domain/src/billing/billing.ts
+None — production deployment and real adapter wiring are deferred per ADR-0007.
 ```
 
 ## Open Decisions

@@ -79,11 +79,21 @@ export const extras = pgTable("extras", {
   status: text("status").$type<CatalogStatus>().notNull(),
 });
 
+export const locations = pgTable("locations", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  name: text("name").notNull(),
+  timezone: text("timezone"),
+  address: text("address"),
+  status: text("status").$type<CatalogStatus>().notNull(),
+});
+
 export const resources = pgTable("resources", {
   id: uuid("id").primaryKey(),
   tenantId: uuid("tenant_id").notNull(),
   name: text("name").notNull(),
   quantity: integer("quantity").notNull(),
+  locationId: uuid("location_id"),
   status: text("status").$type<CatalogStatus>().notNull(),
 });
 
@@ -127,6 +137,16 @@ export const serviceResources = pgTable(
     units: integer("units").notNull(),
   },
   (table) => [primaryKey({ columns: [table.tenantId, table.serviceId, table.resourceId] })],
+);
+
+export const providerResources = pgTable(
+  "provider_resources",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    providerId: uuid("provider_id").notNull(),
+    resourceId: uuid("resource_id").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.tenantId, table.providerId, table.resourceId] })],
 );
 
 export const bookings = pgTable("bookings", {

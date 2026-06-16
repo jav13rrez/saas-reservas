@@ -108,3 +108,20 @@ describe("shared resource conflicts", () => {
     expect(slotsB.map((slot) => slot.startAt)).toEqual(["2026-06-15T09:00:00.000Z"]);
   });
 });
+
+describe("provider-resource eligibility (model B)", () => {
+  it("offers all slots when the provider is eligible for the demanded resource", () => {
+    const input = { ...queryFor(serviceB, []), providerEligibleResourceIds: ["room-1"] };
+    expect(computeAvailableSlots(input)).toHaveLength(3);
+  });
+
+  it("offers no slots when the provider is not eligible for a demanded resource", () => {
+    const input = { ...queryFor(serviceB, []), providerEligibleResourceIds: ["room-2"] };
+    expect(computeAvailableSlots(input)).toEqual([]);
+  });
+
+  it("treats an empty eligibility list as unconstrained", () => {
+    const input = { ...queryFor(serviceB, []), providerEligibleResourceIds: [] };
+    expect(computeAvailableSlots(input)).toHaveLength(3);
+  });
+});

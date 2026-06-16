@@ -189,17 +189,17 @@ description: "Implementation task list for a multitenant Amelia-inspired booking
 
 **Purpose**: Make the SaaS operable, billable, and reviewable.
 
-- [ ] T076 Add tenant billing plan, feature flag, quota, and usage event model in `packages/domain/src/billing/billing.ts`
-- [ ] T077 Add operational dashboards for booking failures, webhook failures, notification failures, and integration health in `apps/admin/src/features/operations/index.tsx`
-- [ ] T078 Add audit search APIs for tenant admins and platform operators in `services/api/src/api/audit-routes.ts`
-- [ ] T079 Add seed/demo tenant scenarios for clinic, salon, consultant, event organizer, and pet service verticals in `services/api/src/seeds/demo-tenants.ts`
-- [ ] T080 Add tenant-aware async job queue primitives, retry policy, idempotency keys, and worker tenant context bootstrap in `services/worker/src/infrastructure/jobs/job-runner.ts`
-- [ ] T081 Add booking notification orchestration for added, approved, rejected, rescheduled, canceled, payment captured, refunded, and failed events in `services/worker/src/jobs/booking-notification-dispatcher.ts`
-- [ ] T082 Add payment reconciliation worker for delayed gateway confirmation, failed webhook replay, refund reconciliation, and cart/subpayment consistency in `services/worker/src/jobs/payment-reconciliation.ts`
-- [ ] T083 Add calendar synchronization worker for outbound booking pushes, external busy-window reconciliation, webhook recovery, and videomeeting update propagation in `services/worker/src/jobs/calendar-sync.ts`
-- [ ] T084 Add videomeeting provisioning service invoked from booking approval and reschedule flows in `services/api/src/application/integrations/videomeeting-provisioning-service.ts`
-- [ ] T085 Add ADRs for RLS tenancy, Redis lock strategy, payment reconciliation, OAuth gateway, worker idempotency, and GDPR anonymization in `docs/adr/0001-saas-architecture-baseline.md`
-- [ ] T086 Validate all success criteria from `spec.md` with automated or documented checks in `specs/001-saas-multitenant-booking/quickstart.md`
+- [x] T076 Add tenant billing plan, feature flag, quota, and usage event model in `packages/domain/src/billing/billing.ts`
+- [x] T077 Add operational dashboards for booking failures, webhook failures, notification failures, and integration health in `apps/admin/src/features/operations/index.tsx`
+- [x] T078 Add audit search APIs for tenant admins and platform operators in `services/api/src/api/audit-routes.ts`
+- [x] T079 Add seed/demo tenant scenarios for clinic, salon, consultant, event organizer, and pet service verticals in `services/api/src/seeds/demo-tenants.ts`
+- [x] T080 Add tenant-aware async job queue primitives, retry policy, idempotency keys, and worker tenant context bootstrap in `services/worker/src/infrastructure/jobs/job-runner.ts`
+- [x] T081 Add booking notification orchestration for added, approved, rejected, rescheduled, canceled, payment captured, refunded, and failed events in `services/worker/src/jobs/booking-notification-dispatcher.ts`
+- [x] T082 Add payment reconciliation worker for delayed gateway confirmation, failed webhook replay, refund reconciliation, and cart/subpayment consistency in `services/worker/src/jobs/payment-reconciliation.ts`
+- [x] T083 Add calendar synchronization worker for outbound booking pushes, external busy-window reconciliation, webhook recovery, and videomeeting update propagation in `services/worker/src/jobs/calendar-sync.ts`
+- [x] T084 Add videomeeting provisioning service invoked from booking approval and reschedule flows in `services/api/src/application/integrations/videomeeting-provisioning-service.ts`
+- [x] T085 Add ADRs for RLS tenancy, Redis lock strategy, payment reconciliation, OAuth gateway, worker idempotency, and GDPR anonymization in `docs/adr/`
+- [x] T086 Validate all success criteria from `spec.md` with automated or documented checks in `specs/001-saas-multitenant-booking/quickstart.md`
 
 ---
 

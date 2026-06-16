@@ -46,6 +46,11 @@ export class InMemoryStore implements TenantRepository, CatalogRepository {
   private readonly schedules = new Map<string, ProviderScheduleEntry[]>();
   private readonly serviceProviders: ServiceProvider[] = [];
   private readonly serviceResources: ServiceResource[] = [];
+  private readonly providerResources: {
+    tenantId: string;
+    providerId: string;
+    resourceId: string;
+  }[] = [];
   private readonly providerBusy: ProviderBusyEntry[] = [];
   private readonly allocations: AllocationEntry[] = [];
 
@@ -155,6 +160,26 @@ export class InMemoryStore implements TenantRepository, CatalogRepository {
   linkResource(link: ServiceResource): Promise<void> {
     this.serviceResources.push(link);
     return Promise.resolve();
+  }
+
+  setProviderResources(tenantId: string, providerId: string, resourceIds: string[]): Promise<void> {
+    const kept = this.providerResources.filter(
+      (link) => !(link.tenantId === tenantId && link.providerId === providerId),
+    );
+    this.providerResources.length = 0;
+    this.providerResources.push(
+      ...kept,
+      ...resourceIds.map((resourceId) => ({ tenantId, providerId, resourceId })),
+    );
+    return Promise.resolve();
+  }
+
+  listProviderEligibleResourceIds(tenantId: string, providerId: string): Promise<string[]> {
+    return Promise.resolve(
+      this.providerResources
+        .filter((link) => link.tenantId === tenantId && link.providerId === providerId)
+        .map((link) => link.resourceId),
+    );
   }
 
   findProviderById(tenantId: string, providerId: string): Promise<Provider | null> {

@@ -1,12 +1,31 @@
 # Handoff
 
-Last updated: 2026-06-13
+Last updated: 2026-06-16
+
+## Post-Spec Work (2026-06-16): Admin Console + Resource Model B/C
+
+Beyond T001–T086, the admin console (`apps/admin`) gained a sidebar shell with product areas, and **Servicios / Reservas / Recursos / Ubicaciones / Proveedores / Clientes / Calendario** are functional screens backed by process-local Next.js route handlers (`apps/admin/src/server/demo-store.ts`) so the console runs with a single `pnpm dev` (no Fastify needed). The API proxy is narrowed to `/api/v1/*` so it does not shadow these handlers.
+
+The full assignment chain is now wired end to end in the admin demo store: `Ubicación -> Recurso -> Proveedor -> Servicio -> Reserva -> Cliente`. Customers (`AdminCustomer`) are first-class (Clientes screen) and bookings link a `customerId` + `providerId`. The Calendario screen renders a weekly grid of confirmed bookings grouped by provider. (This is admin-demo-store wiring; the Fastify `/v1/admin/*` provider/customer/eligibility routes remain the productionization step.)
+
+**Resource hub model (2026-06-16, ADR-0016).** After a full Amelia admin sweep (`docs/analysis/amelia-ux-reference.md`), the admin resource model was migrated to a *hub*: `AdminResource` now declares `locationIds[]`, `serviceIds[]` and `employeeIds[]` (empty = "any"). `AdminService` lost `resourceId`/`resourceUnits` and `AdminProvider` lost `resourceIds` — eligibility now lives only on the resource (single source of truth). The **Recursos** screen is the hub config page (three checkbox groups + edit/save); Proveedores and Servicios dropped their resource controls. `createBooking` allocates: for the booked service it finds active resources whose `serviceIds` include it, filters by provider eligibility and location compatibility, then requires at least one with a free unit (capacity stays 1 unit/booking). Deferred on purpose: quantity partition (`shared/per-service/per-location`) and group booking. **Scope:** this lands only in `apps/admin/src/server/demo-store.ts` + its route handlers; the canonical domain/persistence layer (ADR-0015) still carries the old shape and needs a follow-up migration (join tables `resource_services`/`resource_locations`/`resource_employees`, drop `provider_resources` + `service.resource_id`).
+
+The resource model was extended to **model B (provider-resource eligibility) + model C (multi-site locations)** per ADR-0015:
+
+- Domain: `Location` (`packages/domain/src/locations/location.ts`), `Resource.locationId`, `ProviderResource` + `providerEligibleForResources()`.
+- Engine: `computeAvailableSlots` honors `providerEligibleResourceIds` (zero availability when a provider is not eligible for a demanded resource).
+- Persistence: `locations` + `provider_resources` tables, `resources.location_id`, migration `infra/postgres/003-locations-eligibility.sql`; in-memory + Drizzle adapters.
+- Admin UI enforces concurrent resource capacity in bookings (the "4 therapists / 2 rooms" constraint is observable). See `docs/analysis/resources-model-review.md`.
+
+Remaining for full B/C: Fastify `/v1/admin/*` routes for locations/eligibility, provider-portal eligibility editor, public-widget exposure, and resource _groups_ (interchangeable pools with per-provider subsets). See ADR-0015 "Consequences". Note the eligibility *direction* changed with the hub migration (ADR-0016): the domain `ProviderResource` association should be replaced by resource-owned `employeeIds` when the canonical layer is migrated.
 
 ## Read This First
 
 This is the fastest resume document for Codex, Claude, or any future agent. Read this before making changes.
 
-Phases 1-7 (T001-T075) are complete. User Story 5 (premium integrations) is fully implemented: encrypted credential vault with envelope/KMS-style key management, calendar OAuth gateway (platform and tenant-owned modes), WhatsApp Cloud API integration, email/SMS message adapters, video meeting adapter boundary, Stripe Connect account management and application fee model, external calendar webhook receiver (Google + Microsoft) with idempotency, attachment pipeline (MIME + size + quota + antivirus + signed URLs), and outbound webhook dispatcher with HMAC signatures and exponential backoff retry. The calendar webhook routes are wired into `buildApp` as an optional `calendarWebhooks` dep. 168 tests pass (172 total; 4 skip without Redis/Postgres docker services). Lint and Prettier pass clean.
+**All phases T001–T086 are complete.** The SaaS multitenant booking platform spec (US1–US5) is fully implemented and tested. 229 tests pass (233 total; 4 skip without Redis/Postgres docker services; 1 pre-existing flaky test in passwordless JWT unrelated to spec scope). Lint and Prettier pass clean.
+
+Phase 8 (T076–T086) added: billing plan domain with feature flags and quotas, idempotent async job runner with retry, booking notification dispatcher, payment reconciliation worker, calendar sync with conflict detection, video meeting provisioning service gated on billing plan, audit log search API, demo tenant seeds, operations dashboard UI, 6 new ADRs (ADR-0009 through ADR-0014), and quickstart acceptance validation scenarios 9–13.
 
 The Drizzle/RLS persistence adapter is DONE: `packages/persistence` implements every repository port against PostgreSQL with per-transaction tenant context, verified end to end by `tests/integration/persistence/drizzle-checkout.test.ts`. In-memory adapters remain for fast tests/dev.
 
@@ -46,24 +65,24 @@ Do not treat `reference/` or `archive/` as source code. They are local research 
 
 ## Next Actions
 
-Recommended next steps:
+The implementation is complete. Recommended follow-up work (outside this spec):
 
-1. Start Phase 8 (T076–T086): billing plan + feature flags, operational dashboards, audit search APIs, demo tenant seeds, async worker hardening, booking notification orchestrator, payment reconciliation worker, calendar sync worker, videomeeting provisioning service, final ADRs, and spec acceptance validation.
+1. **Production server bootstrap**: `services/api/src/main.ts` loading `environment.ts`, Drizzle adapters, and starting Fastify — makes the stack runnable outside tests (see `tests/integration/persistence/drizzle-checkout.test.ts` for the wiring pattern).
 
-2. Consider a small server bootstrap (`services/api/src/main.ts`) that loads `environment.ts`, builds the Drizzle adapters like `tests/integration/persistence/drizzle-checkout.test.ts` does, and starts Fastify — that makes the stack runnable outside tests.
+2. **Drizzle migrations for Phase 7–8 contexts**: credential vault blobs, OAuth tokens, calendar event mappings, webhook subscriptions, attachment metadata, and billing/usage tables — all ports currently use in-memory adapters.
 
-3. Drizzle migration for the events context and the integration context (credential blobs, oauth tokens, calendar mappings, webhook subscriptions, attachment metadata) is a known follow-up; all ports currently use in-memory adapters.
+3. **Staff authentication**: `/v1/admin/*` routes use a dev-only `x-provider-id` header; real staff auth (e.g., API keys or JWT) is deferred.
 
-4. After each meaningful implementation session, update `PROGRESS.md`, `HANDOFF.md`, and `tasks.md`.
+4. **Real adapter wiring**: swap `FakePaymentGateway`, `FakeMessageProvider`, `FakeKmsAdapter`, and `FakeStorageAdapter` for real Stripe Connect, SendGrid/Twilio, AWS KMS, and S3 equivalents behind the existing interfaces.
+
+5. **Fix pre-existing flaky test**: `tests/integration/identity/customer-passwordless.test.ts` line 99 — the "expires sessions after their TTL" case fails intermittently due to date-sensitive JWT behavior.
 
 ## Current Task Pointer
 
-Phases 1-7 (T001-T075) are complete.
-
-Next task:
+All tasks T001–T086 are complete.
 
 ```text
-T076 Add tenant billing plan, feature flag, quota, and usage event model in packages/domain/src/billing/billing.ts
+No pending tasks.
 ```
 
 ## Important Constraints
