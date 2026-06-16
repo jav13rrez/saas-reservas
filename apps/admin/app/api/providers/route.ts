@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { createProvider, listProviders } from "@/server/demo-store";
 
 /**
- * GET  /api/providers  -> list providers (with their location/resource/service
- *                         assignments)
+ * GET  /api/providers  -> list providers (with their location/service assignments)
  * POST /api/providers  -> create a provider
+ *
+ * Resource eligibility is configured from /api/resources (hub model).
  */
 
 export function GET(): NextResponse {
@@ -23,7 +24,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     email: string;
     timezone: string;
     locationIds: unknown;
-    resourceIds: unknown;
     serviceIds: unknown;
   }>;
   const result = createProvider({
@@ -31,7 +31,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     email: typeof input.email === "string" ? input.email : "",
     timezone: typeof input.timezone === "string" ? input.timezone : "",
     locationIds: input.locationIds,
-    resourceIds: input.resourceIds,
     serviceIds: input.serviceIds,
   });
   if (!result.ok) {

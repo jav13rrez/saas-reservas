@@ -4,19 +4,15 @@
  * Servicios screen. Lists the tenant catalog and lets the operator create a
  * service or toggle it active/inactive, talking to /api/services.
  *
+ * Resource association is configured from the Recursos screen (hub model):
+ * the resource declares which services consume its capacity, not the service.
+ *
  * Styling reads design tokens; icons from lucide-react only. No emojis.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Package, Plus, RefreshCw } from "lucide-react";
 import { formatMoney } from "@/lib/format";
-
-interface AdminResource {
-  id: string;
-  name: string;
-  quantity: number;
-  active: boolean;
-}
 
 interface AdminService {
   id: string;
@@ -26,8 +22,6 @@ interface AdminService {
   bufferAfterMinutes: number;
   priceAmount: number;
   currency: string;
-  resourceId?: string;
-  resourceUnits?: number;
   active: boolean;
 }
 
@@ -39,7 +33,6 @@ const CELL: React.CSSProperties = {
 
 export function Services() {
   const [services, setServices] = useState<AdminService[]>([]);
-  const [resources, setResources] = useState<AdminResource[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,29 +41,17 @@ export function Services() {
   const [duration, setDuration] = useState(30);
   const [bufferAfter, setBufferAfter] = useState(0);
   const [price, setPrice] = useState(40);
-  const [resourceId, setResourceId] = useState("");
-  const [resourceUnits, setResourceUnits] = useState(1);
   const [submitting, setSubmitting] = useState(false);
-
-  const activeResources = useMemo(() => resources.filter((r) => r.active), [resources]);
-  const resourceName = useCallback(
-    (id: string | undefined) =>
-      id === undefined ? null : (resources.find((r) => r.id === id)?.name ?? id),
-    [resources],
-  );
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const [sRes, rRes] = await Promise.all([fetch("/api/services"), fetch("/api/resources")]);
-      if (!sRes.ok || !rRes.ok) {
-        throw new Error("No se pudo cargar servicios o recursos.");
+      const res = await fetch("/api/services");
+      if (!res.ok) {
+        throw new Error("No se pudo cargar servicios.");
       }
-      const sBody = (await sRes.json()) as { items: AdminService[] };
-      const rBody = (await rRes.json()) as { items: AdminResource[] };
-      setServices(sBody.items);
-      setResources(rBody.items);
+      setServices(((await res.json()) as { items: AdminService[] }).items);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error inesperado");
     } finally {
@@ -97,8 +78,6 @@ export function Services() {
           bufferAfterMinutes: bufferAfter,
           priceAmount: Math.round(price * 100),
           currency: "EUR",
-          resourceId,
-          resourceUnits,
         }),
       });
       const body = (await res.json()) as { error?: string };
@@ -110,8 +89,6 @@ export function Services() {
       setDuration(30);
       setBufferAfter(0);
       setPrice(40);
-      setResourceId("");
-      setResourceUnits(1);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error inesperado");
@@ -145,8 +122,8 @@ export function Services() {
         Servicios
       </h1>
       <p style={{ color: "var(--ui-color-text-muted)", maxWidth: 640 }}>
-        Catálogo de servicios reservables del tenant. Crea servicios y controla cuáles están
-        disponibles para reservar.
+        Catálogo de servicios reservables del tenant. Los recursos que consume cada servicio se
+        configuran desde la pantalla de Recursos.
       </p>
 
       <form
@@ -218,38 +195,6 @@ export function Services() {
             style={{ width: 120 }}
           />
         </label>
-        <label>
-          Recurso requerido
-          <select
-            value={resourceId}
-            onChange={(e) => {
-              setResourceId(e.target.value);
-            }}
-            style={{ minWidth: 180 }}
-          >
-            <option value="">Ninguno</option>
-            {activeResources.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} (x{r.quantity})
-              </option>
-            ))}
-          </select>
-        </label>
-        {resourceId !== "" && (
-          <label>
-            Unidades
-            <input
-              type="number"
-              min={1}
-              step={1}
-              value={resourceUnits}
-              onChange={(e) => {
-                setResourceUnits(Number(e.target.value));
-              }}
-              style={{ width: 100 }}
-            />
-          </label>
-        )}
         <button
           type="submit"
           disabled={submitting}
@@ -300,7 +245,6 @@ export function Services() {
               <th style={CELL}>Categoría</th>
               <th style={CELL}>Duración</th>
               <th style={CELL}>Precio</th>
-              <th style={CELL}>Recurso</th>
               <th style={CELL}>Estado</th>
               <th style={CELL}></th>
             </tr>
@@ -315,11 +259,6 @@ export function Services() {
                   {s.bufferAfterMinutes > 0 ? ` (+${String(s.bufferAfterMinutes)})` : ""}
                 </td>
                 <td style={CELL}>{formatMoney(s.priceAmount, s.currency)}</td>
-                <td style={CELL}>
-                  {s.resourceId === undefined
-                    ? "—"
-                    : `${resourceName(s.resourceId) ?? ""} (x${String(s.resourceUnits ?? 1)})`}
-                </td>
                 <td style={CELL}>
                   <span
                     style={{

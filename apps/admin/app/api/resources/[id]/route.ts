@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { setResourceActive } from "@/server/demo-store";
+import { updateResource } from "@/server/demo-store";
 
 /**
- * PATCH /api/resources/:id  -> toggle a resource active/inactive
- * Body: { active: boolean }
+ * PATCH /api/resources/:id  -> update resource fields (name, quantity, arrays, active)
  */
 
 export async function PATCH(
@@ -17,11 +16,22 @@ export async function PATCH(
   } catch {
     return NextResponse.json({ error: "Cuerpo JSON inválido." }, { status: 400 });
   }
-  const active = (body as { active?: unknown }).active;
-  if (typeof active !== "boolean") {
-    return NextResponse.json({ error: "El campo 'active' debe ser booleano." }, { status: 400 });
-  }
-  const result = setResourceActive(id, active);
+  const input = body as Partial<{
+    name: string;
+    quantity: number;
+    locationIds: unknown;
+    serviceIds: unknown;
+    employeeIds: unknown;
+    active: boolean;
+  }>;
+  const result = updateResource(id, {
+    name: input.name,
+    quantity: input.quantity,
+    locationIds: input.locationIds,
+    serviceIds: input.serviceIds,
+    employeeIds: input.employeeIds,
+    active: input.active,
+  });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 404 });
   }

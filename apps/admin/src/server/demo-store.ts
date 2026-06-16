@@ -14,14 +14,15 @@
  *
  *   Ubicación -> Recurso -> Proveedor -> Servicio -> Reserva -> Cliente
  *
- * - A resource is a pool with a quantity at a location.
- * - A service may demand units of a resource.
- * - A provider works at one or more locations, is eligible for a set of
- *   resources (model B: empty = unconstrained), and delivers a set of services.
- * - A booking links a customer, a service and a provider; it is rejected unless
- *   the provider delivers the service, is eligible for the demanded resource,
- *   works at the resource's location, the resource has spare capacity, and the
- *   provider is not already busy in that interval.
+ * Resource hub model (partial Amelia alignment):
+ * - A resource declares which locations it lives at (locationIds[]).
+ * - A resource declares which services trigger its allocation (serviceIds[]).
+ * - A resource declares which providers are eligible to use it (employeeIds[],
+ *   empty = any provider).
+ * - A service no longer points to a resource; the resource declares the service.
+ * - A provider no longer declares eligible resources; the resource declares it.
+ * - Capacity (quantity) is simple: each booking consumes 1 unit of every
+ *   resource that applies to its service.
  *
  * Money is stored in minor units (cents). Times are ISO-8601 strings.
  */
@@ -46,7 +47,12 @@ export interface AdminResource {
   id: string;
   name: string;
   quantity: number;
-  locationId?: string;
+  /** Locations where this resource is physically available. Empty = any location. */
+  locationIds: string[];
+  /** Services whose bookings consume one unit of this resource. Empty = no services. */
+  serviceIds: string[];
+  /** Providers eligible to use this resource. Empty = any provider. */
+  employeeIds: string[];
   active: boolean;
 }
 
@@ -58,9 +64,6 @@ export interface AdminService {
   bufferAfterMinutes: number;
   priceAmount: number;
   currency: string;
-  /** Optional resource demand: each booking consumes `resourceUnits` of it. */
-  resourceId?: string;
-  resourceUnits?: number;
   active: boolean;
 }
 
@@ -71,8 +74,6 @@ export interface AdminProvider {
   timezone?: string;
   /** Locations the provider works at. Empty = any location. */
   locationIds: string[];
-  /** Eligible resources (model B). Empty = unconstrained (any resource). */
-  resourceIds: string[];
   /** Services the provider can deliver. */
   serviceIds: string[];
   active: boolean;
@@ -181,23 +182,6 @@ function seed(): DemoData {
   };
   const locations: AdminLocation[] = [sedeCentro, sedeNorte];
 
-  // Two therapy rooms at Sede Centro: the bottleneck in the classic example.
-  const salaTerapia: AdminResource = {
-    id: randomUUID(),
-    name: "Sala de terapia",
-    quantity: 2,
-    locationId: sedeCentro.id,
-    active: true,
-  };
-  const boxNorte: AdminResource = {
-    id: randomUUID(),
-    name: "Box de tratamiento",
-    quantity: 1,
-    locationId: sedeNorte.id,
-    active: true,
-  };
-  const resources: AdminResource[] = [salaTerapia, boxNorte];
-
   const consulta: AdminService = {
     id: randomUUID(),
     name: "Consulta inicial",
@@ -216,8 +200,6 @@ function seed(): DemoData {
     bufferAfterMinutes: 10,
     priceAmount: 6000,
     currency: "EUR",
-    resourceId: salaTerapia.id,
-    resourceUnits: 1,
     active: true,
   };
   const premium: AdminService = {
@@ -232,30 +214,49 @@ function seed(): DemoData {
   };
   const services: AdminService[] = [consulta, terapia, premium];
 
-  // Ana works at Sede Centro, is eligible for the therapy room, and delivers
-  // both the initial consult and the therapy session.
+  // Ana works at Sede Centro and delivers both services.
   const ana: AdminProvider = {
     id: randomUUID(),
     name: "Ana Torres",
     email: "ana@example.com",
     timezone: "Europe/Madrid",
     locationIds: [sedeCentro.id],
-    resourceIds: [salaTerapia.id],
     serviceIds: [consulta.id, terapia.id],
     active: true,
   };
-  // Carlos only delivers the initial consult (no resource demand).
+  // Carlos delivers the initial consult at both locations (no resource constraint).
   const carlos: AdminProvider = {
     id: randomUUID(),
     name: "Carlos Ruiz",
     email: "carlos@example.com",
     timezone: "Europe/Madrid",
     locationIds: [sedeCentro.id, sedeNorte.id],
-    resourceIds: [],
     serviceIds: [consulta.id],
     active: true,
   };
   const providers: AdminProvider[] = [ana, carlos];
+
+  // Two therapy rooms at Sede Centro: the capacity bottleneck.
+  // Hub model: the resource declares which services and which providers it applies to.
+  const salaTerapia: AdminResource = {
+    id: randomUUID(),
+    name: "Sala de terapia",
+    quantity: 2,
+    locationIds: [sedeCentro.id],
+    serviceIds: [terapia.id],
+    employeeIds: [ana.id], // only Ana is eligible for the therapy room
+    active: true,
+  };
+  const boxNorte: AdminResource = {
+    id: randomUUID(),
+    name: "Box de tratamiento",
+    quantity: 1,
+    locationIds: [sedeNorte.id],
+    serviceIds: [], // no services assigned yet
+    employeeIds: [],
+    active: true,
+  };
+  const resources: AdminResource[] = [salaTerapia, boxNorte];
 
   const lucia: AdminCustomer = {
     id: randomUUID(),
@@ -375,7 +376,7 @@ export function setLocationActive(id: string, active: boolean): StoreResult<Admi
 }
 
 // ---------------------------------------------------------------------------
-// Resources
+// Resources (hub model)
 // ---------------------------------------------------------------------------
 
 export function listResources(): AdminResource[] {
@@ -389,7 +390,9 @@ export function findResource(id: string): AdminResource | undefined {
 export interface CreateResourceInput {
   name: string;
   quantity: number;
-  locationId: string;
+  locationIds: unknown;
+  serviceIds: unknown;
+  employeeIds: unknown;
 }
 
 export function createResource(input: CreateResourceInput): StoreResult<AdminResource> {
@@ -400,27 +403,65 @@ export function createResource(input: CreateResourceInput): StoreResult<AdminRes
   if (!Number.isInteger(input.quantity) || input.quantity < 1) {
     return { ok: false, error: "La cantidad debe ser un entero de al menos 1." };
   }
-  const locationId = input.locationId.trim();
-  if (locationId !== "" && findLocation(locationId) === undefined) {
-    return { ok: false, error: "La ubicación seleccionada no existe." };
-  }
+  const validLocations = new Set(data().locations.map((l) => l.id));
+  const validServices = new Set(data().services.map((s) => s.id));
+  const validProviders = new Set(data().providers.map((p) => p.id));
+
   const resource: AdminResource = {
     id: randomUUID(),
     name,
     quantity: input.quantity,
+    locationIds: keepKnown(input.locationIds, validLocations),
+    serviceIds: keepKnown(input.serviceIds, validServices),
+    employeeIds: keepKnown(input.employeeIds, validProviders),
     active: true,
-    ...(locationId !== "" ? { locationId } : {}),
   };
   data().resources.unshift(resource);
   return { ok: true, value: resource };
 }
 
-export function setResourceActive(id: string, active: boolean): StoreResult<AdminResource> {
+export interface UpdateResourceInput {
+  name?: string;
+  quantity?: number;
+  locationIds?: unknown;
+  serviceIds?: unknown;
+  employeeIds?: unknown;
+  active?: boolean;
+}
+
+export function updateResource(id: string, input: UpdateResourceInput): StoreResult<AdminResource> {
   const resource = findResource(id);
   if (resource === undefined) {
     return { ok: false, error: "Recurso no encontrado." };
   }
-  resource.active = active;
+  if (input.name !== undefined) {
+    const name = input.name.trim();
+    if (name === "") {
+      return { ok: false, error: "El nombre del recurso es obligatorio." };
+    }
+    resource.name = name;
+  }
+  if (input.quantity !== undefined) {
+    if (!Number.isInteger(input.quantity) || input.quantity < 1) {
+      return { ok: false, error: "La cantidad debe ser un entero de al menos 1." };
+    }
+    resource.quantity = input.quantity;
+  }
+  if (input.locationIds !== undefined) {
+    resource.locationIds = keepKnown(input.locationIds, new Set(data().locations.map((l) => l.id)));
+  }
+  if (input.serviceIds !== undefined) {
+    resource.serviceIds = keepKnown(input.serviceIds, new Set(data().services.map((s) => s.id)));
+  }
+  if (input.employeeIds !== undefined) {
+    resource.employeeIds = keepKnown(
+      input.employeeIds,
+      new Set(data().providers.map((p) => p.id)),
+    );
+  }
+  if (input.active !== undefined) {
+    resource.active = input.active;
+  }
   return { ok: true, value: resource };
 }
 
@@ -443,8 +484,6 @@ export interface CreateServiceInput {
   bufferAfterMinutes: number;
   priceAmount: number;
   currency: string;
-  resourceId: string;
-  resourceUnits: number;
 }
 
 export function createService(input: CreateServiceInput): StoreResult<AdminService> {
@@ -458,25 +497,6 @@ export function createService(input: CreateServiceInput): StoreResult<AdminServi
   if (!Number.isFinite(input.priceAmount) || input.priceAmount < 0) {
     return { ok: false, error: "El precio no puede ser negativo." };
   }
-  const resourceId = input.resourceId.trim();
-  let demand: { resourceId: string; resourceUnits: number } | undefined;
-  if (resourceId !== "") {
-    const resource = findResource(resourceId);
-    if (resource === undefined) {
-      return { ok: false, error: "El recurso seleccionado no existe." };
-    }
-    const units = Number.isFinite(input.resourceUnits) ? Math.round(input.resourceUnits) : 1;
-    if (units < 1) {
-      return { ok: false, error: "Las unidades de recurso deben ser al menos 1." };
-    }
-    if (units > resource.quantity) {
-      return {
-        ok: false,
-        error: `El servicio pide ${String(units)} unidades pero el recurso solo tiene ${String(resource.quantity)}.`,
-      };
-    }
-    demand = { resourceId, resourceUnits: units };
-  }
   const service: AdminService = {
     id: randomUUID(),
     name,
@@ -486,7 +506,6 @@ export function createService(input: CreateServiceInput): StoreResult<AdminServi
     priceAmount: Math.round(input.priceAmount),
     currency: input.currency.trim() === "" ? "EUR" : input.currency.trim().toUpperCase(),
     active: true,
-    ...(demand ?? {}),
   };
   data().services.unshift(service);
   return { ok: true, value: service };
@@ -502,7 +521,7 @@ export function setServiceActive(id: string, active: boolean): StoreResult<Admin
 }
 
 // ---------------------------------------------------------------------------
-// Providers (with the location/resource/service assignment chain)
+// Providers
 // ---------------------------------------------------------------------------
 
 export function listProviders(): AdminProvider[] {
@@ -518,7 +537,6 @@ export interface CreateProviderInput {
   email: string;
   timezone: string;
   locationIds: unknown;
-  resourceIds: unknown;
   serviceIds: unknown;
 }
 
@@ -540,7 +558,6 @@ export function createProvider(input: CreateProviderInput): StoreResult<AdminPro
   }
 
   const validLocations = new Set(data().locations.map((l) => l.id));
-  const validResources = new Set(data().resources.map((r) => r.id));
   const validServices = new Set(data().services.map((s) => s.id));
 
   const provider: AdminProvider = {
@@ -548,7 +565,6 @@ export function createProvider(input: CreateProviderInput): StoreResult<AdminPro
     name,
     email,
     locationIds: keepKnown(input.locationIds, validLocations),
-    resourceIds: keepKnown(input.resourceIds, validResources),
     serviceIds: keepKnown(input.serviceIds, validServices),
     active: true,
     ...(timezone !== "" ? { timezone } : {}),
@@ -562,7 +578,6 @@ export interface UpdateProviderInput {
   email?: string;
   timezone?: string;
   locationIds?: unknown;
-  resourceIds?: unknown;
   serviceIds?: unknown;
   active?: boolean;
 }
@@ -603,9 +618,6 @@ export function updateProvider(id: string, input: UpdateProviderInput): StoreRes
   }
   if (input.locationIds !== undefined) {
     provider.locationIds = keepKnown(input.locationIds, new Set(data().locations.map((l) => l.id)));
-  }
-  if (input.resourceIds !== undefined) {
-    provider.resourceIds = keepKnown(input.resourceIds, new Set(data().resources.map((r) => r.id)));
   }
   if (input.serviceIds !== undefined) {
     provider.serviceIds = keepKnown(input.serviceIds, new Set(data().services.map((s) => s.id)));
@@ -674,7 +686,7 @@ export function setCustomerActive(id: string, active: boolean): StoreResult<Admi
 }
 
 // ---------------------------------------------------------------------------
-// Bookings (with the full assignment-chain validation)
+// Bookings (with the full hub-model validation)
 // ---------------------------------------------------------------------------
 
 export function listBookings(): AdminBooking[] {
@@ -689,22 +701,17 @@ export interface CreateBookingInput {
 }
 
 /**
- * Units of `resourceId` already committed by confirmed bookings overlapping
- * [start, end). Sums across every service that demands the same resource — the
- * resource is the shared bottleneck regardless of service or provider.
+ * Units of `resourceId` already consumed by confirmed bookings that overlap
+ * [start, end). Each confirmed booking whose service is in resource.serviceIds
+ * consumes 1 unit of that resource.
  */
-function unitsInUse(resourceId: string, start: string, end: string): number {
+function unitsInUse(resource: AdminResource, start: string, end: string): number {
   let used = 0;
   for (const booking of data().bookings) {
-    if (booking.status !== "confirmed") {
-      continue;
-    }
-    const service = findService(booking.serviceId);
-    if (service?.resourceId !== resourceId || service.resourceUnits === undefined) {
-      continue;
-    }
+    if (booking.status !== "confirmed") continue;
+    if (!resource.serviceIds.includes(booking.serviceId)) continue;
     if (intervalsOverlap(start, end, booking.startAt, booking.endAt)) {
-      used += service.resourceUnits;
+      used += 1;
     }
   }
   return used;
@@ -755,42 +762,47 @@ export function createBooking(input: CreateBookingInput): StoreResult<AdminBooki
   const startAt = start.toISOString();
   const endAt = addMinutes(startAt, service.durationMinutes);
 
-  // Resource chain: eligibility (model B), location, and concurrent capacity.
-  if (service.resourceId !== undefined && service.resourceUnits !== undefined) {
-    const resource = findResource(service.resourceId);
-    if (resource === undefined) {
-      return { ok: false, error: "El recurso del servicio ya no existe." };
-    }
-    if (!resource.active) {
-      return { ok: false, error: `El recurso "${resource.name}" está inactivo.` };
-    }
-    // Model B: empty eligibility = unconstrained; otherwise must include it.
-    if (provider.resourceIds.length > 0 && !provider.resourceIds.includes(resource.id)) {
+  // Hub resource chain: find every resource that applies to this service.
+  const candidateResources = data().resources.filter(
+    (r) => r.active && r.serviceIds.includes(service.id),
+  );
+
+  if (candidateResources.length > 0) {
+    // Provider eligibility: resource.employeeIds empty = any provider OK.
+    const eligibleResources = candidateResources.filter(
+      (r) => r.employeeIds.length === 0 || r.employeeIds.includes(provider.id),
+    );
+    if (eligibleResources.length === 0) {
       return {
         ok: false,
-        error: `"${provider.name}" no es elegible para el recurso "${resource.name}".`,
+        error: `"${provider.name}" no es elegible para ningún recurso de "${service.name}".`,
       };
     }
-    // Location chain: a provider with declared sites must work where the
-    // resource lives.
-    if (
-      resource.locationId !== undefined &&
-      provider.locationIds.length > 0 &&
-      !provider.locationIds.includes(resource.locationId)
-    ) {
-      const location = findLocation(resource.locationId);
+
+    // Location compatibility: overlap between resource locations and provider locations.
+    // Empty locationIds on either side means "any location".
+    const locationCompatible = eligibleResources.filter(
+      (r) =>
+        r.locationIds.length === 0 ||
+        provider.locationIds.length === 0 ||
+        provider.locationIds.some((lid) => r.locationIds.includes(lid)),
+    );
+    if (locationCompatible.length === 0) {
       return {
         ok: false,
-        error: `"${provider.name}" no trabaja en la ubicación del recurso${
-          location !== undefined ? ` (${location.name})` : ""
-        }.`,
+        error: `"${provider.name}" no trabaja en ninguna ubicación donde esté disponible el recurso requerido para "${service.name}".`,
       };
     }
-    const used = unitsInUse(resource.id, startAt, endAt);
-    if (used + service.resourceUnits > resource.quantity) {
+
+    // Capacity: at least one compatible resource must have a free slot.
+    const hasCapacity = locationCompatible.some(
+      (r) => unitsInUse(r, startAt, endAt) < r.quantity,
+    );
+    if (!hasCapacity) {
+      const names = locationCompatible.map((r) => r.name).join(", ");
       return {
         ok: false,
-        error: `Sin capacidad de "${resource.name}" en ese horario (${String(used)}/${String(resource.quantity)} en uso).`,
+        error: `Sin capacidad disponible (${names}) en ese horario.`,
       };
     }
   }

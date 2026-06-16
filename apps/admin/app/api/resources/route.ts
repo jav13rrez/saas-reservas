@@ -3,7 +3,7 @@ import { createResource, listResources } from "@/server/demo-store";
 
 /**
  * GET  /api/resources  -> list resources
- * POST /api/resources  -> create a resource (pool with a quantity at a location)
+ * POST /api/resources  -> create a resource (hub model: declares locations, services, providers)
  */
 
 export function GET(): NextResponse {
@@ -17,11 +17,19 @@ export async function POST(request: Request): Promise<NextResponse> {
   } catch {
     return NextResponse.json({ error: "Cuerpo JSON inválido." }, { status: 400 });
   }
-  const input = body as Partial<{ name: string; quantity: number; locationId: string }>;
+  const input = body as Partial<{
+    name: string;
+    quantity: number;
+    locationIds: unknown;
+    serviceIds: unknown;
+    employeeIds: unknown;
+  }>;
   const result = createResource({
     name: typeof input.name === "string" ? input.name : "",
     quantity: typeof input.quantity === "number" ? input.quantity : NaN,
-    locationId: typeof input.locationId === "string" ? input.locationId : "",
+    locationIds: input.locationIds ?? [],
+    serviceIds: input.serviceIds ?? [],
+    employeeIds: input.employeeIds ?? [],
   });
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });

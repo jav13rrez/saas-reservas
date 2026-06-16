@@ -2,9 +2,9 @@
 
 /**
  * Proveedores screen. A provider (the human delivering the service) is assigned
- * to locations, eligible resources (model B) and the services they deliver —
- * the whole assignment chain in one place. Talks to /api/providers,
- * /api/locations, /api/resources and /api/services.
+ * to locations and the services they deliver. Resource eligibility is now
+ * configured from the resource side (hub model), not here. Talks to
+ * /api/providers, /api/locations and /api/services.
  *
  * Styling reads design tokens; icons from lucide-react only. No emojis.
  */
@@ -15,13 +15,6 @@ import { UserCog, Plus, RefreshCw, Save, X } from "lucide-react";
 interface AdminLocation {
   id: string;
   name: string;
-  active: boolean;
-}
-interface AdminResource {
-  id: string;
-  name: string;
-  quantity: number;
-  locationId?: string;
   active: boolean;
 }
 interface AdminService {
@@ -35,7 +28,6 @@ interface AdminProvider {
   email: string;
   timezone?: string;
   locationIds: string[];
-  resourceIds: string[];
   serviceIds: string[];
   active: boolean;
 }
@@ -57,7 +49,6 @@ function emptyForm() {
     email: "",
     timezone: "Europe/Madrid",
     locationIds: [] as string[],
-    resourceIds: [] as string[],
     serviceIds: [] as string[],
   };
 }
@@ -65,7 +56,6 @@ function emptyForm() {
 export function Providers() {
   const [providers, setProviders] = useState<AdminProvider[]>([]);
   const [locations, setLocations] = useState<AdminLocation[]>([]);
-  const [resources, setResources] = useState<AdminResource[]>([]);
   const [services, setServices] = useState<AdminService[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +65,6 @@ export function Providers() {
   const [submitting, setSubmitting] = useState(false);
 
   const activeLocations = useMemo(() => locations.filter((l) => l.active), [locations]);
-  const activeResources = useMemo(() => resources.filter((r) => r.active), [resources]);
   const activeServices = useMemo(() => services.filter((s) => s.active), [services]);
 
   const nameOf = useCallback(
@@ -88,18 +77,16 @@ export function Providers() {
     setLoading(true);
     setError(null);
     try {
-      const [pRes, lRes, rRes, sRes] = await Promise.all([
+      const [pRes, lRes, sRes] = await Promise.all([
         fetch("/api/providers"),
         fetch("/api/locations"),
-        fetch("/api/resources"),
         fetch("/api/services"),
       ]);
-      if (!pRes.ok || !lRes.ok || !rRes.ok || !sRes.ok) {
+      if (!pRes.ok || !lRes.ok || !sRes.ok) {
         throw new Error("No se pudo cargar la información de proveedores.");
       }
       setProviders(((await pRes.json()) as { items: AdminProvider[] }).items);
       setLocations(((await lRes.json()) as { items: AdminLocation[] }).items);
-      setResources(((await rRes.json()) as { items: AdminResource[] }).items);
       setServices(((await sRes.json()) as { items: AdminService[] }).items);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error inesperado");
@@ -124,7 +111,6 @@ export function Providers() {
       email: p.email,
       timezone: p.timezone ?? "",
       locationIds: [...p.locationIds],
-      resourceIds: [...p.resourceIds],
       serviceIds: [...p.serviceIds],
     });
   }
@@ -179,9 +165,9 @@ export function Providers() {
         Proveedores
       </h1>
       <p style={{ color: "var(--ui-color-text-muted)", maxWidth: 680 }}>
-        El profesional que presta el servicio. Asígnale sus ubicaciones, los recursos para los que
-        es elegible y los servicios que ofrece. Sin recursos marcados, el proveedor puede usar
-        cualquier recurso; con recursos marcados, solo esos.
+        El profesional que presta el servicio. Asígnale sus ubicaciones y los servicios que ofrece.
+        La elegibilidad sobre recursos físicos (salas, equipos) se configura desde la pantalla de
+        Recursos.
       </p>
 
       <form
@@ -270,15 +256,6 @@ export function Providers() {
             }}
           />
           <CheckboxGroup
-            title="Recursos elegibles"
-            empty="No hay recursos activos."
-            options={activeResources}
-            selected={form.resourceIds}
-            onToggle={(id) => {
-              setForm((f) => ({ ...f, resourceIds: toggle(f.resourceIds, id) }));
-            }}
-          />
-          <CheckboxGroup
             title="Servicios que presta"
             empty="No hay servicios activos."
             options={activeServices}
@@ -339,7 +316,6 @@ export function Providers() {
             <tr style={{ color: "var(--ui-color-text-muted)", fontSize: "var(--ui-text-sm)" }}>
               <th style={CELL}>Proveedor</th>
               <th style={CELL}>Ubicaciones</th>
-              <th style={CELL}>Recursos</th>
               <th style={CELL}>Servicios</th>
               <th style={CELL}>Estado</th>
               <th style={CELL}></th>
@@ -360,12 +336,6 @@ export function Providers() {
                   <Chips
                     values={p.locationIds.map((id) => nameOf(locations, id))}
                     fallback="Todas"
-                  />
-                </td>
-                <td style={CELL}>
-                  <Chips
-                    values={p.resourceIds.map((id) => nameOf(resources, id))}
-                    fallback="Cualquiera"
                   />
                 </td>
                 <td style={CELL}>

@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { updateProvider, type UpdateProviderInput } from "@/server/demo-store";
 
 /**
- * PATCH /api/providers/:id  -> update a provider's profile, assignments
- *                              (locations/resources/services) or active state.
- * Any subset of fields may be sent.
+ * PATCH /api/providers/:id  -> update a provider's profile, location/service
+ *                              assignments, or active state. Any subset of
+ *                              fields may be sent.
+ *
+ * Resource eligibility is configured from /api/resources (hub model).
  */
 
 export async function PATCH(
@@ -23,33 +25,17 @@ export async function PATCH(
     email: string;
     timezone: string;
     locationIds: unknown;
-    resourceIds: unknown;
     serviceIds: unknown;
     active: boolean;
   }>;
 
   const patch: UpdateProviderInput = {};
-  if (typeof raw.name === "string") {
-    patch.name = raw.name;
-  }
-  if (typeof raw.email === "string") {
-    patch.email = raw.email;
-  }
-  if (typeof raw.timezone === "string") {
-    patch.timezone = raw.timezone;
-  }
-  if (raw.locationIds !== undefined) {
-    patch.locationIds = raw.locationIds;
-  }
-  if (raw.resourceIds !== undefined) {
-    patch.resourceIds = raw.resourceIds;
-  }
-  if (raw.serviceIds !== undefined) {
-    patch.serviceIds = raw.serviceIds;
-  }
-  if (typeof raw.active === "boolean") {
-    patch.active = raw.active;
-  }
+  if (typeof raw.name === "string") patch.name = raw.name;
+  if (typeof raw.email === "string") patch.email = raw.email;
+  if (typeof raw.timezone === "string") patch.timezone = raw.timezone;
+  if (raw.locationIds !== undefined) patch.locationIds = raw.locationIds;
+  if (raw.serviceIds !== undefined) patch.serviceIds = raw.serviceIds;
+  if (typeof raw.active === "boolean") patch.active = raw.active;
 
   const result = updateProvider(id, patch);
   if (!result.ok) {
