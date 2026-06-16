@@ -2,7 +2,7 @@
 
 Fecha: 2026-06-16
 Autor: análisis de agente sobre el código y las specs (`specs/001-saas-multitenant-booking/`)
-Estado: informe de análisis — **no se ha modificado código**
+Estado: **ACTUADO** — el §8 se decidió como **B + C** y está implementado (ver ADR-0015). Las brechas B2 (elegibilidad proveedor↔recurso) y B3 (ubicaciones) quedan cubiertas en dominio, motor, persistencia y UI del admin. Pendiente: editor de elegibilidad en el portal de proveedor y exposición en el widget público.
 
 ---
 
@@ -31,15 +31,16 @@ export interface Resource {
   id: string;
   tenantId: string;
   name: string;
-  quantity: number;   // nº de unidades idénticas (p.ej. 2 salas)
+  quantity: number; // nº de unidades idénticas (p.ej. 2 salas)
   status: CatalogStatus;
 }
 
-export interface ServiceResource {  // demanda de un servicio sobre un recurso
+export interface ServiceResource {
+  // demanda de un servicio sobre un recurso
   tenantId: string;
   serviceId: string;
   resourceId: string;
-  units: number;       // unidades que consume cada reserva de ese servicio
+  units: number; // unidades que consume cada reserva de ese servicio
 }
 ```
 
@@ -63,6 +64,7 @@ Es decir: un slot solo se ofrece si `(unidades ya ocupadas en ese intervalo) + (
 ### 2.3 El checkout reserva y libera recursos
 
 `services/api/src/api/checkout-routes.ts`:
+
 - Antes de cobrar adquiere **locks** del proveedor **y de cada recurso** demandado.
 - Al aprobarse el pago, `recordBookingOccupancy(...)` persiste la asignación de recursos.
 - Al cancelar, `releaseBookingOccupancy(...)` libera proveedor y recursos.
@@ -88,7 +90,7 @@ Hoy esto se modela así:
 
 Resultado: aunque haya 4 terapeutas libres a las 10:00, el motor **solo ofrece 2 slots simultáneos** a las 10:00, porque a la tercera reserva `unitsInUse(2) + 1 > quantity(2)`. **El cuello de botella de las salas se respeta correctamente.**
 
-> Conclusión: el caso que te preocupa **ya funciona** — pero por la vía *recurso↔servicio*, no *recurso↔proveedor*.
+> Conclusión: el caso que te preocupa **ya funciona** — pero por la vía _recurso↔servicio_, no _recurso↔proveedor_.
 
 ---
 
@@ -96,31 +98,33 @@ Resultado: aunque haya 4 terapeutas libres a las 10:00, el motor **solo ofrece 2
 
 Tu frase fue "recursos… asignados a los proveedores". El sistema actual los asigna **a los servicios**. No es lo mismo y conviene decidirlo a conciencia:
 
-| Modelo | Significado | ¿Implementado? | Cuándo es el correcto |
-|---|---|---|---|
-| **Recurso ↔ Servicio** (actual, y lo que dice el spec) | "El servicio Masaje consume 1 unidad del pool de Salas (2)." Cualquier reserva de ese servicio compite por el pool. | Sí | Recursos **compartidos como pool**: salas, boxes, sillones, máquinas que cualquier profesional puede usar. |
-| **Recurso ↔ Proveedor** (tu petición) | "La terapeuta Ana usa específicamente la Sala A." El recurso queda ligado a una persona. | No | Recursos **dedicados** a un profesional, o **elegibilidad** (qué unidades puede usar cada proveedor). |
+| Modelo                                                 | Significado                                                                                                         | ¿Implementado? | Cuándo es el correcto                                                                                      |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Recurso ↔ Servicio** (actual, y lo que dice el spec) | "El servicio Masaje consume 1 unidad del pool de Salas (2)." Cualquier reserva de ese servicio compite por el pool. | Sí             | Recursos **compartidos como pool**: salas, boxes, sillones, máquinas que cualquier profesional puede usar. |
+| **Recurso ↔ Proveedor** (tu petición)                  | "La terapeuta Ana usa específicamente la Sala A." El recurso queda ligado a una persona.                            | No             | Recursos **dedicados** a un profesional, o **elegibilidad** (qué unidades puede usar cada proveedor).      |
 
-En la práctica, muchos negocios necesitan una **combinación**: el *servicio* exige un *tipo* de recurso (grupo/pool), y al reservar se asigna *cualquier unidad libre* de ese grupo, **opcionalmente filtrada** por qué unidades puede usar el proveedor elegido. El modelo actual cubre la primera mitad (pool por servicio) pero **no** la elegibilidad por proveedor.
+En la práctica, muchos negocios necesitan una **combinación**: el _servicio_ exige un _tipo_ de recurso (grupo/pool), y al reservar se asigna _cualquier unidad libre_ de ese grupo, **opcionalmente filtrada** por qué unidades puede usar el proveedor elegido. El modelo actual cubre la primera mitad (pool por servicio) pero **no** la elegibilidad por proveedor.
 
 Ejemplos para decidir:
-- **Peluquería**: 4 peluqueros, 3 sillones cualquiera-sirve → *recurso↔servicio* basta (lo actual).
-- **Clínica con salas dedicadas**: la Dra. X solo opera en el Quirófano 1 → necesitas *recurso↔proveedor* (elegibilidad).
+
+- **Peluquería**: 4 peluqueros, 3 sillones cualquiera-sirve → _recurso↔servicio_ basta (lo actual).
+- **Clínica con salas dedicadas**: la Dra. X solo opera en el Quirófano 1 → necesitas _recurso↔proveedor_ (elegibilidad).
 - **Multi-sede**: el recurso "Sala" existe en la sede A y en la B, y el proveedor trabaja en una sede → necesitas **Ubicación** (no implementada) + elegibilidad.
 
 ---
 
 ## 5. Brechas identificadas (resumen)
 
-| # | Brecha | Severidad | Origen |
-|---|---|---|---|
-| **B1** | **No hay UI de Recursos** (ni entrada de menú ni pantalla CRUD ni asignación servicio↔recurso). | Alta (operativa) | UI nunca construida |
-| **B2** | **No existe relación Proveedor↔Recurso** (ni elegibilidad ni recurso dedicado). | Media–Alta (depende del negocio) | Fuera del modelo actual y del spec |
-| **B3** | **No existe entidad Ubicación/Location** pese a estar en el spec (US1, `Service`, `Resource.location_id`, `Resource.scope`). Multi-sede no modelado. | Media | Divergencia respecto al spec |
-| **B4** | Campos `scope` y `location_id` del data-model **no implementados** en el dominio `Resource`. | Baja | Divergencia data-model ↔ código |
-| **B5** | Los recursos no se exponen en el flujo de alta rápida (`/settings` actual) ni en Servicios. | Baja | UI parcial |
+| #      | Brecha                                                                                                                                               | Severidad                        | Origen                             |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------- |
+| **B1** | **No hay UI de Recursos** (ni entrada de menú ni pantalla CRUD ni asignación servicio↔recurso).                                                      | Alta (operativa)                 | UI nunca construida                |
+| **B2** | **No existe relación Proveedor↔Recurso** (ni elegibilidad ni recurso dedicado).                                                                      | Media–Alta (depende del negocio) | Fuera del modelo actual y del spec |
+| **B3** | **No existe entidad Ubicación/Location** pese a estar en el spec (US1, `Service`, `Resource.location_id`, `Resource.scope`). Multi-sede no modelado. | Media                            | Divergencia respecto al spec       |
+| **B4** | Campos `scope` y `location_id` del data-model **no implementados** en el dominio `Resource`.                                                         | Baja                             | Divergencia data-model ↔ código    |
+| **B5** | Los recursos no se exponen en el flujo de alta rápida (`/settings` actual) ni en Servicios.                                                          | Baja                             | UI parcial                         |
 
 Notas:
+
 - B1 es la causa de que "no los veas". Es puramente de interfaz; el backend está listo.
 - B2 y B3 son **decisiones de producto**, no bugs. El spec deliberadamente puso recursos "por servicio/ubicación" y dejó la asignación backend-only ("resource allocation is backend-only and not customer-selectable"). Cambiar a "por proveedor" amplía el spec.
 
@@ -131,17 +135,20 @@ Notas:
 Si confirmas que necesitas el comportamiento "recurso ligado a proveedor", hay tres niveles de ambición:
 
 ### Opción A — Mínima (solo cerrar B1): UI sobre el modelo actual
+
 - Construir pantalla **Recursos** (CRUD de recurso + cantidad) y la asignación **Servicio↔Recurso** (units).
 - No toca el dominio. Resuelve "4 terapeutas / 2 salas" hoy mismo y lo hace visible/configurable.
 - **No** cubre recurso dedicado a un proveedor concreto.
 
 ### Opción B — Recomendada: grupos de recurso + elegibilidad por proveedor
+
 - Mantener `Resource` (pool con cantidad) y `ServiceResource` (qué exige el servicio).
-- Añadir **`ProviderResource`** (qué unidades/recursos puede usar cada proveedor) y, en el motor, filtrar la disponibilidad por la intersección *recurso exigido por el servicio* ∩ *recurso elegible por el proveedor*.
+- Añadir **`ProviderResource`** (qué unidades/recursos puede usar cada proveedor) y, en el motor, filtrar la disponibilidad por la intersección _recurso exigido por el servicio_ ∩ _recurso elegible por el proveedor_.
 - Cubre tanto el pool compartido como la dedicación/elegibilidad. Es el modelo más cercano a la realidad de clínicas y centros con salas/equipos específicos.
 - Coste: cambio en dominio, motor de disponibilidad, checkout (locks), persistencia y UI.
 
 ### Opción C — Completa: Ubicaciones + recursos + elegibilidad (alinear 100% con spec)
+
 - Añadir entidad **Location** (sede), ligar `Resource.location_id` y `Service`/`Provider` a ubicaciones, y combinar con la elegibilidad de la Opción B.
 - Es el modelo "enterprise" multi-sede que el spec insinúa. Mayor alcance; recomendable solo si multi-sede es un requisito real a corto plazo.
 

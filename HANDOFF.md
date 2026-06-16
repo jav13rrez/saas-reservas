@@ -1,6 +1,19 @@
 # Handoff
 
-Last updated: 2026-06-15
+Last updated: 2026-06-16
+
+## Post-Spec Work (2026-06-16): Admin Console + Resource Model B/C
+
+Beyond T001–T086, the admin console (`apps/admin`) gained a sidebar shell with product areas, and **Servicios / Reservas / Recursos / Ubicaciones** are functional screens backed by process-local Next.js route handlers (`apps/admin/src/server/demo-store.ts`) so the console runs with a single `pnpm dev` (no Fastify needed). The API proxy is narrowed to `/api/v1/*` so it does not shadow these handlers.
+
+The resource model was extended to **model B (provider-resource eligibility) + model C (multi-site locations)** per ADR-0015:
+
+- Domain: `Location` (`packages/domain/src/locations/location.ts`), `Resource.locationId`, `ProviderResource` + `providerEligibleForResources()`.
+- Engine: `computeAvailableSlots` honors `providerEligibleResourceIds` (zero availability when a provider is not eligible for a demanded resource).
+- Persistence: `locations` + `provider_resources` tables, `resources.location_id`, migration `infra/postgres/003-locations-eligibility.sql`; in-memory + Drizzle adapters.
+- Admin UI enforces concurrent resource capacity in bookings (the "4 therapists / 2 rooms" constraint is observable). See `docs/analysis/resources-model-review.md`.
+
+Remaining for full B/C: Fastify `/v1/admin/*` routes for locations/eligibility, provider-portal eligibility editor, public-widget exposure, and resource _groups_ (interchangeable pools with per-provider subsets). See ADR-0015 "Consequences".
 
 ## Read This First
 
