@@ -6,9 +6,10 @@ Estas observaciones guían el diseño de nuestras pantallas de admin, no son có
 **Método:** capturas compartidas por el propietario del proyecto, anotadas aquí en forma de árbol y
 notas de campo. Se actualiza en sesiones sucesivas.
 
-**Estado:** barrido del menú completado (2026-06-16). Revisadas todas las áreas salvo
-**Features & Integrations** y los sub-tabs de **Settings** (Payments / Bookings / Roles &
-permissions / Company), que quedan como único pendiente de capturas.
+**Estado:** barrido del menú **completado** (2026-06-16). Revisadas todas las áreas, incluidas
+**Features & Integrations** y los sub-tabs de **Settings** (General, Company, Payments, Bookings,
+Roles & permissions). Quedan sin capturar en detalle: Notifications dentro de Settings y Activation
+(no críticos). Pendiente abierto: decisión sobre el modelo de recursos (ver final del documento).
 
 ---
 
@@ -725,12 +726,37 @@ Observaciones:
 
 ## Features & Integrations
 
-[pendiente — no revisado en el barrido]
+**Revisado: 2026-06-16.**
 
-Esperado (por conocimiento de Amelia, a confirmar con captura): pasarelas de pago (Stripe, PayPal,
-Mollie, Razorpay, WooCommerce), calendarios (Google, Outlook/Microsoft, Apple), videollamada
-(Zoom, Google Meet, MS Teams), Zapier/webhooks, analytics, lecciones (LMS). Nuestro lado: todo vía
-adapters (`PaymentGateway`, `MessageProvider`, calendar sync, etc.) ya definidos como puertos.
+Pantalla en forma de **rejilla de tiles**, cada uno una capability con botón **Set up / Disable**.
+Permite activar/desactivar el plugin pieza a pieza (modelo "feature flags" cara al operador).
+
+Features observadas en la rejilla:
+
+```
+Custom fields            Custom notifications     Tax
+Invoices                 Coupons                  Deposit payment
+Time zones               Extras                   Recurring appointments
+Recurring events         Packages                 Custom pricing
+Cart                     Appointments waiting list Events waiting list
+Tickets                  E-ticket QR code         Resources   ← se activa/desactiva aquí
+Employee badges          No-show tag              Webhooks
+API (Elite)
+```
+
+Observaciones / ideas a robar:
+- **`Resources` es una feature conmutable**, no un área siempre presente. Confirma que para muchos
+  tenants el constraint de recursos no aplica. En nuestro modelo, recurso es opcional por servicio
+  (`service.resourceId` puede ser null), lo que da el mismo efecto sin un flag global.
+- **Feature flags por tenant**: encaja con nuestro modelo multi-tenant. Candidato a una tabla
+  `tenant_features` que habilite módulos (depósitos, cupones, lista de espera, no-show, etc.).
+- **Capabilities que ya tenemos como puertos**: notificaciones, pagos/depósitos, webhooks. Otras
+  (tax, invoices, coupons, cart, waiting list, QR e-ticket, employee badges, no-show) son backlog
+  de producto, no de infraestructura.
+- **Integraciones esperadas** (Amelia las trata aparte como conexiones externas): pasarelas (Stripe,
+  PayPal, Mollie, Razorpay, WooCommerce), calendarios (Google, Outlook, Apple), videollamada (Zoom,
+  Meet, Teams), Zapier. Nuestro lado: adapters (`PaymentGateway`, `MessageProvider`, calendar sync)
+  ya definidos como puertos.
 
 ---
 
@@ -766,9 +792,125 @@ Observaciones / ideas a robar:
   (365 días). Coincide con nuestro motor de políticas de cambio (US3, ya en backend). Falta UI.
 - **Mostrar slots en el huso del cliente**, **Add to Calendar**, **redirect tras reservar** —
   ajustes del widget público.
-- **Sub-tabs pendientes que SÍ nos importan**: **Payments** (gateway, moneda, depósitos),
-  **Bookings** (reglas globales), **Roles & permissions** (clave para staff auth multi-tenant),
-  **Company** (nombre, logo, timezone, moneda → branding del tenant).
+### Company (revisado)
+
+Sub-árbol propio dentro de Settings:
+
+```
+Company
+├── General
+│   · Upload image (logo PNG/JPG/JPEG)
+│   · Name (Translate)
+│   · Address  (Google Maps si hay API key)
+│   · Country (select)
+│   · Website
+│   · VAT number
+│   · Phone number / Email
+├── Working hours          ← horario GLOBAL de la empresa
+│   · Por día (Mon…Sun): toggle on/off + tramos "9:00 am – 5:00 pm"
+│   · "Add work hours" (varios tramos por día) + "Apply to all days"
+└── Days off               ← días libres GLOBALES
+    · Modal "Add day off": Start date – End date, Day off name, [toggle] Repeat yearly
+```
+
+Observaciones / ideas a robar:
+- **Working hours / Days off existen a DOS niveles**: empresa (aquí) y empleado (tab del empleado).
+  El horario efectivo de un slot es la **intersección** empresa ∩ empleado ∩ (servicio). Nosotros
+  hoy no modelamos horario de empresa; conviene añadirlo como capa base del tenant.
+- **Days off con "Repeat yearly"**: festivos recurrentes. Modelo simple (rango + nombre + flag).
+- **Company = branding + fiscal del tenant**: logo, nombre, dirección, país, web, VAT, contacto.
+  Encaja directamente con nuestra entidad Tenant (settings de marca y datos de facturación).
+
+### Payments (revisado)
+
+```
+· Currency (US Dollar…)              · Price symbol position (Before/After)
+· Price separator (Comma-dot…)       · Price number of decimals (2)
+· Custom currency symbol ($)
+Payment methods
+· Default payment method (On-site…)
+· [toggle] On-site   (+ otras pasarelas cuando se activan: Stripe, PayPal, Mollie…)
+```
+
+Observaciones / ideas a robar:
+- **Formato monetario configurable** (símbolo, posición, separador, decimales) → ajuste del tenant.
+  Hoy formateamos en `@/lib/format`; falta exponerlo como preferencia.
+- **"On-site" como método por defecto**: pago presencial. Útil para el caso terapias/consulta.
+- Las pasarelas reales viven en **Features & Integrations**; aquí solo se elige moneda y método.
+
+### Bookings → Appointments (revisado)
+
+```
+· Default appointment status (Approved / Pending)
+· [toggle] Allow booking above maximum capacity
+· [toggle] Allow booking below minimum capacity
+· [toggle] Use service duration for booking a time slot
+· [toggle] Include service buffer time in time slots
+People counting logic:  (○) Customer plus additional people   ( ) Total people
+· Employee selection logic (Random…)        ← cómo autoasigna empleado si el cliente no elige
+```
+
+Observaciones / ideas a robar:
+- **`Default appointment status`** (Approved vs Pending) = reserva auto-confirmada o pendiente de
+  aprobación. Nosotros hoy creamos siempre `confirmed`; añadir un modo "pending" es backlog.
+- **`Employee selection logic` (Random / Least busy / …)**: clave para nuestro selector de
+  proveedor. Hoy el operador elige proveedor a mano; este ajuste permitiría **autoasignación**
+  cuando el cliente reserva desde el widget público sin elegir profesional.
+- **Buffer time** y **service duration → slot**: detalles del motor de disponibilidad que ya
+  contemplamos en backend; aquí se ve cómo Amelia los expone como toggles.
+- **People counting logic / capacity toggles**: group booking. Fuera de nuestro alcance inmediato.
+
+### Roles & permissions (revisado)
+
+Tres roles con toggles granulares. Esto es **el modelo de autorización de staff** que necesitamos
+para el panel multi-tenant.
+
+```
+Employee
+├── Manage personal schedule
+│   · [ ] Allow employees to manage their services
+│   · [x] Allow employees to manage their schedule
+│   · [x] Allow employees to manage their special days
+│   · [x] Allow employees to manage their days off
+├── Manage bookings
+│   · Limit appointments per employee (toggle)
+└── Panel & access permissions
+    · Employee panel page URL
+    · [ ] Allow employees to manage their appointments
+    · [ ] Allow employees to manage their events
+    · [ ] Allow employees to manage customers
+
+Customer
+├── Customer configuration
+│   · [x] Check customer's name for existing email/phone when booking
+│   · [ ] Automatically create Amelia Customer user
+│   · [x] Require password for login
+├── Manage bookings
+│   · Limit appointments / package purchases / events per customer (toggles)
+└── Panel & access permissions
+    · Customer Panel Page URL
+    · [x] Allow customers to reschedule their own appointments
+    · [x] Allow customers to cancel packages
+    · [ ] Allow customers to delete their profile
+
+Admin
+· [ ] Allow admin to book appointment at any time
+· [ ] Allow admin to book over an existing appointment
+```
+
+Observaciones / ideas a robar:
+- **Tres roles base = Employee / Customer / Admin**, cada uno con un panel propio (URL) y un set de
+  permisos. Mapea a nuestro RBAC multi-tenant: `owner/admin`, `staff` (=Employee), `customer`.
+- **El permiso es por capability, no por pantalla**: "manage their schedule", "manage customers",
+  "book at any time". Conviene un enum de capabilities en vez de roles monolíticos.
+- **"Allow admin to book over an existing appointment"**: override del constraint de solape. Hoy
+  nuestro `createBooking()` rechaza siempre el solape; este toggle permitiría un override por rol.
+- **"Allow admin to book appointment at any time"**: ignora working hours/políticas de antelación.
+  Mismo patrón de override por rol.
+- **Customer: "Check existing email/phone"** = deduplicación de clientes al reservar. Útil para no
+  duplicar el registro de cliente que ya tenemos como entidad de primera clase.
+- **Self-service del cliente** (reschedule / cancel) gobernado por toggles → encaja con US3
+  (políticas de cambio) ya en backend; estos serían los flags que la UI consulta.
 
 ---
 
