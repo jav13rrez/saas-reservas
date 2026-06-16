@@ -625,18 +625,76 @@ Nuestro estado: el dominio de pagos/cupones existe en backend (US2, US8). Falta 
 
 ## Notifications
 
-[pendiente]
+**Revisado: 2026-06-16** (Email + SMS).
 
-Preguntas clave:
-- ¿Por trigger (booking created, reminder, cancellation…)?
-- ¿Email / SMS / WhatsApp?
-- ¿Editor de plantillas o integración con servicio externo?
+```
+Notifications
+├── Tabs canal: [ Email | SMS ]     (SMS = servicio externo "Amelia SMS" con login/Sign up)
+├── Sub-toggle destinatario: [ To customer | To employee ]
+├── Columna izquierda: lista de triggers agrupados + Search + [+ Notification]
+│   ├── Appointments: Approved, Pending, Rejected, Canceled, Details changed,
+│   │                 Rescheduled, Next day reminder*, Follow up*, Package purchased,
+│   │                 Package canceled        (* = con temporización/programados)
+│   ├── Events: Booked, Canceled by admin, Canceled by attendee, Details changed, Rescheduled
+│   └── Other: Birthday greeting*, Panel access, Booking invoice
+│   └── cada trigger con toggle on/off
+├── Panel derecho: editor de la plantilla seleccionada
+│   ├── Selector de idioma (English US…) → plantillas i18n por idioma
+│   ├── Subject * (con placeholders)
+│   ├── Subject placeholders: chips desplegables (Appointment, Customer, Employee,
+│   │     Service, Location, Company, Payment, Custom fields)
+│   ├── Message content (editor Text/HTML) con los mismos grupos de placeholders
+│   │     ej.: "Dear %customer_full_name%, … %service_name% … %employee_full_name% …
+│   │           %location_address% … %appointment_date_time% … %company_name%"
+│   └── bloque "Recurring appointments details" configurable
+└── [+ Notification] permite crear notificaciones custom (para Appointments o Events)
+```
+
+Observaciones / ideas a robar:
+- **Matriz canal × destinatario × trigger**: Email/SMS, a cliente/empleado, por cada evento del
+  ciclo de vida. Muy completo. Coincide con nuestro `NotificationTemplate` (channel, trigger,
+  placeholders) y `NotificationJob` ya en backend.
+- **Placeholders agrupados por entidad** (`%customer_full_name%`, `%service_name%`,
+  `%appointment_date_time%`, `%location_address%`, `%company_name%`…). Define el contrato de
+  variables que deben exponer nuestras plantillas.
+- **Plantillas por idioma** (selector de language) → i18n de notificaciones.
+- **Triggers programados** (Next day reminder, Follow up, Birthday greeting) además de los reactivos.
+- **Toggle on/off por trigger** sin borrar la plantilla.
+- **SMS como servicio externo** con cuenta propia (no incluido) — para nosotros sería un adapter
+  (Twilio/etc.) tras el `MessageProvider` que ya tenemos como Fake.
+- Nuestro "Notifications" no existe como área en el sidebar todavía → candidata a añadir.
 
 ---
 
 ## Customize
 
-[pendiente]
+**Revisado: 2026-06-16** (vista general; sin entrar en cada editor).
+
+Galería de **6 experiencias de front-end personalizables**, cada una con preview + botón "Continue":
+
+```
+1. Step-by-step    → formulario de reserva guiado paso a paso (diseño + labels)
+2. Catalog         → servicios en tarjetas, organizados por categoría
+3. Events calendar → eventos en vista calendario, reservables directamente
+4. Events list     → eventos en lista
+5. Customer panel  → panel del cliente (gestiona sus citas/eventos), colores + labels
+6. Employee panel  → panel del empleado, colores de marca
+```
+
+Cada una abre un editor visual (colores, textos/labels, layout) para que el widget encaje con la
+marca del sitio.
+
+Nota del dueño del proyecto (2026-06-16): *Amelia ha invertido mucho aquí porque, al ser un plugin
+de WordPress, integrarse en el diseño del sitio es crítico. Para nosotros NO necesitamos tanta
+complejidad; sí integraremos algo de personalización, pero se abordará más adelante.* No se entra
+en cada editor por ahora.
+
+Implicación para nosotros:
+- Corresponde a `apps/booking-widget` (front-end público) + el portal de cliente/empleado.
+- Nuestro enfoque: branding por tenant (logo, color primario, labels básicos) vía design tokens
+  (`packages/ui`), sin un editor visual tan elaborado. Decisión diferida.
+- Las 6 "experiencias" confirman que separar **Step-by-step vs Catalog vs Events** como modos de
+  presentación del widget es un patrón consolidado.
 
 ---
 
