@@ -17,6 +17,24 @@ All UI work follows `docs/design-system.md` (ADR-0008): tokens from `packages/ui
 
 Do not push, publish, merge, delete reference material, or change credentials without explicit user approval.
 
+## Current Implementation State
+
+All spec tasks T001–T086 are complete. There are no pending spec tasks. Current work is post-spec productionization and feature extensions. Read `HANDOFF.md` for the prioritized next-action list.
+
+## Admin Console Architecture
+
+`apps/admin` runs with a single `pnpm dev` using process-local Next.js route handlers backed by `apps/admin/src/server/demo-store.ts`. This store implements the full assignment chain:
+
+```
+Ubicación → Recurso → Proveedor → Servicio → Reserva → Cliente → Calendario
+```
+
+**Resource hub model** (ADR-0016): the `AdminResource` entity is the configuration hub — it declares `locationIds[]`, `serviceIds[]`, `employeeIds[]` (empty = "any"). The old `service.resourceId` and `provider.resourceIds` have been removed. The canonical domain/persistence layer (`packages/domain`, Drizzle) has NOT yet been migrated to the hub model — that is the top priority follow-up task (see HANDOFF.md and ADR-0016 "Consequences").
+
+## Amelia UX Reference
+
+`docs/analysis/amelia-ux-reference.md` contains the full sweep of the Amelia Premium admin console (14+ areas). Read it before designing any new UI or product feature. Key open decisions from the sweep are in the "Decisiones pendientes" section of that file and in `HANDOFF.md`.
+
 ## graphify
 
 This project keeps archived Amelia reference knowledge graphs under reference/graphify/.
