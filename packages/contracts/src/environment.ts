@@ -26,20 +26,26 @@ export const environmentSchema = z.object({
   // Redis (locks, queues, cache, short-lived coordination)
   REDIS_URL: z.url(),
 
-  // S3/GCS-compatible object storage
-  STORAGE_ENDPOINT: z.url(),
-  STORAGE_REGION: z.string().default("us-east-1"),
-  STORAGE_BUCKET: z.string().min(1),
-  STORAGE_ACCESS_KEY_ID: z.string().min(1),
-  STORAGE_SECRET_ACCESS_KEY: z.string().min(1),
-
-  // Cryptographic material
-  /** Root key for envelope encryption of tenant integration credentials. */
-  CREDENTIALS_MASTER_KEY: z.string().min(32),
+  // Session / token signing secrets (core auth — always required).
   /** Signing secret for customer passwordless link tokens. */
   PASSWORDLESS_TOKEN_SECRET: z.string().min(32),
   /** Signing secret for session cookies. */
   SESSION_COOKIE_SECRET: z.string().min(32),
+
+  // --- Optional until the corresponding feature is wired in the bootstrap ---
+  // Validation still applies when a value IS provided, so a misconfigured
+  // integration fails fast rather than silently using a weak/blank value.
+
+  // S3/GCS-compatible object storage (file attachments). STORAGE_REGION keeps a
+  // default; the rest are optional until the attachment pipeline is wired.
+  STORAGE_ENDPOINT: z.url().optional(),
+  STORAGE_REGION: z.string().default("us-east-1"),
+  STORAGE_BUCKET: z.string().min(1).optional(),
+  STORAGE_ACCESS_KEY_ID: z.string().min(1).optional(),
+  STORAGE_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+
+  /** Root key for envelope encryption of tenant integration credentials. */
+  CREDENTIALS_MASTER_KEY: z.string().min(32).optional(),
 
   // Observability
   LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).default("info"),

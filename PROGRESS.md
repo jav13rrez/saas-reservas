@@ -261,6 +261,15 @@ Current clean baseline commit:
     in-memory session map (per-process), login rate limiting and staff-portal
     migration pending.
 
+### 2026-06-17 (operator setup docs + relaxed env contract)
+
+- Added `.env.example` and `docs/operations/SETUP.md` (operator checklist: infra,
+  secrets, env vars, external provider accounts, global vs per-tenant, status).
+- Relaxed `packages/contracts/src/environment.ts`: `STORAGE_*` and
+  `CREDENTIALS_MASTER_KEY` are now optional (still validated when present), so the
+  persistent server boots with DB + Redis + domain + session/token secrets only.
+  Verified a minimal env validates; full suite stays green (261 passing).
+
 ### 2026-06-17 (production server bootstrap)
 
 - Turned `services/api/src/main.ts` into a mode-selectable composition root:

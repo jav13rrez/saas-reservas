@@ -2,6 +2,17 @@
 
 Last updated: 2026-06-17
 
+## Post-Spec Work (2026-06-17f): Operator setup docs + relaxed env contract
+
+- **`.env.example`** and **`docs/operations/SETUP.md`** added: full operator
+  checklist (infra, secrets, env vars, external provider accounts, global vs
+  per-tenant, wiring status).
+- **`environment.ts` relaxed:** persistent mode now boots with just
+  `DATABASE_URL`, `REDIS_URL`, `PLATFORM_BASE_DOMAIN`, `PASSWORDLESS_TOKEN_SECRET`,
+  `SESSION_COOKIE_SECRET`. `STORAGE_*` and `CREDENTIALS_MASTER_KEY` are now
+  optional until their features are wired (still validated when present, so a
+  misconfigured value fails fast). Verified a minimal env validates.
+
 ## Post-Spec Work (2026-06-17e): Production server bootstrap
 
 `services/api/src/main.ts` is now a mode-selectable composition root:
