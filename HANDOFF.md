@@ -1,6 +1,35 @@
 # Handoff
 
-Last updated: 2026-06-16
+Last updated: 2026-06-17
+
+## Post-Spec Work (2026-06-17): Canonical resource-hub migration (additive)
+
+The ADR-0016 resource hub now exists in the **canonical domain/persistence layer**,
+not just the admin demo store. This was done **additively and non-destructively** —
+the legacy ADR-0015 model B is retained and still drives availability; nothing was
+dropped.
+
+- Domain helpers: `packages/domain/src/catalog/resource-hub.ts`
+  (`resourceServesService`, `resourceAllowsProvider`,
+  `resourceCompatibleWithLocations`, `hubResourcesForBooking`), same empty-array
+  "any" semantics as the admin store.
+- SQL: `infra/postgres/004-resource-hub.sql` adds `resource_services`,
+  `resource_locations`, `resource_employees` (RLS, idempotent), mirrored in
+  `packages/persistence/src/schema.ts`. The `resources.location_id`,
+  `service_resources` and `provider_resources` tables are **kept**.
+- Port + service: `ResourceHubRepository` and audited `ResourceHubService` in
+  `services/api/src/application/catalog/resource-hub-service.ts`, implemented by
+  `InMemoryStore` and the new `DrizzleResourceHubRepository`.
+- Tests: `tests/unit/catalog/resource-hub.test.ts` (11) and the shared-contract
+  `tests/integration/catalog/resource-hub.test.ts` (in-memory always; Drizzle
+  self-skips without PostgreSQL). The integration fixture now applies migrations
+  003 + 004.
+
+**Remaining cutover (top follow-up):** point the availability engine / public
+widget and the Fastify `/v1/admin/*` routes at the hub read model
+(`listHubResourcesForService` + `hubResourcesForBooking`); only after no caller
+depends on the legacy direction, write a destructive migration to drop
+`provider_resources` and `service_resources`.
 
 ## Post-Spec Work (2026-06-16): Admin Console + Resource Model B/C
 

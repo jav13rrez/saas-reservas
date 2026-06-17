@@ -71,15 +71,27 @@ of every resource that applies to its service.
   screen, matching the "everything connected and assignable" requirement.
 - A single source of truth for eligibility (the resource) removes the model B
   duplication.
-- **Scope:** this migration currently lands in the admin console's process-local
-  store (`apps/admin/src/server/demo-store.ts`) and its Next.js route handlers.
-  The canonical domain/persistence layer from ADR-0015 (`packages/domain`,
-  `ProviderResource`, `Resource.locationId`, Drizzle tables, RLS) still carries
-  the old shape. A follow-up task must migrate the domain model and write the
-  additive SQL migration (`resource_services`, `resource_locations`,
-  `resource_employees` join tables, dropping `provider_resources` and
-  `service.resource_id`) before the public booking widget and Fastify
-  `/v1/admin/*` routes can use the hub model.
+- **Canonical layer — additive migration done (2026-06-17).** The hub now also
+  exists in the canonical domain/persistence layer as an *additive, non-destructive*
+  change that preserves backward compatibility:
+  - Domain helpers `packages/domain/src/catalog/resource-hub.ts`
+    (`resourceServesService`, `resourceAllowsProvider`,
+    `resourceCompatibleWithLocations`, `hubResourcesForBooking`) implement the
+    same empty-array "any" semantics as the admin store.
+  - SQL migration `infra/postgres/004-resource-hub.sql` adds the resource-owned
+    join tables `resource_services`, `resource_locations`, `resource_employees`
+    (RLS, idempotent), mirrored in `packages/persistence/src/schema.ts`.
+  - Port `ResourceHubRepository` + audited `ResourceHubService`
+    (`services/api/src/application/catalog/resource-hub-service.ts`), implemented
+    by both the in-memory adapter and `DrizzleResourceHubRepository`.
+  - The legacy ADR-0015 shape (`service_resources`, `provider_resources`,
+    `resources.location_id`, `ProviderResource`,
+    `providerEligibleForResources`) is **retained** and still drives the
+    availability engine. Nothing was dropped.
+- **Remaining cutover (not done):** point the availability engine / public widget
+  and the Fastify `/v1/admin/*` routes at the hub read model, then a later
+  destructive migration may drop `provider_resources` and `service_resources`
+  once no caller depends on them.
 - The "4 therapists / 2 rooms" capacity guarantee is preserved: the allocation
   step still rejects a booking when no eligible, location-compatible resource
   has a free unit over the interval.

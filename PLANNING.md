@@ -123,7 +123,7 @@ A full sweep of the Amelia Premium admin console is permanently recorded in `doc
 
 Prioritized follow-up work — see `HANDOFF.md` for detail:
 
-1. **Canonical domain/persistence hub migration**: `packages/domain` and Drizzle tables still carry the old ADR-0015 shape. Needs join tables (`resource_services`, `resource_locations`, `resource_employees`), drop `provider_resources` and `service.resource_id`, and matching SQL migration. This unlocks the hub model in the public widget and Fastify `/v1/admin/*` routes.
+1. **Canonical domain/persistence hub migration** — *additive part DONE (2026-06-17)*. The hub join tables (`resource_services`, `resource_locations`, `resource_employees`), the `004-resource-hub.sql` migration, the domain helpers (`resource-hub.ts`), and the `ResourceHubRepository`/`ResourceHubService` now exist alongside the legacy ADR-0015 shape (nothing dropped, full backward compatibility). **Remaining:** cut the availability engine / public widget and Fastify `/v1/admin/*` routes over to the hub read model (`hubResourcesForBooking`), then a later destructive migration drops `provider_resources` + `service_resources`.
 2. **Production server bootstrap**: `services/api/src/main.ts` wiring Drizzle adapters (pattern in `tests/integration/persistence/drizzle-checkout.test.ts`).
 3. **Staff auth**: `/v1/admin/*` routes use a dev-only `x-provider-id` header; real JWT/API-key auth is deferred.
 4. **Real adapter wiring**: swap fake gateway, message provider, KMS, and storage adapters for Stripe Connect, SendGrid/Twilio, AWS KMS, and S3.

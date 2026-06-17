@@ -20,6 +20,11 @@ import { intervalsOverlap, type Interval } from "@saas-reservas/domain/schedulin
 import type { Tenant, TenantDomain } from "@saas-reservas/domain/tenancy/tenant";
 import type { ResolvedTenant, TenantLookup } from "../tenancy/tenant-resolver.js";
 import type { CatalogRepository } from "../../application/catalog/catalog-service.js";
+import type {
+  ResourceHubRepository,
+  ResourceWithHub,
+} from "../../application/catalog/resource-hub-service.js";
+import type { ResourceHubAssociations } from "@saas-reservas/domain/catalog/resource-hub";
 import type { TenantRepository } from "../../application/tenancy/tenant-admin-service.js";
 import type { ResourceAllocation } from "../../application/scheduling/availability-engine.js";
 
@@ -35,7 +40,7 @@ interface AllocationEntry extends ResourceAllocation {
   bookingId?: string;
 }
 
-export class InMemoryStore implements TenantRepository, CatalogRepository {
+export class InMemoryStore implements TenantRepository, CatalogRepository, ResourceHubRepository {
   private readonly tenants = new Map<string, Tenant>();
   private readonly domains = new Map<string, TenantDomain>();
   private readonly categories: Category[] = [];
@@ -53,6 +58,19 @@ export class InMemoryStore implements TenantRepository, CatalogRepository {
   }[] = [];
   private readonly providerBusy: ProviderBusyEntry[] = [];
   private readonly allocations: AllocationEntry[] = [];
+  // Resource hub model (ADR-0016): resource-owned associations.
+  private readonly resourceServices: { tenantId: string; resourceId: string; serviceId: string }[] =
+    [];
+  private readonly resourceLocations: {
+    tenantId: string;
+    resourceId: string;
+    locationId: string;
+  }[] = [];
+  private readonly resourceEmployees: {
+    tenantId: string;
+    resourceId: string;
+    providerId: string;
+  }[] = [];
 
   // --- TenantRepository ---
 
@@ -275,6 +293,81 @@ export class InMemoryStore implements TenantRepository, CatalogRepository {
           intervalsOverlap(allocation, range),
       ),
     );
+  }
+
+  // --- ResourceHubRepository (ADR-0016) ---
+
+  private replaceAssociation<T extends { tenantId: string; resourceId: string }>(
+    store: T[],
+    tenantId: string,
+    resourceId: string,
+    next: T[],
+  ): void {
+    const kept = store.filter(
+      (row) => !(row.tenantId === tenantId && row.resourceId === resourceId),
+    );
+    store.length = 0;
+    store.push(...kept, ...next);
+  }
+
+  setResourceServices(tenantId: string, resourceId: string, serviceIds: string[]): Promise<void> {
+    this.replaceAssociation(
+      this.resourceServices,
+      tenantId,
+      resourceId,
+      serviceIds.map((serviceId) => ({ tenantId, resourceId, serviceId })),
+    );
+    return Promise.resolve();
+  }
+
+  setResourceLocations(tenantId: string, resourceId: string, locationIds: string[]): Promise<void> {
+    this.replaceAssociation(
+      this.resourceLocations,
+      tenantId,
+      resourceId,
+      locationIds.map((locationId) => ({ tenantId, resourceId, locationId })),
+    );
+    return Promise.resolve();
+  }
+
+  setResourceEmployees(tenantId: string, resourceId: string, providerIds: string[]): Promise<void> {
+    this.replaceAssociation(
+      this.resourceEmployees,
+      tenantId,
+      resourceId,
+      providerIds.map((providerId) => ({ tenantId, resourceId, providerId })),
+    );
+    return Promise.resolve();
+  }
+
+  getResourceHub(tenantId: string, resourceId: string): Promise<ResourceHubAssociations> {
+    return Promise.resolve(this.hubFor(tenantId, resourceId));
+  }
+
+  listHubResourcesForService(tenantId: string, serviceId: string): Promise<ResourceWithHub[]> {
+    const result: ResourceWithHub[] = [];
+    for (const link of this.resourceServices) {
+      if (link.tenantId !== tenantId || link.serviceId !== serviceId) {
+        continue;
+      }
+      const resource = this.resources.find(
+        (candidate) => candidate.tenantId === tenantId && candidate.id === link.resourceId,
+      );
+      if (resource?.status === "active") {
+        result.push({ resource, hub: this.hubFor(tenantId, resource.id) });
+      }
+    }
+    return Promise.resolve(result);
+  }
+
+  private hubFor(tenantId: string, resourceId: string): ResourceHubAssociations {
+    const match = <T extends { tenantId: string; resourceId: string }>(store: T[]): T[] =>
+      store.filter((row) => row.tenantId === tenantId && row.resourceId === resourceId);
+    return {
+      serviceIds: match(this.resourceServices).map((row) => row.serviceId),
+      locationIds: match(this.resourceLocations).map((row) => row.locationId),
+      employeeIds: match(this.resourceEmployees).map((row) => row.providerId),
+    };
   }
 
   // --- Simulation helpers (stand in for booking/checkout flows from US2) ---

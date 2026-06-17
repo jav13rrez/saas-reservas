@@ -10,9 +10,12 @@ import { fileURLToPath } from "node:url";
 import pg from "pg";
 import { ADMIN_URL } from "./postgres.js";
 
-const MIGRATIONS = ["001-tenancy.sql", "002-domain.sql"].map((file) =>
-  fileURLToPath(new URL(`../../../infra/postgres/${file}`, import.meta.url)),
-);
+const MIGRATIONS = [
+  "001-tenancy.sql",
+  "002-domain.sql",
+  "003-locations-eligibility.sql",
+  "004-resource-hub.sql",
+].map((file) => fileURLToPath(new URL(`../../../infra/postgres/${file}`, import.meta.url)));
 
 const APP_ROLE = "saas_app_test";
 const APP_PASSWORD = "saas_app_test";
@@ -26,6 +29,11 @@ const DOMAIN_TABLES = [
   "provider_schedules",
   "service_providers",
   "service_resources",
+  "locations",
+  "provider_resources",
+  "resource_services",
+  "resource_locations",
+  "resource_employees",
   "customers",
   "bookings",
   "cart_transactions",

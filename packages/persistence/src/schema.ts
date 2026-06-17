@@ -149,6 +149,40 @@ export const providerResources = pgTable(
   (table) => [primaryKey({ columns: [table.tenantId, table.providerId, table.resourceId] })],
 );
 
+// --- Resource hub model (ADR-0016): resource-owned N:M associations ---
+// Additive; mirrors infra/postgres/004-resource-hub.sql. Retained alongside
+// service_resources / provider_resources for backward compatibility.
+
+export const resourceServices = pgTable(
+  "resource_services",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    resourceId: uuid("resource_id").notNull(),
+    serviceId: uuid("service_id").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.tenantId, table.resourceId, table.serviceId] })],
+);
+
+export const resourceLocations = pgTable(
+  "resource_locations",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    resourceId: uuid("resource_id").notNull(),
+    locationId: uuid("location_id").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.tenantId, table.resourceId, table.locationId] })],
+);
+
+export const resourceEmployees = pgTable(
+  "resource_employees",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    resourceId: uuid("resource_id").notNull(),
+    providerId: uuid("provider_id").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.tenantId, table.resourceId, table.providerId] })],
+);
+
 export const bookings = pgTable("bookings", {
   id: uuid("id").primaryKey(),
   tenantId: uuid("tenant_id").notNull(),

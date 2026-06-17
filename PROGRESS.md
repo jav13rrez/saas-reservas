@@ -165,6 +165,33 @@ Current clean baseline commit:
 - Completed a full sweep of the Amelia Premium admin console and recorded it as a permanent UX reference (`docs/analysis/amelia-ux-reference.md`): all 14+ areas including Dashboard, Calendar, Bookings, Employees, Events, Catalog (Services/Resources/Packages), Locations, Customers, Finance, Notifications, Customize, Custom Fields, Features & Integrations, and Settings (General/Company/Payments/Bookings/Roles & permissions).
 - **Migrated the admin resource model to a hub (ADR-0016):** `AdminResource` now declares `locationIds[]`/`serviceIds[]`/`employeeIds[]` (empty = "any"); `AdminService` dropped `resourceId`/`resourceUnits` and `AdminProvider` dropped `resourceIds` — eligibility lives only on the resource (single source of truth). `createBooking` allocates an eligible, location-compatible resource with spare capacity (1 unit/booking). Recursos screen rebuilt as the hub config page; Proveedores/Servicios dropped their resource controls. `tsc --noEmit` clean. Quantity partition and group booking deferred on purpose (registered in the reference doc's "Decisiones pendientes" and ADR-0016). Scope is the admin demo store; the canonical domain/persistence layer (ADR-0015) still needs the matching migration.
 
+### 2026-06-17 (canonical resource-hub migration — additive)
+
+- Migrated the canonical domain/persistence layer to the ADR-0016 resource hub as
+  an **additive, non-destructive** change (compatibility preserved; nothing dropped):
+  - Domain: `packages/domain/src/catalog/resource-hub.ts` with pure helpers
+    (`resourceServesService`, `resourceAllowsProvider`,
+    `resourceCompatibleWithLocations`, `hubResourcesForBooking`) mirroring the
+    admin store's empty-array "any" semantics for locations/employees and
+    "none" for services.
+  - Persistence: SQL migration `infra/postgres/004-resource-hub.sql` adding the
+    resource-owned join tables `resource_services` / `resource_locations` /
+    `resource_employees` (RLS, idempotent), mirrored in
+    `packages/persistence/src/schema.ts`; new `DrizzleResourceHubRepository`.
+  - Application: `ResourceHubRepository` port + audited `ResourceHubService`
+    (`services/api/src/application/catalog/resource-hub-service.ts`), implemented
+    by both the in-memory adapter (`InMemoryStore`) and the Drizzle adapter.
+  - Legacy ADR-0015 model B (`service_resources`, `provider_resources`,
+    `resources.location_id`, `providerEligibleForResources`) is retained and still
+    drives the availability engine; the engine/widget/Fastify cutover and the
+    eventual destructive drop are the remaining follow-up.
+  - Tests: 11 unit (`tests/unit/catalog/resource-hub.test.ts`) + a shared-contract
+    integration suite (`tests/integration/catalog/resource-hub.test.ts`) over the
+    in-memory adapter (always) and Drizzle/RLS (self-skips without PostgreSQL).
+    The domain-db fixture now applies migrations 003 + 004 and grants/cleans the
+    new tables. Full suite: 253 passing, 5 skipped (no Redis/Postgres), 1
+    pre-existing flaky (`customer-passwordless` TTL). Typecheck, lint, Prettier clean.
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.
