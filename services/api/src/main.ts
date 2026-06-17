@@ -10,6 +10,7 @@ import { buildApp } from "./api/availability-routes.js";
 import { BookingService } from "./application/bookings/booking-service.js";
 import { CatalogService } from "./application/catalog/catalog-service.js";
 import { ResourceHubService } from "./application/catalog/resource-hub-service.js";
+import { StaffAuthService } from "./application/identity/staff-auth-service.js";
 import { CartReconciliationService } from "./application/payments/cart-reconciliation-service.js";
 import { AvailabilityService } from "./application/scheduling/availability-service.js";
 import { CheckoutLockService } from "./application/scheduling/checkout-lock-service.js";
@@ -18,6 +19,7 @@ import { TenantAdminService } from "./application/tenancy/tenant-admin-service.j
 import { InMemoryLockStore } from "./infrastructure/memory/in-memory-lock-store.js";
 import { InMemoryPaymentStore } from "./infrastructure/memory/in-memory-payment-store.js";
 import { InMemoryStore } from "./infrastructure/memory/in-memory-store.js";
+import { InMemoryStaffAccountStore } from "./infrastructure/memory/in-memory-staff-account-store.js";
 import {
   InMemoryProcessedWebhookStore,
   WebhookProcessor,
@@ -99,6 +101,7 @@ const app = buildApp({
   tenantAdmin: new TenantAdminService(store, events),
   catalogService: new CatalogService(store, events),
   resourceHub: new ResourceHubService(store, events),
+  staffAuth: new StaffAuthService(new InMemoryStaffAccountStore(), events),
   availability: new AvailabilityService(store, store),
   tenantTimezone: async (tenantId) =>
     (await store.findTenantById(tenantId))?.defaultTimezone ?? "UTC",

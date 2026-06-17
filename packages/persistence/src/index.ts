@@ -7,3 +7,4 @@ export { DrizzlePaymentRepository } from "./repositories/payment-repository.js";
 export { DrizzleEventSink } from "./repositories/event-sink.js";
 export { DrizzleProcessedWebhookStore } from "./repositories/webhook-store.js";
 export { DrizzleHoldStore } from "./repositories/hold-store.js";
+export { DrizzleStaffAccountRepository } from "./repositories/staff-account-repository.js";

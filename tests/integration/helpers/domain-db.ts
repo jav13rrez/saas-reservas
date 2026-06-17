@@ -18,6 +18,7 @@ const MIGRATIONS = [
   "005-provider-locations.sql",
   "006-drop-legacy-resource-model.sql",
   "007-drop-resource-location-id.sql",
+  "008-staff-accounts.sql",
 ].map((file) => fileURLToPath(new URL(`../../../infra/postgres/${file}`, import.meta.url)));
 
 const APP_ROLE = "saas_app_test";
@@ -36,6 +37,7 @@ const DOMAIN_TABLES = [
   "resource_services",
   "resource_locations",
   "resource_employees",
+  "staff_accounts",
   "customers",
   "bookings",
   "cart_transactions",

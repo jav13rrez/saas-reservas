@@ -239,6 +239,28 @@ Current clean baseline commit:
     in `resource_locations`. The hub is the complete and sole resource model with
     no legacy remnants.
 
+### 2026-06-17 (staff authentication for /v1/admin/*)
+
+- Implemented staff auth (ADR-0005, recorded in ADR-0017), replacing the
+  `SYSTEM_ACTOR` placeholder on `/v1/admin/*`:
+  - `staff_accounts` table (`008-staff-accounts.sql`, RLS, unique tenant+email),
+    `staffAccounts` in `schema.ts`, `StaffAccountStore` port with in-memory and
+    Drizzle (`DrizzleStaffAccountRepository`) adapters.
+  - `StaffAuthService` + scrypt password hashing (`application/identity/`):
+    create account, authenticate → opaque `staff_session` HttpOnly cookie (8h),
+    tenant-bound `getSession`, logout. Failed logins verify against a placeholder
+    hash for uniform timing. Account creation and login are audited.
+  - `buildApp` gains an optional `staffAuth`; when set, `/v1/admin/*` requires an
+    admin session (401/403) and the audit actor is the staff member. Routes:
+    `POST/DELETE /v1/admin/sessions`, `POST /v1/admin/staff`,
+    `POST /v1/platform/tenants/:id/staff` (bootstrap). `main.ts` wires it; fast
+    tests opt out so they stay unchanged.
+  - Tests: `tests/unit/identity/password.test.ts` + `tests/e2e/staff-auth.test.ts`.
+    Suite: 261 passing, 5 skipped, 0 failures. Typecheck and lint clean.
+  - Deviations/follow-ups (ADR-0017): scrypt instead of argon2 (no native build),
+    in-memory session map (per-process), login rate limiting and staff-portal
+    migration pending.
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.

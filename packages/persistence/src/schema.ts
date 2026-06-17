@@ -270,6 +270,15 @@ export const resourceAllocations = pgTable("resource_allocations", {
   units: integer("units").notNull(),
 });
 
+export const staffAccounts = pgTable("staff_accounts", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  email: text("email").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  role: text("role").$type<"admin" | "staff">().notNull(),
+  status: text("status").$type<"active" | "inactive">().notNull(),
+});
+
 export const customers = pgTable("customers", {
   id: uuid("id").primaryKey(),
   tenantId: uuid("tenant_id").notNull(),

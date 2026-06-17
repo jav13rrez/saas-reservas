@@ -3,15 +3,19 @@
  *
  * Every tenant-scoped route resolves the tenant from the Host header on each
  * request (constitution: proxy header injection is only an optimization).
- * NOTE: staff authentication for /v1/admin/* arrives with the identity tasks;
- * until then these routes must only be exposed in development environments.
+ * Staff authentication (ADR-0005) gates /v1/admin/* when `staffAuth` is wired:
+ * an admin `staff_session` cookie is required; login/logout live at
+ * /v1/admin/sessions. When `staffAuth` is omitted the routes stay open
+ * (development/tests only).
  */
 
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { SYSTEM_ACTOR, type Actor } from "@saas-reservas/domain/audit/events";
 import type { ProviderScheduleEntry } from "@saas-reservas/domain/providers/provider";
+import type { StaffRole } from "@saas-reservas/domain/identity/staff";
 import type { CatalogService } from "../application/catalog/catalog-service.js";
 import type { ResourceHubService } from "../application/catalog/resource-hub-service.js";
+import type { StaffAuthService } from "../application/identity/staff-auth-service.js";
 import type { AvailabilityService } from "../application/scheduling/availability-service.js";
 import type { TenantAdminService } from "../application/tenancy/tenant-admin-service.js";
 import {
@@ -34,6 +38,12 @@ export interface AppDeps {
   catalogService: CatalogService;
   /** Resource hub configuration (ADR-0016); omit to disable the hub admin routes. */
   resourceHub?: ResourceHubService;
+  /**
+   * Staff authentication (ADR-0005). When provided, `/v1/admin/*` requires a
+   * valid admin staff session and the login/logout/bootstrap routes are exposed.
+   * When omitted, `/v1/admin/*` stays open (development/tests).
+   */
+  staffAuth?: StaffAuthService;
   availability: AvailabilityService;
   /** Tenant default timezone lookup for availability queries. */
   tenantTimezone(tenantId: string): Promise<string>;
@@ -52,10 +62,41 @@ interface RequestTenant {
   slug: string;
 }
 
+interface RequestStaff {
+  id: string;
+  role: StaffRole;
+}
+
 declare module "fastify" {
   interface FastifyRequest {
     tenant?: RequestTenant;
+    staff?: RequestStaff;
   }
+}
+
+/** Reads a cookie value from the request's Cookie header, or null. */
+function cookieValue(request: FastifyRequest, name: string): string | null {
+  const header = request.headers.cookie;
+  if (header === undefined) {
+    return null;
+  }
+  for (const part of header.split(";")) {
+    const [key, ...rest] = part.trim().split("=");
+    if (key === name) {
+      return rest.join("=");
+    }
+  }
+  return null;
+}
+
+function serializeCookie(cookie: {
+  name: string;
+  value: string;
+  maxAgeSeconds: number;
+  path: string;
+  sameSite: string;
+}): string {
+  return `${cookie.name}=${cookie.value}; Max-Age=${String(cookie.maxAgeSeconds)}; Path=${cookie.path}; HttpOnly; Secure; SameSite=${cookie.sameSite}`;
 }
 
 function failureStatus(resolution: Exclude<TenantResolution, { ok: true }>): number {
@@ -72,8 +113,6 @@ function failureStatus(resolution: Exclude<TenantResolution, { ok: true }>): num
       return 404;
   }
 }
-
-const ADMIN_ACTOR: Actor = SYSTEM_ACTOR; // placeholder until staff auth lands
 
 function tenantOf(request: FastifyRequest): RequestTenant {
   if (request.tenant === undefined) {
@@ -103,6 +142,39 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return;
   });
 
+  // Staff auth gate (ADR-0005): when configured, /v1/admin/* requires an admin
+  // staff session. Login/logout (/v1/admin/sessions) stay public.
+  const staffAuth = deps.staffAuth;
+  if (staffAuth !== undefined) {
+    app.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
+      const path = request.url.split("?")[0] ?? request.url;
+      if (!path.startsWith("/v1/admin/") || path === "/v1/admin/sessions") {
+        return;
+      }
+      const tenant = request.tenant;
+      if (tenant === undefined) {
+        await reply.code(404).send({ error: "unknown-host" });
+        return reply;
+      }
+      const sessionId = cookieValue(request, "staff_session");
+      const session = sessionId === null ? null : staffAuth.getSession(sessionId, tenant.tenantId);
+      if (session === null) {
+        await reply.code(401).send({ error: "unauthenticated" });
+        return reply;
+      }
+      if (session.role !== "admin") {
+        await reply.code(403).send({ error: "forbidden" });
+        return reply;
+      }
+      request.staff = { id: session.staffId, role: session.role };
+      return;
+    });
+  }
+
+  /** Audit actor for admin routes: the authenticated staff member, else system. */
+  const adminActor = (request: FastifyRequest): Actor =>
+    request.staff === undefined ? SYSTEM_ACTOR : { type: "staff", id: request.staff.id };
+
   app.post("/v1/platform/tenants", async (request, reply) => {
     const body = request.body as {
       slug: string;
@@ -110,15 +182,77 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       defaultTimezone: string;
       defaultLocale?: string;
     };
-    const tenant = await deps.tenantAdmin.createTenant({ ...body, actor: ADMIN_ACTOR });
+    const tenant = await deps.tenantAdmin.createTenant({ ...body, actor: adminActor(request) });
     await deps.tenantAdmin.addDomain({
       tenantId: tenant.id,
       hostname: `${tenant.slug}.${deps.platformBaseDomain}`,
       kind: "subdomain",
-      actor: ADMIN_ACTOR,
+      actor: adminActor(request),
     });
     return reply.code(201).send(tenant);
   });
+
+  if (staffAuth !== undefined) {
+    // Bootstrap: a platform operator provisions a tenant's first staff account.
+    // (Platform-operator auth itself is out of scope here; this route is the
+    // chicken-and-egg entry point before any admin session exists.)
+    app.post("/v1/platform/tenants/:tenantId/staff", async (request, reply) => {
+      const { tenantId } = request.params as { tenantId: string };
+      const body = request.body as { email: string; password: string; role?: StaffRole };
+      const account = await staffAuth.createAccount({
+        tenantId,
+        email: body.email,
+        password: body.password,
+        role: body.role ?? "admin",
+        actor: { type: "platform" },
+      });
+      return reply.code(201).send({ id: account.id, email: account.email, role: account.role });
+    });
+
+    // Staff login: exchange credentials for an opaque staff_session cookie.
+    app.post("/v1/admin/sessions", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const body = request.body as { email: string; password: string };
+      const result = await staffAuth.authenticate({
+        tenantId: tenant.tenantId,
+        email: body.email,
+        password: body.password,
+      });
+      if (!result.ok) {
+        return reply.code(401).send({ error: result.reason });
+      }
+      return reply.header("set-cookie", serializeCookie(result.cookie)).code(201).send({
+        staffId: result.session.staffId,
+        role: result.session.role,
+        expiresAt: result.session.expiresAt,
+      });
+    });
+
+    app.delete("/v1/admin/sessions", async (request, reply) => {
+      const sessionId = cookieValue(request, "staff_session");
+      if (sessionId !== null) {
+        staffAuth.logout(sessionId);
+      }
+      return reply
+        .header("set-cookie", "staff_session=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax")
+        .code(204)
+        .send();
+    });
+
+    // An authenticated admin provisions additional staff for the tenant.
+    app.post("/v1/admin/staff", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const body = request.body as { email: string; password: string; role?: StaffRole };
+      const account = await staffAuth.createAccount({
+        tenantId: tenant.tenantId,
+        email: body.email,
+        password: body.password,
+        role: body.role ?? "staff",
+        actor: adminActor(request),
+      });
+      return reply.code(201).send({ id: account.id, email: account.email, role: account.role });
+    });
+  }
 
   app.post("/v1/admin/categories", async (request, reply) => {
     const tenant = tenantOf(request);
@@ -127,7 +261,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       tenantId: tenant.tenantId,
       name: body.name,
       sortOrder: body.sortOrder ?? 0,
-      actor: ADMIN_ACTOR,
+      actor: adminActor(request),
     });
     return reply.code(201).send(category);
   });
@@ -156,7 +290,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       bufferAfterMinutes: body.bufferAfterMinutes ?? 0,
       minCapacity: body.minCapacity ?? 1,
       maxCapacity: body.maxCapacity ?? 1,
-      actor: ADMIN_ACTOR,
+      actor: adminActor(request),
     });
     return reply.code(201).send(service);
   });
@@ -170,7 +304,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       displayName: body.displayName,
       timezone: body.timezone,
       permissions: [],
-      actor: ADMIN_ACTOR,
+      actor: adminActor(request),
     });
     return reply.code(201).send(provider);
   });
@@ -183,7 +317,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       tenantId: tenant.tenantId,
       providerId,
       entries: body.entries,
-      actor: ADMIN_ACTOR,
+      actor: adminActor(request),
     });
     return reply.code(204).send();
   });
@@ -196,7 +330,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       tenantId: tenant.tenantId,
       providerId,
       locationIds: body.locationIds,
-      actor: ADMIN_ACTOR,
+      actor: adminActor(request),
     });
     return reply.code(204).send();
   });
@@ -208,7 +342,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       tenantId: tenant.tenantId,
       name: body.name,
       quantity: body.quantity,
-      actor: ADMIN_ACTOR,
+      actor: adminActor(request),
     });
     return reply.code(201).send(resource);
   });
@@ -225,7 +359,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         tenantId: tenant.tenantId,
         resourceId,
         serviceIds: body.serviceIds,
-        actor: ADMIN_ACTOR,
+        actor: adminActor(request),
       });
       return reply.code(204).send();
     });
@@ -238,7 +372,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         tenantId: tenant.tenantId,
         resourceId,
         locationIds: body.locationIds,
-        actor: ADMIN_ACTOR,
+        actor: adminActor(request),
       });
       return reply.code(204).send();
     });
@@ -251,7 +385,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         tenantId: tenant.tenantId,
         resourceId,
         providerIds: body.providerIds,
-        actor: ADMIN_ACTOR,
+        actor: adminActor(request),
       });
       return reply.code(204).send();
     });
@@ -272,7 +406,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       tenantId: tenant.tenantId,
       serviceId,
       providerId: body.providerId,
-      actor: ADMIN_ACTOR,
+      actor: adminActor(request),
     });
     return reply.code(204).send();
   });

@@ -18,6 +18,7 @@ Use ADRs for decisions that affect framework choice, tenancy, database strategy,
 | [0008](0008-design-system.md)                | Design System — Holded-Inspired UI With Lucide Icons        | accepted | 2026-06-12 |
 | [0015](0015-resource-model-locations-eligibility.md) | Resource Model — Locations And Provider Eligibility | accepted | 2026-06-16 |
 | [0016](0016-resource-hub-model.md)           | Resource Hub Model — Partial Amelia Alignment               | accepted | 2026-06-16 |
+| [0017](0017-staff-auth-implementation.md)    | Staff Authentication Implementation                         | accepted | 2026-06-17 |
 
 ## Template
 

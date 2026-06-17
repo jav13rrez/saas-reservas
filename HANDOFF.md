@@ -2,6 +2,34 @@
 
 Last updated: 2026-06-17
 
+## Post-Spec Work (2026-06-17d): Staff authentication for /v1/admin/*
+
+`/v1/admin/*` now has real staff auth (ADR-0005, implementation in ADR-0017),
+replacing the `SYSTEM_ACTOR` placeholder.
+
+- **Model:** tenant-scoped `staff_accounts` (email + scrypt password hash, role
+  `admin`/`staff`, RLS) — `008-staff-accounts.sql`, `staffAccounts` in
+  `schema.ts`, `StaffAccountStore` port with in-memory + Drizzle adapters.
+- **Service:** `StaffAuthService` (`application/identity/staff-auth-service.ts`)
+  — `createAccount` (hashes via `application/identity/password.ts` scrypt),
+  `authenticate` → opaque `staff_session` cookie (HttpOnly/Secure/SameSite, 8h),
+  `getSession` (tenant-bound, TTL), `logout`. Sessions in-memory (like the
+  customer passwordless service).
+- **Gate:** `buildApp` takes an **optional** `staffAuth`. When provided,
+  `/v1/admin/*` requires an admin session (401/403) and the audit actor becomes
+  the staff member; when omitted, routes stay open (existing fast tests unchanged).
+  `main.ts` wires it.
+- **Routes:** `POST/DELETE /v1/admin/sessions` (login/logout, public),
+  `POST /v1/admin/staff` (admin adds staff), `POST /v1/platform/tenants/:id/staff`
+  (bootstrap first admin).
+- Tests: `tests/unit/identity/password.test.ts`, `tests/e2e/staff-auth.test.ts`.
+  Suite: 261 passing, 5 skipped, 0 failures. Typecheck/lint clean.
+
+**Scrypt vs argon2 (ADR-0017):** scrypt is used (no native build for argon2 in
+this env). **Follow-ups:** persistent/shared session store (in-memory map is
+per-process), login rate limiting, optional argon2id, staff portal still uses the
+dev-only `x-provider-id` header (not migrated to staff sessions yet).
+
 ## Post-Spec Work (2026-06-17): Canonical resource-hub migration (additive)
 
 The ADR-0016 resource hub now exists in the **canonical domain/persistence layer**,
