@@ -4,6 +4,8 @@ This project is agent-agnostic. Claude and Codex must follow the same durable wo
 
 ## Session Start
 
+A ready-to-paste startup prompt lives in `docs/START_PROMPT.md`.
+
 Read these files in order before making changes:
 
 1. `HANDOFF.md`

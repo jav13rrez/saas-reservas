@@ -2,6 +2,8 @@
 
 This project is designed to work across Codex and Claude without losing context.
 
+A ready-to-paste startup prompt lives in `docs/START_PROMPT.md`.
+
 Read these files in order at the start of a new session:
 
 1. `HANDOFF.md` — current resume point and next actions.
