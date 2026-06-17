@@ -2,6 +2,31 @@
 
 Last updated: 2026-06-17
 
+## Post-Spec Work (2026-06-17e): Production server bootstrap
+
+`services/api/src/main.ts` is now a mode-selectable composition root:
+
+- **Persistent mode** (when `DATABASE_URL` is set): validates the full
+  environment via `loadEnvironment` (`@saas-reservas/contracts/environment`,
+  fail-fast) and wires the Drizzle/RLS adapters (`DrizzleTenantRepository`,
+  `DrizzleCatalogRepository`, `DrizzleResourceHubRepository`,
+  `DrizzleStaffAccountRepository`, `DrizzlePaymentRepository`, `DrizzleEventSink`,
+  `DrizzleProcessedWebhookStore`, `DrizzleHoldStore`) plus a Redis-backed
+  `RedisLockStore` for checkout locks. Listens on `API_HOST:API_PORT`.
+- **In-memory mode** (no `DATABASE_URL`): the previous dev behavior — in-memory
+  adapters, seeds the first demo tenant, port 3001.
+- `services/api` now depends on `@saas-reservas/persistence` (added to
+  `package.json` + `tsconfig.json` references). SIGTERM/SIGINT close the app, the
+  DB pool, and Redis. The `/v1/ops/*` routes are now exempt from tenant
+  resolution (platform-level), so the ops dashboard feed is reachable.
+- Smoke-tested: dev boot serves `/v1/ops/tenants`; the persistent path typechecks
+  and mirrors the proven `drizzle-checkout.test.ts` composition.
+
+**Payment gateway is still the fake adapter in both modes** — swapping it for
+Stripe Connect (and the other real adapters) is the next follow-up; it sits
+behind the existing `PaymentGateway` port. Migrations are applied operationally
+(the SQL files in `infra/postgres/`), not at boot.
+
 ## Post-Spec Work (2026-06-17d): Staff authentication for /v1/admin/*
 
 `/v1/admin/*` now has real staff auth (ADR-0005, implementation in ADR-0017),

@@ -126,7 +126,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
 
   app.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
     // Platform-level routes carry no tenant.
-    if (request.url.startsWith("/v1/platform/")) {
+    if (request.url.startsWith("/v1/platform/") || request.url.startsWith("/v1/ops/")) {
       return;
     }
     const resolution = await resolveRequestTenant({

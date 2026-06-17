@@ -261,6 +261,23 @@ Current clean baseline commit:
     in-memory session map (per-process), login rate limiting and staff-portal
     migration pending.
 
+### 2026-06-17 (production server bootstrap)
+
+- Turned `services/api/src/main.ts` into a mode-selectable composition root:
+  - **Persistent mode** (`DATABASE_URL` set): `loadEnvironment` fail-fast
+    validation, Drizzle/RLS adapters for tenant/catalog/hub/staff/payment/
+    event-sink/webhook/hold, and a Redis `RedisLockStore` for checkout locks;
+    listens on `API_HOST:API_PORT`. Mirrors the `drizzle-checkout.test.ts` wiring.
+  - **In-memory mode** (default): prior dev behavior (seeds demo tenant, port 3001).
+  - `services/api` gained a dependency on `@saas-reservas/persistence`
+    (package.json + tsconfig references). Added SIGTERM/SIGINT graceful shutdown
+    (close app, DB pool, Redis). Exempted `/v1/ops/*` from tenant resolution so
+    the operations dashboard feed is reachable.
+  - Smoke-tested the dev boot (server listens, `/v1/ops/tenants` serves the
+    overview). Payment gateway remains the fake adapter (real Stripe Connect is
+    the next follow-up). Suite: 261 passing, 5 skipped, 0 failures; typecheck and
+    lint clean.
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.

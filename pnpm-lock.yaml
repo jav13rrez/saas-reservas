@@ -163,6 +163,9 @@ importers:
       '@saas-reservas/integrations':
         specifier: workspace:*
         version: link:../../packages/integrations
+      '@saas-reservas/persistence':
+        specifier: workspace:*
+        version: link:../../packages/persistence
       '@saas-reservas/tenant-context':
         specifier: workspace:*
         version: link:../../packages/tenant-context

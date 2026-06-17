@@ -11,12 +11,14 @@
   },
   "scripts": {
     "build": "tsc --build",
-    "typecheck": "tsc --build"
+    "typecheck": "tsc --build",
+    "start": "node dist/main.js"
   },
   "dependencies": {
     "@saas-reservas/contracts": "workspace:*",
     "@saas-reservas/domain": "workspace:*",
     "@saas-reservas/integrations": "workspace:*",
+    "@saas-reservas/persistence": "workspace:*",
     "@saas-reservas/tenant-context": "workspace:*",
     "fastify": "^5.2.0",
     "ioredis": "^5.11.1"

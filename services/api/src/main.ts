@@ -1,12 +1,40 @@
 /**
- * Local dev server entry point.
+ * API server entry point with a mode-selectable composition root.
  *
- * Wires up in-memory adapters (same pattern as tests/e2e/checkout-flow.test.ts),
- * seeds the store with DEMO_TENANTS, and starts Fastify on port 3001.
- * Also registers a GET /v1/ops/tenants route for the operations dashboard.
+ * - When `DATABASE_URL` is set, the environment is validated (fail-fast,
+ *   `@saas-reservas/contracts/environment`) and the app is wired against the
+ *   Drizzle/RLS persistence adapters plus a Redis-backed checkout lock store —
+ *   the runnable production stack.
+ * - Otherwise it falls back to the in-memory adapters for local dev, seeds the
+ *   first DEMO_TENANT, and listens on port 3001.
+ *
+ * The payment gateway is still the fake adapter in both modes; swapping it for
+ * Stripe Connect is the next follow-up (it sits behind the existing port).
  */
 
-import { buildApp } from "./api/availability-routes.js";
+import { Redis } from "ioredis";
+import { loadEnvironment } from "@saas-reservas/contracts/environment";
+import {
+  createTenantDb,
+  DrizzleCatalogRepository,
+  DrizzleEventSink,
+  DrizzleHoldStore,
+  DrizzlePaymentRepository,
+  DrizzleProcessedWebhookStore,
+  DrizzleResourceHubRepository,
+  DrizzleStaffAccountRepository,
+  DrizzleTenantRepository,
+} from "@saas-reservas/persistence";
+import { FakePaymentGateway } from "@saas-reservas/integrations/payments/payment-gateway";
+import type { BillingPlan } from "@saas-reservas/domain/billing/billing";
+import {
+  ENTERPRISE_PLAN,
+  PROFESSIONAL_PLAN,
+  STARTER_PLAN,
+} from "@saas-reservas/domain/billing/billing";
+import type { Tenant } from "@saas-reservas/domain/tenancy/tenant";
+import { DEFAULT_BRANDING, DEFAULT_POLICIES } from "@saas-reservas/domain/tenancy/tenant";
+import { buildApp, type AppDeps } from "./api/availability-routes.js";
 import { BookingService } from "./application/bookings/booking-service.js";
 import { CatalogService } from "./application/catalog/catalog-service.js";
 import { ResourceHubService } from "./application/catalog/resource-hub-service.js";
@@ -24,19 +52,11 @@ import {
   InMemoryProcessedWebhookStore,
   WebhookProcessor,
 } from "./infrastructure/payments/payment-webhooks.js";
-import { FakePaymentGateway } from "@saas-reservas/integrations/payments/payment-gateway";
+import { RedisLockStore } from "./infrastructure/redis/redis-lock-store.js";
 import { DEMO_TENANTS } from "./seeds/demo-tenants.js";
-import {
-  STARTER_PLAN,
-  PROFESSIONAL_PLAN,
-  ENTERPRISE_PLAN,
-} from "@saas-reservas/domain/billing/billing";
-import type { BillingPlan } from "@saas-reservas/domain/billing/billing";
-import type { Tenant } from "@saas-reservas/domain/tenancy/tenant";
-import { DEFAULT_BRANDING, DEFAULT_POLICIES } from "@saas-reservas/domain/tenancy/tenant";
 
 // ---------------------------------------------------------------------------
-// TenantOverview shape (mirrors apps/admin/src/features/operations/index.tsx)
+// Operations dashboard feed (demo data; mirrors apps/admin operations view)
 // ---------------------------------------------------------------------------
 
 interface TenantOverview {
@@ -52,29 +72,20 @@ interface TenantOverview {
   notificationsQuota: number;
 }
 
-// ---------------------------------------------------------------------------
-// Plan lookup helper
-// ---------------------------------------------------------------------------
-
 const ALL_PLANS: BillingPlan[] = [STARTER_PLAN, PROFESSIONAL_PLAN, ENTERPRISE_PLAN];
 
 function planById(id: string): BillingPlan {
   return ALL_PLANS.find((p) => p.id === id) ?? STARTER_PLAN;
 }
 
-// ---------------------------------------------------------------------------
-// Build TenantOverview array from DEMO_TENANTS
-// ---------------------------------------------------------------------------
-
 const TENANT_OVERVIEWS: TenantOverview[] = DEMO_TENANTS.map((dt) => {
   const plan = planById(dt.plan.id);
-  const bookingsThisPeriod = dt.bookings.length * 30;
   return {
     tenantId: dt.id,
     tenantName: dt.name,
     planName: plan.name,
     billingStatus: "active" as const,
-    bookingsThisPeriod,
+    bookingsThisPeriod: dt.bookings.length * 30,
     bookingsQuota: plan.quotas.bookingsPerMonth,
     storageUsedBytes: Math.round(plan.quotas.storageBytes * 0.18),
     storageQuotaBytes: plan.quotas.storageBytes,
@@ -84,69 +95,143 @@ const TENANT_OVERVIEWS: TenantOverview[] = DEMO_TENANTS.map((dt) => {
 });
 
 // ---------------------------------------------------------------------------
-// Bootstrap
+// Composition roots
 // ---------------------------------------------------------------------------
 
-const store = new InMemoryStore();
-const paymentStore = new InMemoryPaymentStore();
-const gateway = new FakePaymentGateway();
-const events = new InMemoryEventSink();
-
-const bookings = new BookingService(paymentStore, events);
-const carts = new CartReconciliationService(paymentStore, gateway, events);
-
-const app = buildApp({
-  platformBaseDomain: "localhost",
-  tenantLookup: store.tenantLookup(),
-  tenantAdmin: new TenantAdminService(store, events),
-  catalogService: new CatalogService(store, events),
-  resourceHub: new ResourceHubService(store, events),
-  staffAuth: new StaffAuthService(new InMemoryStaffAccountStore(), events),
-  availability: new AvailabilityService(store, store),
-  tenantTimezone: async (tenantId) =>
-    (await store.findTenantById(tenantId))?.defaultTimezone ?? "UTC",
-  checkout: {
-    catalog: store,
-    hub: store,
-    locks: new CheckoutLockService(new InMemoryLockStore()),
-    bookings,
-    carts,
-    webhooks: new WebhookProcessor(new InMemoryProcessedWebhookStore(), events),
-    occupancy: store,
-  },
-});
-
-// ---------------------------------------------------------------------------
-// Seed the first DEMO_TENANT (demo-tenant-professional) into the store
-// ---------------------------------------------------------------------------
-
-const firstDemoTenant = DEMO_TENANTS[0];
-
-if (firstDemoTenant !== undefined) {
-  const seedTenant: Tenant = {
-    id: firstDemoTenant.id,
-    slug: firstDemoTenant.slug,
-    displayName: firstDemoTenant.name,
-    status: "active",
-    defaultTimezone: "Europe/Madrid",
-    defaultLocale: "es",
-    branding: DEFAULT_BRANDING,
-    policies: DEFAULT_POLICIES,
-  };
-  await store.insertTenant(seedTenant);
+interface Bootstrap {
+  deps: AppDeps;
+  host: string;
+  port: number;
+  mode: "persistent" | "in-memory";
+  seed(): Promise<void>;
+  close(): Promise<void>;
 }
 
-// ---------------------------------------------------------------------------
-// Platform-level ops route (not tenant-scoped)
-// ---------------------------------------------------------------------------
+/** Production stack: Drizzle/RLS persistence + Redis checkout locks. */
+function persistentBootstrap(): Bootstrap {
+  const env = loadEnvironment(process.env);
+  const db = createTenantDb(env.DATABASE_URL);
+  const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
 
-app.get("/v1/ops/tenants", async (_request, reply) => {
-  await reply.send(TENANT_OVERVIEWS);
-});
+  const tenantRepo = new DrizzleTenantRepository(db);
+  const catalogRepo = new DrizzleCatalogRepository(db);
+  const hubRepo = new DrizzleResourceHubRepository(db);
+  const staffRepo = new DrizzleStaffAccountRepository(db);
+  const paymentRepo = new DrizzlePaymentRepository(db);
+  const events = new DrizzleEventSink(db);
+  const gateway = new FakePaymentGateway();
+
+  const deps: AppDeps = {
+    platformBaseDomain: env.PLATFORM_BASE_DOMAIN,
+    tenantLookup: tenantRepo.tenantLookup(),
+    tenantAdmin: new TenantAdminService(tenantRepo, events),
+    catalogService: new CatalogService(catalogRepo, events),
+    resourceHub: new ResourceHubService(hubRepo, events),
+    staffAuth: new StaffAuthService(staffRepo, events),
+    availability: new AvailabilityService(catalogRepo, hubRepo),
+    tenantTimezone: async (id) => (await tenantRepo.findTenantById(id))?.defaultTimezone ?? "UTC",
+    checkout: {
+      catalog: catalogRepo,
+      hub: hubRepo,
+      locks: new CheckoutLockService(new RedisLockStore(redis)),
+      bookings: new BookingService(paymentRepo, events),
+      carts: new CartReconciliationService(paymentRepo, gateway, events),
+      webhooks: new WebhookProcessor(new DrizzleProcessedWebhookStore(db), events),
+      occupancy: catalogRepo,
+      holds: new DrizzleHoldStore(db),
+    },
+  };
+
+  return {
+    deps,
+    host: env.API_HOST,
+    port: env.API_PORT,
+    mode: "persistent",
+    // Migrations and tenant provisioning are operational steps, not boot-time.
+    seed: () => Promise.resolve(),
+    close: async () => {
+      await redis.quit();
+      await db.close();
+    },
+  };
+}
+
+/** Local dev stack: in-memory adapters seeded with the first demo tenant. */
+function inMemoryBootstrap(): Bootstrap {
+  const store = new InMemoryStore();
+  const paymentStore = new InMemoryPaymentStore();
+  const gateway = new FakePaymentGateway();
+  const events = new InMemoryEventSink();
+
+  const deps: AppDeps = {
+    platformBaseDomain: "localhost",
+    tenantLookup: store.tenantLookup(),
+    tenantAdmin: new TenantAdminService(store, events),
+    catalogService: new CatalogService(store, events),
+    resourceHub: new ResourceHubService(store, events),
+    staffAuth: new StaffAuthService(new InMemoryStaffAccountStore(), events),
+    availability: new AvailabilityService(store, store),
+    tenantTimezone: async (id) => (await store.findTenantById(id))?.defaultTimezone ?? "UTC",
+    checkout: {
+      catalog: store,
+      hub: store,
+      locks: new CheckoutLockService(new InMemoryLockStore()),
+      bookings: new BookingService(paymentStore, events),
+      carts: new CartReconciliationService(paymentStore, gateway, events),
+      webhooks: new WebhookProcessor(new InMemoryProcessedWebhookStore(), events),
+      occupancy: store,
+    },
+  };
+
+  return {
+    deps,
+    host: "0.0.0.0",
+    port: 3001,
+    mode: "in-memory",
+    seed: async () => {
+      const demo = DEMO_TENANTS[0];
+      if (demo === undefined) {
+        return;
+      }
+      const seedTenant: Tenant = {
+        id: demo.id,
+        slug: demo.slug,
+        displayName: demo.name,
+        status: "active",
+        defaultTimezone: "Europe/Madrid",
+        defaultLocale: "es",
+        branding: DEFAULT_BRANDING,
+        policies: DEFAULT_POLICIES,
+      };
+      await store.insertTenant(seedTenant);
+    },
+    close: () => Promise.resolve(),
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Start
 // ---------------------------------------------------------------------------
 
-await app.listen({ port: 3001, host: "0.0.0.0" });
-console.log("API server listening on http://localhost:3001");
+const bootstrap =
+  process.env.DATABASE_URL !== undefined ? persistentBootstrap() : inMemoryBootstrap();
+
+const app = buildApp(bootstrap.deps);
+
+// Platform-level operations dashboard feed (not tenant-scoped).
+app.get("/v1/ops/tenants", async (_request, reply) => {
+  await reply.send(TENANT_OVERVIEWS);
+});
+
+const shutdown = async (): Promise<void> => {
+  await app.close();
+  await bootstrap.close();
+};
+process.on("SIGTERM", () => void shutdown());
+process.on("SIGINT", () => void shutdown());
+
+await bootstrap.seed();
+await app.listen({ host: bootstrap.host, port: bootstrap.port });
+console.log(
+  `API server (${bootstrap.mode}) listening on ${bootstrap.host}:${String(bootstrap.port)}`,
+);
