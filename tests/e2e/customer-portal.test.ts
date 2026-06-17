@@ -51,7 +51,7 @@ describe("customer and staff portals", () => {
     const catalogService = new CatalogService(store, events);
     const bookingService = new BookingService(paymentStore, events);
     const reconciliation = new CartReconciliationService(paymentStore, gateway, events);
-    const availability = new AvailabilityService(store);
+    const availability = new AvailabilityService(store, store);
     const passwordless = new CustomerPasswordlessService(
       CustomerPasswordlessService.generateKeys(),
       new InMemoryNonceStore(),
@@ -72,6 +72,7 @@ describe("customer and staff portals", () => {
           new CartPaymentSettlement(paymentStore, reconciliation),
           store,
           availability,
+          store,
           store,
         ),
         gdpr: new GdprAnonymizationService(paymentStore, events),

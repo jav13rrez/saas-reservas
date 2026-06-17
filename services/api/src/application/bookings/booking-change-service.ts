@@ -14,7 +14,9 @@ import { MINUTE_MS, type Interval } from "@saas-reservas/domain/scheduling/time"
 import type { TenantPolicies } from "@saas-reservas/domain/tenancy/tenant";
 import type { OccupancyRecorder } from "../../api/checkout-routes.js";
 import type { CatalogRepository } from "../catalog/catalog-service.js";
+import type { ResourceHubRepository } from "../catalog/resource-hub-service.js";
 import type { AvailabilityService } from "../scheduling/availability-service.js";
+import { hubCandidates } from "../scheduling/hub-resources.js";
 import { evaluateChange, type ChangeAction } from "./change-policy-engine.js";
 import type { BookingRepository, BookingService } from "./booking-service.js";
 
@@ -52,6 +54,7 @@ export class BookingChangeService {
     private readonly occupancy: OccupancyRecorder,
     private readonly availability: AvailabilityService,
     private readonly catalog: CatalogRepository,
+    private readonly hub: ResourceHubRepository,
   ) {}
 
   async cancel(input: {
@@ -133,16 +136,53 @@ export class BookingChangeService {
       start: startMs - service.bufferBeforeMinutes * MINUTE_MS,
       end: startMs + (booking.durationMinutes + service.bufferAfterMinutes) * MINUTE_MS,
     };
-    const demands = await this.catalog.listResourceDemands(input.tenantId, booking.serviceId);
+    // Hub allocation (ADR-0016): re-allocate one resource from the service pool
+    // for the new interval, mirroring checkout. The slot was already validated.
+    const allocated = await this.allocateHubResource(
+      input.tenantId,
+      booking.serviceId,
+      booking.providerId,
+      occupied,
+    );
     await this.occupancy.recordBookingOccupancy(
       input.tenantId,
       booking.providerId,
       occupied,
-      demands.map((demand) => ({ resourceId: demand.resource.id, units: demand.units })),
+      allocated,
       newBooking.id,
     );
 
     return { oldBooking, newBooking };
+  }
+
+  /**
+   * Picks one eligible, location-compatible resource from the service's hub pool
+   * that has a free unit over the interval. Returns `[]` when no resource serves
+   * the service. The availability check already guaranteed capacity exists.
+   */
+  private async allocateHubResource(
+    tenantId: string,
+    serviceId: string,
+    providerId: string,
+    occupied: Interval,
+  ): Promise<{ resourceId: string; units: number }[]> {
+    const serving = await this.hub.listHubResourcesForService(tenantId, serviceId);
+    if (serving.length === 0) {
+      return [];
+    }
+    const candidates = hubCandidates(serving, providerId, []);
+    for (const candidate of candidates) {
+      const allocations = await this.catalog.listResourceAllocations(
+        tenantId,
+        candidate.resource.id,
+        occupied,
+      );
+      const unitsInUse = allocations.reduce((sum, allocation) => sum + allocation.units, 0);
+      if (unitsInUse + 1 <= candidate.resource.quantity) {
+        return [{ resourceId: candidate.resource.id, units: 1 }];
+      }
+    }
+    return [];
   }
 
   private async requireBookingAllowing(

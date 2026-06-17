@@ -53,7 +53,7 @@ describe("event sales with waitlist", () => {
       tenantLookup: store.tenantLookup(),
       tenantAdmin: new TenantAdminService(store, events),
       catalogService: new CatalogService(store, events),
-      availability: new AvailabilityService(store),
+      availability: new AvailabilityService(store, store),
       tenantTimezone: () => Promise.resolve("UTC"),
       events: {
         store: eventStore,

@@ -11,7 +11,13 @@ import {
   type Interval,
 } from "@saas-reservas/domain/scheduling/time";
 import type { CatalogRepository } from "../catalog/catalog-service.js";
-import { computeAvailableSlots, type AvailableSlot } from "./availability-engine.js";
+import type { ResourceHubRepository } from "../catalog/resource-hub-service.js";
+import {
+  computeAvailableSlots,
+  type AvailableSlot,
+  type ResourceDemand,
+} from "./availability-engine.js";
+import { HUB_POOL_RESOURCE_ID, hubCandidates } from "./hub-resources.js";
 
 const DAY_MS = 86_400_000;
 
@@ -38,7 +44,10 @@ export interface WidgetConfig {
 }
 
 export class AvailabilityService {
-  constructor(private readonly catalog: CatalogRepository) {}
+  constructor(
+    private readonly catalog: CatalogRepository,
+    private readonly hub: ResourceHubRepository,
+  ) {}
 
   async widgetConfig(tenantId: string, serviceId: string): Promise<WidgetConfig | null> {
     const service = await this.catalog.findServiceById(tenantId, serviceId);
@@ -97,22 +106,14 @@ export class AvailabilityService {
     const range: Interval = { start: dayStart - DAY_MS, end: dayStart + 2 * DAY_MS };
 
     const providerBusy = await this.catalog.listProviderBusy(query.tenantId, provider.id, range);
-    const eligibleResourceIds = await this.catalog.listProviderEligibleResourceIds(
+
+    // Hub read model (ADR-0016): the resources that serve this service form an
+    // interchangeable pool, collapsed into one synthetic demand for the engine.
+    const resources = await this.resourcePoolDemand(
       query.tenantId,
+      query.serviceId,
       provider.id,
-    );
-    const demands = await this.catalog.listResourceDemands(query.tenantId, query.serviceId);
-    const resources = await Promise.all(
-      demands.map(async (demand) => ({
-        resourceId: demand.resource.id,
-        resourceQuantity: demand.resource.quantity,
-        unitsRequired: demand.units,
-        existingAllocations: await this.catalog.listResourceAllocations(
-          query.tenantId,
-          demand.resource.id,
-          range,
-        ),
-      })),
+      range,
     );
 
     const slots = computeAvailableSlots({
@@ -123,8 +124,49 @@ export class AvailabilityService {
       scheduleEntries,
       providerBusy,
       resources,
-      providerEligibleResourceIds: eligibleResourceIds,
     });
     return { ok: true, provider, providerSelection, slots };
+  }
+
+  /**
+   * Builds the pooled hub demand. Returns `[]` when no resource serves the
+   * service (no constraint); a zero-capacity demand when resources exist but the
+   * provider is eligible for none (zero availability); otherwise one synthetic
+   * demand whose quantity/allocations are the union of the eligible pool.
+   */
+  private async resourcePoolDemand(
+    tenantId: string,
+    serviceId: string,
+    providerId: string,
+    range: Interval,
+  ): Promise<ResourceDemand[]> {
+    const serving = await this.hub.listHubResourcesForService(tenantId, serviceId);
+    if (serving.length === 0) {
+      return [];
+    }
+    const candidates = hubCandidates(serving, providerId, []);
+    if (candidates.length === 0) {
+      return [
+        {
+          resourceId: HUB_POOL_RESOURCE_ID,
+          resourceQuantity: 0,
+          unitsRequired: 1,
+          existingAllocations: [],
+        },
+      ];
+    }
+    const perResource = await Promise.all(
+      candidates.map((candidate) =>
+        this.catalog.listResourceAllocations(tenantId, candidate.resource.id, range),
+      ),
+    );
+    return [
+      {
+        resourceId: HUB_POOL_RESOURCE_ID,
+        resourceQuantity: candidates.reduce((sum, c) => sum + c.resource.quantity, 0),
+        unitsRequired: 1,
+        existingAllocations: perResource.flat(),
+      },
+    ];
   }
 }

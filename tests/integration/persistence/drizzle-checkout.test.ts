@@ -22,6 +22,7 @@ import { FakePaymentGateway } from "@saas-reservas/integrations/payments/payment
 import {
   createTenantDb,
   DrizzleCatalogRepository,
+  DrizzleResourceHubRepository,
   DrizzleEventSink,
   DrizzleHoldStore,
   DrizzlePaymentRepository,
@@ -71,6 +72,7 @@ if (fixture === null) {
       db = createTenantDb(fixture.appUrl);
       tenantRepo = new DrizzleTenantRepository(db);
       const catalogRepo = new DrizzleCatalogRepository(db);
+      const hubRepo = new DrizzleResourceHubRepository(db);
       paymentRepo = new DrizzlePaymentRepository(db);
       const events = new DrizzleEventSink(db);
       gateway = new FakePaymentGateway();
@@ -80,11 +82,12 @@ if (fixture === null) {
         tenantLookup: tenantRepo.tenantLookup(),
         tenantAdmin: new TenantAdminService(tenantRepo, events),
         catalogService: new CatalogService(catalogRepo, events),
-        availability: new AvailabilityService(catalogRepo),
+        availability: new AvailabilityService(catalogRepo, hubRepo),
         tenantTimezone: async (id) =>
           (await tenantRepo.findTenantById(id))?.defaultTimezone ?? "UTC",
         checkout: {
           catalog: catalogRepo,
+          hub: hubRepo,
           locks: new CheckoutLockService(new InMemoryLockStore()),
           bookings: new BookingService(paymentRepo, events),
           carts: new CartReconciliationService(paymentRepo, gateway, events),

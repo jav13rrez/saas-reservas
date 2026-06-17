@@ -18,9 +18,11 @@ import {
 import { MINUTE_MS, type Interval } from "@saas-reservas/domain/scheduling/time";
 import type { BookingService } from "../application/bookings/booking-service.js";
 import type { CatalogRepository } from "../application/catalog/catalog-service.js";
+import type { ResourceHubRepository } from "../application/catalog/resource-hub-service.js";
 import type { CartReconciliationService } from "../application/payments/cart-reconciliation-service.js";
 import { priceBooking } from "../application/payments/pricing-service.js";
 import type { AvailabilityService } from "../application/scheduling/availability-service.js";
+import { hubCandidates } from "../application/scheduling/hub-resources.js";
 import type {
   CheckoutLockService,
   SlotRef,
@@ -84,6 +86,8 @@ export class InMemoryHoldStore implements HoldStore {
 
 export interface CheckoutDeps {
   catalog: CatalogRepository;
+  /** Hub read model (ADR-0016) for resource pool allocation. */
+  hub: ResourceHubRepository;
   availability: AvailabilityService;
   locks: CheckoutLockService;
   bookings: BookingService;
@@ -151,8 +155,6 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
       body.serviceId,
       body.extraIds ?? [],
     );
-    const demands = await deps.catalog.listResourceDemands(tenant.tenantId, body.serviceId);
-
     // Occupied interval includes buffers; locks key on the occupied start.
     const appointmentStartMs = Date.parse(body.startAt);
     const occupiedStartMs = appointmentStartMs - service.bufferBeforeMinutes * MINUTE_MS;
@@ -160,33 +162,57 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
       start: occupiedStartMs,
       end: occupiedStartMs + totalDurationMinutes(service, extras) * MINUTE_MS,
     };
-    const slotRefs: SlotRef[] =
-      demands.length === 0
-        ? [
-            {
-              tenantId: tenant.tenantId,
-              providerId: availability.provider.id,
-              resourceId: "none",
-              startAt: new Date(occupiedStartMs),
-            },
-          ]
-        : demands.map((demand) => ({
-            tenantId: tenant.tenantId,
-            providerId: availability.provider.id,
-            resourceId: demand.resource.id,
-            startAt: new Date(occupiedStartMs),
-          }));
+
+    // Hub allocation (ADR-0016): the resources serving this service form an
+    // interchangeable pool. Pick one eligible, location-compatible resource with
+    // a free unit and an acquirable lock; if none serve the service, a single
+    // provider-level lock guards the slot.
+    const serving = await deps.hub.listHubResourcesForService(tenant.tenantId, body.serviceId);
+    const candidates =
+      serving.length > 0 ? hubCandidates(serving, availability.provider.id, []) : [];
 
     const acquired: { slot: SlotRef; token: string }[] = [];
-    for (const slot of slotRefs) {
+    let allocatedResource: { resourceId: string; units: number } | null = null;
+
+    if (candidates.length === 0) {
+      const slot: SlotRef = {
+        tenantId: tenant.tenantId,
+        providerId: availability.provider.id,
+        resourceId: "none",
+        startAt: new Date(occupiedStartMs),
+      };
       const result = await deps.locks.acquire(slot);
       if (!result.acquired) {
-        for (const held of acquired) {
-          await deps.locks.release(held.slot, held.token);
-        }
         return reply.code(409).send({ error: "slot-locked" });
       }
       acquired.push({ slot, token: result.token });
+    } else {
+      for (const candidate of candidates) {
+        const allocations = await deps.catalog.listResourceAllocations(
+          tenant.tenantId,
+          candidate.resource.id,
+          occupied,
+        );
+        const unitsInUse = allocations.reduce((sum, allocation) => sum + allocation.units, 0);
+        if (unitsInUse + 1 > candidate.resource.quantity) {
+          continue; // full over this interval; try the next pool resource
+        }
+        const slot: SlotRef = {
+          tenantId: tenant.tenantId,
+          providerId: availability.provider.id,
+          resourceId: candidate.resource.id,
+          startAt: new Date(occupiedStartMs),
+        };
+        const result = await deps.locks.acquire(slot);
+        if (result.acquired) {
+          acquired.push({ slot, token: result.token });
+          allocatedResource = { resourceId: candidate.resource.id, units: 1 };
+          break;
+        }
+      }
+      if (allocatedResource === null) {
+        return reply.code(409).send({ error: "slot-locked" });
+      }
     }
 
     try {
@@ -232,10 +258,7 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
         bookingId: booking.id,
         providerId: availability.provider.id,
         occupied,
-        resources: demands.map((demand) => ({
-          resourceId: demand.resource.id,
-          units: demand.units,
-        })),
+        resources: allocatedResource === null ? [] : [allocatedResource],
         slots: acquired,
       };
       await holds.save(cart.id, hold);

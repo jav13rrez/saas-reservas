@@ -25,11 +25,36 @@ dropped.
   self-skips without PostgreSQL). The integration fixture now applies migrations
   003 + 004.
 
-**Remaining cutover (top follow-up):** point the availability engine / public
-widget and the Fastify `/v1/admin/*` routes at the hub read model
-(`listHubResourcesForService` + `hubResourcesForBooking`); only after no caller
-depends on the legacy direction, write a destructive migration to drop
-`provider_resources` and `service_resources`.
+## Post-Spec Work (2026-06-17b): Hub read-model cutover (availability / checkout / Fastify)
+
+The availability engine, checkout, reschedule, and Fastify admin now read the
+hub instead of the legacy model-B tables:
+
+- `AvailabilityService` takes a `ResourceHubRepository`; resource constraints come
+  from `listHubResourcesForService`. The serving resources form an interchangeable
+  pool collapsed into one synthetic engine demand (`hub-resources.ts`,
+  `HUB_POOL_RESOURCE_ID`): quantity = Σ candidate quantities, allocations = union,
+  so `unitsInUse + 1 <= total` means "≥1 free unit". No resource serving the
+  service → no constraint; resources exist but provider eligible for none → zero
+  availability. The availability *engine* itself is unchanged (the legacy
+  `resources`/`providerEligibleResourceIds` fields still exist and are still
+  covered by `resource-conflicts.test.ts`).
+- `checkout-routes` and `BookingChangeService` (reschedule) allocate one eligible,
+  location-compatible pool resource with a free unit (iterating candidates so a
+  contended room falls through to a free one), via the new `hub` dep.
+- Fastify admin hub routes (optional `resourceHub` dep): `PUT
+  /v1/admin/resources/:id/{services,locations,employees}` and `GET
+  /v1/admin/resources/:id/hub`.
+- New test: `tests/integration/scheduling/hub-availability.test.ts` proves the
+  pool capacity ("2 rooms") and eligibility-zero behavior. Suite: 257 passing,
+  5 skipped, 0 failures.
+
+**Known limitation:** the canonical `Provider` has no locations, so hub location
+compatibility is a no-op (treated as "any") until provider locations are added —
+it never wrongly blocks. **Remaining:** add provider→locations canonically; then
+a destructive migration may drop `provider_resources` and `service_resources`
+(now unused by the read path; `linkResource`/`setProviderResources` ports remain
+for back-compat).
 
 ## Post-Spec Work (2026-06-16): Admin Console + Resource Model B/C
 

@@ -53,13 +53,14 @@ describe("booking changes: cancel, refund, reschedule", () => {
     const catalogService = new CatalogService(store, events);
     const bookingService = new BookingService(paymentStore, events);
     const reconciliation = new CartReconciliationService(paymentStore, gateway, events);
-    availability = new AvailabilityService(store);
+    availability = new AvailabilityService(store, store);
     changes = new BookingChangeService(
       paymentStore,
       bookingService,
       new CartPaymentSettlement(paymentStore, reconciliation),
       store,
       availability,
+      store,
       store,
     );
 

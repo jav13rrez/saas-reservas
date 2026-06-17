@@ -192,6 +192,29 @@ Current clean baseline commit:
     new tables. Full suite: 253 passing, 5 skipped (no Redis/Postgres), 1
     pre-existing flaky (`customer-passwordless` TTL). Typecheck, lint, Prettier clean.
 
+### 2026-06-17 (hub read-model cutover)
+
+- Pointed the canonical read path at the hub (ADR-0016), keeping the engine intact:
+  - `AvailabilityService` now takes a `ResourceHubRepository`; the resources serving
+    a service form an interchangeable pool collapsed into one synthetic engine
+    demand (`services/api/src/application/scheduling/hub-resources.ts`,
+    `HUB_POOL_RESOURCE_ID`) — quantity = Σ candidate quantities, allocations = union.
+    No serving resource → no constraint; resources but provider eligible for none →
+    zero availability. The availability engine is unchanged; the legacy model-B
+    inputs remain and are still covered by `resource-conflicts.test.ts`.
+  - `checkout-routes` and `BookingChangeService` (reschedule) allocate one eligible,
+    location-compatible pool resource with a free unit (iterating candidates), via a
+    new `hub` dependency.
+  - Fastify admin hub routes (optional `resourceHub` dep in `buildApp`): `PUT
+    /v1/admin/resources/:id/{services,locations,employees}`, `GET
+    /v1/admin/resources/:id/hub`.
+  - New `tests/integration/scheduling/hub-availability.test.ts` proves pool capacity
+    ("2 rooms") and eligibility-zero. Also fixed `customer-passwordless` flaky test
+    (nonce expiry now honors the injected clock). Suite: 257 passing, 5 skipped, 0
+    failures. Typecheck and lint clean.
+  - Known limitation: hub location compatibility is a no-op until the canonical
+    `Provider` gains locations (it never wrongly blocks).
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.

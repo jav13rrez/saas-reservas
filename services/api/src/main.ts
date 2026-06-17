@@ -9,6 +9,7 @@
 import { buildApp } from "./api/availability-routes.js";
 import { BookingService } from "./application/bookings/booking-service.js";
 import { CatalogService } from "./application/catalog/catalog-service.js";
+import { ResourceHubService } from "./application/catalog/resource-hub-service.js";
 import { CartReconciliationService } from "./application/payments/cart-reconciliation-service.js";
 import { AvailabilityService } from "./application/scheduling/availability-service.js";
 import { CheckoutLockService } from "./application/scheduling/checkout-lock-service.js";
@@ -97,11 +98,13 @@ const app = buildApp({
   tenantLookup: store.tenantLookup(),
   tenantAdmin: new TenantAdminService(store, events),
   catalogService: new CatalogService(store, events),
-  availability: new AvailabilityService(store),
+  resourceHub: new ResourceHubService(store, events),
+  availability: new AvailabilityService(store, store),
   tenantTimezone: async (tenantId) =>
     (await store.findTenantById(tenantId))?.defaultTimezone ?? "UTC",
   checkout: {
     catalog: store,
+    hub: store,
     locks: new CheckoutLockService(new InMemoryLockStore()),
     bookings,
     carts,

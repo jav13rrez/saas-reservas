@@ -11,6 +11,7 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 import { SYSTEM_ACTOR, type Actor } from "@saas-reservas/domain/audit/events";
 import type { ProviderScheduleEntry } from "@saas-reservas/domain/providers/provider";
 import type { CatalogService } from "../application/catalog/catalog-service.js";
+import type { ResourceHubService } from "../application/catalog/resource-hub-service.js";
 import type { AvailabilityService } from "../application/scheduling/availability-service.js";
 import type { TenantAdminService } from "../application/tenancy/tenant-admin-service.js";
 import {
@@ -31,6 +32,8 @@ export interface AppDeps {
   tenantLookup: TenantLookup;
   tenantAdmin: TenantAdminService;
   catalogService: CatalogService;
+  /** Resource hub configuration (ADR-0016); omit to disable the hub admin routes. */
+  resourceHub?: ResourceHubService;
   availability: AvailabilityService;
   /** Tenant default timezone lookup for availability queries. */
   tenantTimezone(tenantId: string): Promise<string>;
@@ -196,6 +199,57 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     });
     return reply.code(201).send(resource);
   });
+
+  // Resource hub configuration (ADR-0016): the resource declares the services it
+  // serves, the sites it exists at, and the providers eligible to use it.
+  if (deps.resourceHub !== undefined) {
+    const resourceHub = deps.resourceHub;
+    app.put("/v1/admin/resources/:resourceId/services", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const { resourceId } = request.params as { resourceId: string };
+      const body = request.body as { serviceIds: string[] };
+      await resourceHub.setServices({
+        tenantId: tenant.tenantId,
+        resourceId,
+        serviceIds: body.serviceIds,
+        actor: ADMIN_ACTOR,
+      });
+      return reply.code(204).send();
+    });
+
+    app.put("/v1/admin/resources/:resourceId/locations", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const { resourceId } = request.params as { resourceId: string };
+      const body = request.body as { locationIds: string[] };
+      await resourceHub.setLocations({
+        tenantId: tenant.tenantId,
+        resourceId,
+        locationIds: body.locationIds,
+        actor: ADMIN_ACTOR,
+      });
+      return reply.code(204).send();
+    });
+
+    app.put("/v1/admin/resources/:resourceId/employees", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const { resourceId } = request.params as { resourceId: string };
+      const body = request.body as { providerIds: string[] };
+      await resourceHub.setEmployees({
+        tenantId: tenant.tenantId,
+        resourceId,
+        providerIds: body.providerIds,
+        actor: ADMIN_ACTOR,
+      });
+      return reply.code(204).send();
+    });
+
+    app.get("/v1/admin/resources/:resourceId/hub", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const { resourceId } = request.params as { resourceId: string };
+      const hub = await resourceHub.getHub(tenant.tenantId, resourceId);
+      return reply.send(hub);
+    });
+  }
 
   app.post("/v1/admin/services/:serviceId/providers", async (request, reply) => {
     const tenant = tenantOf(request);

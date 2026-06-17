@@ -52,7 +52,7 @@ describe("booking widget, single-provider tenant", () => {
       tenantLookup: store.tenantLookup(),
       tenantAdmin: new TenantAdminService(store, events),
       catalogService: new CatalogService(store, events),
-      availability: new AvailabilityService(store),
+      availability: new AvailabilityService(store, store),
       tenantTimezone: async (tenantId) =>
         (await store.findTenantById(tenantId))?.defaultTimezone ?? "UTC",
     });

@@ -88,10 +88,20 @@ of every resource that applies to its service.
     `resources.location_id`, `ProviderResource`,
     `providerEligibleForResources`) is **retained** and still drives the
     availability engine. Nothing was dropped.
-- **Remaining cutover (not done):** point the availability engine / public widget
-  and the Fastify `/v1/admin/*` routes at the hub read model, then a later
-  destructive migration may drop `provider_resources` and `service_resources`
-  once no caller depends on them.
+- **Read-model cutover — done (2026-06-17).** `AvailabilityService`, checkout,
+  reschedule (`BookingChangeService`), and the Fastify admin routes now read the
+  hub. The resources serving a service form an interchangeable pool collapsed into
+  one synthetic availability-engine demand (`hub-resources.ts`,
+  `HUB_POOL_RESOURCE_ID`): quantity = Σ candidate quantities, allocations = union,
+  so `unitsInUse + 1 <= total` expresses "≥1 free unit". The availability engine
+  is unchanged (legacy `resources`/`providerEligibleResourceIds` inputs remain and
+  are still tested). New Fastify routes: `PUT
+  /v1/admin/resources/:id/{services,locations,employees}`, `GET
+  /v1/admin/resources/:id/hub`.
+- **Known limitation:** the canonical `Provider` has no locations, so hub location
+  compatibility is treated as "any" (never wrongly blocks). **Remaining:** add
+  provider→locations canonically, then a destructive migration may drop
+  `provider_resources` and `service_resources` once no caller depends on them.
 - The "4 therapists / 2 rooms" capacity guarantee is preserved: the allocation
   step still rejects a booking when no eligible, location-compatible resource
   has a free unit over the interval.
