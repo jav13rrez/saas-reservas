@@ -261,6 +261,16 @@ Current clean baseline commit:
     in-memory session map (per-process), login rate limiting and staff-portal
     migration pending.
 
+### 2026-06-17 (operator onboarding — Part 1: admin running locally)
+
+- Began hands-on onboarding with the repo owner (Supabase/Vercel background).
+  Walked through running the project locally: upgraded to Node 22 (nvm), installed
+  pnpm 10, and started the admin console (`pnpm --filter @saas-reservas/admin dev`).
+  Owner confirmed the panel renders at `http://localhost:3000` with in-memory demo
+  data (no DB needed for Part 1). Next session continues with Part 2 (full local
+  stack: Postgres + Redis via Docker + the persistent API). See HANDOFF.md
+  "Resume Point" and docs/operations/SETUP.md. No code changes this step.
+
 ### 2026-06-17 (operator setup docs + relaxed env contract)
 
 - Added `.env.example` and `docs/operations/SETUP.md` (operator checklist: infra,

@@ -27,14 +27,26 @@ Apoyo según contexto:
   - docs/analysis/amelia-ux-reference.md — LEER antes de diseñar cualquier UI o
     feature nueva. Es el barrido completo del admin de Amelia (referencia UX, no
     código). Sus "Decisiones pendientes" marcan lo que falta por decidir.
-  - docs/adr/ (ADR-0001 a ADR-0016) — el porqué de cada decisión de arquitectura.
-    El modelo de recursos vigente es el HUB de ADR-0016.
+  - docs/adr/ (ADR-0001 a ADR-0017) — el porqué de cada decisión de arquitectura.
+    El modelo de recursos vigente es el HUB de ADR-0016; la auth de staff es ADR-0017.
 
 Estado actual (a fecha de este prompt): las tareas de spec T001–T086 están
-COMPLETAS. El trabajo actual es post-spec (productivización y extensiones). El
-pendiente nº1 es migrar la capa canónica packages/domain/persistencia al modelo
-hub de recursos (ADR-0016); el resto está priorizado en PLANNING.md > "Immediate
-Route" y en HANDOFF.md > "Next Actions".
+COMPLETAS. El trabajo es post-spec (productivización). Ya completado: migración
+de la capa canónica al modelo HUB de recursos (ADR-0016, incl. drop del modelo B
+legacy y ubicaciones de proveedor), auth de staff para /v1/admin/* (ADR-0017) y
+bootstrap de servidor de producción (main.ts: modo Drizzle/Redis o in-memory).
+Las próximas acciones están priorizadas en PLANNING.md > "Immediate Route" y
+HANDOFF.md; quedan: adaptadores reales (Stripe Connect, email/SMS/WhatsApp, KMS,
+S3) y profundidad de producto (agenda por proveedor, quantity partition, group
+booking).
+
+Contexto de operación (importante): el dueño del repo viene de Supabase+Vercel y
+está en fase de onboarding — arrancando el proyecto en local por primera vez. El
+panel admin (apps/admin) ya corre en su máquina con `pnpm --filter
+@saas-reservas/admin dev` (Node 22). El siguiente paso acordado es la "Parte 2":
+levantar el stack completo en local (Postgres + Redis vía Docker + el API).
+Guías de apoyo: docs/operations/SETUP.md (checklist de operador) y .env.example.
+Prefiere explicaciones paso a paso, detalladas y en español.
 
 Reglas de operación (de CLAUDE.md / AGENTS.md):
   - Spec Kit es la fuente de verdad de producto. PLANNING/PROGRESS/HANDOFF son la
