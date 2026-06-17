@@ -15,8 +15,12 @@ import {
 
 export interface NonceStore {
   create(tenantId: string, nonce: string, expiresAtMs: number): Promise<void>;
-  /** Atomically consumes the nonce; false when missing, expired, or already used. */
-  consume(tenantId: string, nonce: string): Promise<boolean>;
+  /**
+   * Atomically consumes the nonce; false when missing, expired, or already used.
+   * `nowMs` lets callers inject the clock so expiry stays consistent with the
+   * service's time source (defaults to the wall clock).
+   */
+  consume(tenantId: string, nonce: string, nowMs?: number): Promise<boolean>;
 }
 
 export class InMemoryNonceStore implements NonceStore {
@@ -27,10 +31,10 @@ export class InMemoryNonceStore implements NonceStore {
     return Promise.resolve();
   }
 
-  consume(tenantId: string, nonce: string): Promise<boolean> {
+  consume(tenantId: string, nonce: string, nowMs: number = Date.now()): Promise<boolean> {
     const key = `${tenantId}:${nonce}`;
     const expiresAt = this.nonces.get(key);
-    if (expiresAt === undefined || expiresAt <= Date.now()) {
+    if (expiresAt === undefined || expiresAt <= nowMs) {
       this.nonces.delete(key);
       return Promise.resolve(false);
     }
@@ -140,7 +144,7 @@ export class CustomerPasswordlessService {
     if (claims.exp * 1000 <= now.getTime()) {
       return { ok: false, reason: "expired" };
     }
-    if (!(await this.nonces.consume(claims.tid, claims.jti))) {
+    if (!(await this.nonces.consume(claims.tid, claims.jti, now.getTime()))) {
       return { ok: false, reason: "replayed" };
     }
 

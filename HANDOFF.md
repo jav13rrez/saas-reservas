@@ -104,7 +104,7 @@ The implementation is complete. Recommended follow-up work (outside this spec):
 
 4. **Real adapter wiring**: swap `FakePaymentGateway`, `FakeMessageProvider`, `FakeKmsAdapter`, and `FakeStorageAdapter` for real Stripe Connect, SendGrid/Twilio, AWS KMS, and S3 equivalents behind the existing interfaces.
 
-5. **Fix pre-existing flaky test**: `tests/integration/identity/customer-passwordless.test.ts` line 99 — the "expires sessions after their TTL" case fails intermittently due to date-sensitive JWT behavior.
+5. **Fix pre-existing flaky test**: DONE (2026-06-17). `customer-passwordless.test.ts` "expires sessions after their TTL" was failing because `InMemoryNonceStore.consume` checked nonce expiry against the wall clock (`Date.now()`) while the service threads an injected `now` everywhere else. `NonceStore.consume` now takes an optional `nowMs` and `redeem` passes its `now`, so behavior is clock-consistent and deterministic.
 
 ## Current Task Pointer
 
