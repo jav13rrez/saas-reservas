@@ -93,7 +93,6 @@ export const resources = pgTable("resources", {
   tenantId: uuid("tenant_id").notNull(),
   name: text("name").notNull(),
   quantity: integer("quantity").notNull(),
-  locationId: uuid("location_id"),
   status: text("status").$type<CatalogStatus>().notNull(),
 });
 

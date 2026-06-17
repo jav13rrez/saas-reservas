@@ -233,8 +233,11 @@ Current clean baseline commit:
     table defs, and the `POST /v1/admin/services/:id/resources` route). The
     availability engine is untouched (`resource-conflicts.test.ts` still green).
   - Suite: 254 passing, 5 skipped, 0 failures. Typecheck and lint clean.
-  - Optional remaining cleanup: `resources.location_id` (superseded by
-    `resource_locations`) could be dropped in a later migration.
+  - Follow-up (same day): dropped `resources.location_id`
+    (`infra/postgres/007-drop-resource-location-id.sql`) and removed it from the
+    domain `Resource` and Drizzle schema; multi-site placement now lives entirely
+    in `resource_locations`. The hub is the complete and sole resource model with
+    no legacy remnants.
 
 ## Current Backlog
 

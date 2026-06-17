@@ -107,9 +107,11 @@ of every resource that applies to its service.
   (`ServiceResource`/`ProviderResource`/`providerEligibleForResources`, the
   `CatalogRepository` model-B methods, and the `POST /v1/admin/services/:id/resources`
   route). The hub is now the sole resource model.
-- **Minor remaining cleanup (optional):** `resources.location_id` (ADR-0015 model C
-  single-site column) is superseded by `resource_locations` and could be dropped
-  in a future migration.
+- **`resources.location_id` dropped (2026-06-17):** the ADR-0015 model C single-site
+  column was removed (`007-drop-resource-location-id.sql`) from the DB, the domain
+  `Resource`, and the Drizzle schema. Multi-site placement lives entirely in
+  `resource_locations`. The hub is now the complete and sole resource model with no
+  legacy remnants.
 - The "4 therapists / 2 rooms" capacity guarantee is preserved: the allocation
   step still rejects a booking when no eligible, location-compatible resource
   has a free unit over the interval.

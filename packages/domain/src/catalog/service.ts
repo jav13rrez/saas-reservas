@@ -48,8 +48,6 @@ export interface Resource {
   name: string;
   /** Number of identical units; allocation is backend-only, never customer-facing. */
   quantity: number;
-  /** Site this resource belongs to (multi-site). Optional for single-site tenants. */
-  locationId?: string;
   status: CatalogStatus;
 }
 

@@ -17,6 +17,7 @@ const MIGRATIONS = [
   "004-resource-hub.sql",
   "005-provider-locations.sql",
   "006-drop-legacy-resource-model.sql",
+  "007-drop-resource-location-id.sql",
 ].map((file) => fileURLToPath(new URL(`../../../infra/postgres/${file}`, import.meta.url)));
 
 const APP_ROLE = "saas_app_test";

@@ -123,7 +123,7 @@ A full sweep of the Amelia Premium admin console is permanently recorded in `doc
 
 Prioritized follow-up work — see `HANDOFF.md` for detail:
 
-1. **Canonical domain/persistence hub migration** — *COMPLETE (2026-06-17)*. Additive hub layer + read-model cutover (`AvailabilityService`/checkout/reschedule/Fastify read the hub pool via `hub-resources.ts`) + **provider locations** (`provider_locations`, `005-*.sql`, real hub location compatibility) + **destructive drop** of the legacy model-B tables `provider_resources` and `service_resources` (`006-*.sql`) and all their plumbing. The availability engine is untouched. Only minor optional cleanup left: `resources.location_id` (superseded by `resource_locations`) could be dropped later.
+1. **Canonical domain/persistence hub migration** — *COMPLETE (2026-06-17)*. Additive hub layer + read-model cutover (`AvailabilityService`/checkout/reschedule/Fastify read the hub pool via `hub-resources.ts`) + **provider locations** (`provider_locations`, `005-*.sql`, real hub location compatibility) + **destructive drop** of the legacy model-B tables `provider_resources` and `service_resources` (`006-*.sql`) and all their plumbing. The availability engine is untouched. `resources.location_id` was also dropped (`007-*.sql`); the hub is now the complete and sole resource model with no legacy remnants.
 2. **Production server bootstrap**: `services/api/src/main.ts` wiring Drizzle adapters (pattern in `tests/integration/persistence/drizzle-checkout.test.ts`).
 3. **Staff auth**: `/v1/admin/*` routes use a dev-only `x-provider-id` header; real JWT/API-key auth is deferred.
 4. **Real adapter wiring**: swap fake gateway, message provider, KMS, and storage adapters for Stripe Connect, SendGrid/Twilio, AWS KMS, and S3.

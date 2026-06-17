@@ -71,9 +71,11 @@ The hub cutover is now complete end to end and the legacy model-B tables are gon
   `resource-conflicts.test.ts`).
 - Suite: 254 passing, 5 skipped, 0 failures. Typecheck and lint clean.
 
-**Minor remaining cleanup (optional):** `resources.location_id` (ADR-0015 model C
-single-site column) is still present in DB/domain but superseded by
-`resource_locations`; it can be dropped in a future migration if desired.
+**Cleanup done (2026-06-17):** `resources.location_id` (ADR-0015 model C single-site
+column) was dropped (`007-drop-resource-location-id.sql`) and removed from the
+domain `Resource` and the Drizzle schema. Multi-site placement lives entirely in
+`resource_locations`. The hub is now the complete and sole resource model with no
+legacy remnants.
 
 ## Post-Spec Work (2026-06-16): Admin Console + Resource Model B/C
 

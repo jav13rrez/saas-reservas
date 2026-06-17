@@ -15,12 +15,6 @@ interface ResourceWithHub {
   hub: ResourceHubAssociations;
 }
 
-/** Normalize the nullable DB location_id to the optional domain shape. */
-function toResource(row: typeof resources.$inferSelect): Resource {
-  const { locationId, ...rest } = row;
-  return locationId === null ? rest : { ...rest, locationId };
-}
-
 export class DrizzleResourceHubRepository {
   constructor(private readonly db: TenantDb) {}
 
@@ -86,8 +80,7 @@ export class DrizzleResourceHubRepository {
 
       const result: ResourceWithHub[] = [];
       for (const row of rows) {
-        const resource = toResource(row.resource);
-        result.push({ resource, hub: await hubForResource(tx, resource.id) });
+        result.push({ resource: row.resource, hub: await hubForResource(tx, row.resource.id) });
       }
       return result;
     });
