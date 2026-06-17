@@ -1,6 +1,6 @@
 # Planning
 
-Last updated: 2026-06-12
+Last updated: 2026-06-16
 
 ## Purpose
 
@@ -105,10 +105,27 @@ Create an ADR for decisions that affect:
 
 ADRs live in `docs/adr/`.
 
-## Immediate Route
+## Current Implementation State
 
-Stack decisions are closed (ADR-0001..0008) and Phases 1-6 (`T001`-`T061`) are merged into `main`. The route ahead:
+All spec tasks T001–T086 (Phases 1–8, User Stories 1–5) are complete and merged into `main`. ADRs 0001–0016 record all stack and architecture decisions.
 
-1. Phase 7 / User Story 5 (`T062`-`T075`): premium integrations — credential vault, calendar OAuth, WhatsApp, messaging/meeting adapters, attachments, outbound webhooks.
-2. Phase 8 (`T076`-`T086`): observability, billing, workers, seeds, and product readiness.
-3. Cross-cutting follow-ups tracked in `HANDOFF.md`: staff auth for admin routes, real payment gateway adapters, events persistence in Drizzle, production server bootstrap, and restyling existing screens to `docs/design-system.md`.
+The admin console (`apps/admin`) implements the full assignment chain end to end using process-local Next.js route handlers (`src/server/demo-store.ts`):
+
+```
+Ubicación → Recurso → Proveedor → Servicio → Reserva → Cliente → Calendario
+```
+
+The **Resource hub model** (ADR-0016) was adopted: the Resource entity declares `locationIds[]`, `serviceIds[]` and `employeeIds[]` (empty = "any"). This replaced the old 1→1 `service.resourceId` and provider-side `resourceIds`. The admin UI reflects this: Recursos is the single configuration hub; Proveedores and Servicios no longer carry resource references.
+
+A full sweep of the Amelia Premium admin console is permanently recorded in `docs/analysis/amelia-ux-reference.md` as a UX/product reference for all future feature work.
+
+## Immediate Route (post-spec)
+
+Prioritized follow-up work — see `HANDOFF.md` for detail:
+
+1. **Canonical domain/persistence hub migration**: `packages/domain` and Drizzle tables still carry the old ADR-0015 shape. Needs join tables (`resource_services`, `resource_locations`, `resource_employees`), drop `provider_resources` and `service.resource_id`, and matching SQL migration. This unlocks the hub model in the public widget and Fastify `/v1/admin/*` routes.
+2. **Production server bootstrap**: `services/api/src/main.ts` wiring Drizzle adapters (pattern in `tests/integration/persistence/drizzle-checkout.test.ts`).
+3. **Staff auth**: `/v1/admin/*` routes use a dev-only `x-provider-id` header; real JWT/API-key auth is deferred.
+4. **Real adapter wiring**: swap fake gateway, message provider, KMS, and storage adapters for Stripe Connect, SendGrid/Twilio, AWS KMS, and S3.
+5. **Scheduling per provider**: Work hours / Days off / Special days — noted in Amelia UX reference as a key gap in our current admin.
+6. **Deferred resource features**: quantity partition (`shared/per-service/per-location`) and group booking (registered in ADR-0016 and `amelia-ux-reference.md` pending decisions #1/#4).

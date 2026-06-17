@@ -38,8 +38,13 @@ Amelia/Graphify material is local reference only:
 
 ## Current Implementation Pointer
 
-Phases 1-6 (`T001`-`T061`) are complete and stack decisions live in `docs/adr/`. The next task is `T062` (Phase 7, User Story 5) in:
+All spec tasks T001–T086 (Phases 1–8, User Stories 1–5) are **complete**. Stack decisions live in `docs/adr/` (ADR-0001 through ADR-0016). There are no pending spec tasks.
 
-```text
-specs/001-saas-multitenant-booking/tasks.md
-```
+Current work is post-spec: productionization, real adapter wiring, and feature extensions. The prioritized list lives in `PLANNING.md` ("Immediate Route") and `HANDOFF.md` ("Next Actions").
+
+Key post-spec context for the next agent:
+
+- **Admin console architecture**: `apps/admin` runs standalone via process-local Next.js route handlers (`src/server/demo-store.ts`). It implements the full chain: Ubicación → Recurso → Proveedor → Servicio → Reserva → Cliente → Calendario.
+- **Resource hub model** (ADR-0016): the Resource declares `locationIds[]`, `serviceIds[]`, `employeeIds[]`. The old `service.resourceId` and `provider.resourceIds` are gone from the admin store. The canonical domain/persistence layer (`packages/domain`, Drizzle) still needs this migration — it is the top priority follow-up.
+- **Amelia UX reference**: `docs/analysis/amelia-ux-reference.md` is the permanent record of all Amelia admin areas. Read it before designing any new UI or product feature to avoid reinventing what Amelia solved.
+- **Pending decisions from the Amelia sweep**: quantity partition (shared/per-service/per-location), group booking, category-as-entity, provider Work Hours/Days Off UI, online/virtual locations. All registered in `amelia-ux-reference.md` and `HANDOFF.md`.
