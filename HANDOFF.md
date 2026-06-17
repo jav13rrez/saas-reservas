@@ -49,12 +49,31 @@ hub instead of the legacy model-B tables:
   pool capacity ("2 rooms") and eligibility-zero behavior. Suite: 257 passing,
   5 skipped, 0 failures.
 
-**Known limitation:** the canonical `Provider` has no locations, so hub location
-compatibility is a no-op (treated as "any") until provider locations are added —
-it never wrongly blocks. **Remaining:** add provider→locations canonically; then
-a destructive migration may drop `provider_resources` and `service_resources`
-(now unused by the read path; `linkResource`/`setProviderResources` ports remain
-for back-compat).
+## Post-Spec Work (2026-06-17c): Provider locations + legacy model-B drop
+
+The hub cutover is now complete end to end and the legacy model-B tables are gone:
+
+- **Provider locations (canonical):** `provider_locations` join table
+  (`infra/postgres/005-provider-locations.sql`, `providerLocations` in
+  `schema.ts`), `CatalogRepository.{setProviderLocations,listProviderLocationIds}`
+  on both adapters, `CatalogService.setProviderLocations`, and Fastify `PUT
+  /v1/admin/providers/:id/locations`. Availability, checkout, and reschedule now
+  pass the provider's locations into `hubCandidates`, so hub location
+  compatibility is real (empty on either side still means "any").
+- **Destructive migration:** `infra/postgres/006-drop-legacy-resource-model.sql`
+  drops `provider_resources` and `service_resources`. All their plumbing was
+  removed: domain `ServiceResource`/`ProviderResource`/`providerEligibleForResources`,
+  the `CatalogRepository` methods `linkResource`/`setProviderResources`/
+  `listResourceDemands`/`listProviderEligibleResourceIds` (both adapters), the
+  Drizzle table defs, and the `POST /v1/admin/services/:id/resources` route.
+- The availability *engine* is untouched (its generic `resources` /
+  `providerEligibleResourceIds` inputs remain, still covered by
+  `resource-conflicts.test.ts`).
+- Suite: 254 passing, 5 skipped, 0 failures. Typecheck and lint clean.
+
+**Minor remaining cleanup (optional):** `resources.location_id` (ADR-0015 model C
+single-site column) is still present in DB/domain but superseded by
+`resource_locations`; it can be dropped in a future migration if desired.
 
 ## Post-Spec Work (2026-06-16): Admin Console + Resource Model B/C
 

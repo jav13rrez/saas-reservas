@@ -17,7 +17,6 @@ import {
   type Resource,
   type Service,
   type ServiceProvider,
-  type ServiceResource,
 } from "@saas-reservas/domain/catalog/service";
 import {
   validateScheduleEntry,
@@ -40,9 +39,10 @@ export interface CatalogRepository {
     entries: ProviderScheduleEntry[],
   ): Promise<void>;
   assignProvider(link: ServiceProvider): Promise<void>;
-  linkResource(link: ServiceResource): Promise<void>;
-  /** Replace the set of resources a provider is eligible to use (model B). */
-  setProviderResources(tenantId: string, providerId: string, resourceIds: string[]): Promise<void>;
+  /** Replace the sites a provider works at (empty = any location). */
+  setProviderLocations(tenantId: string, providerId: string, locationIds: string[]): Promise<void>;
+  /** Sites a provider works at; empty means "any location". */
+  listProviderLocationIds(tenantId: string, providerId: string): Promise<string[]>;
 
   findServiceById(tenantId: string, serviceId: string): Promise<Service | null>;
   findProviderById(tenantId: string, providerId: string): Promise<Provider | null>;
@@ -50,17 +50,11 @@ export interface CatalogRepository {
   listActiveProvidersForService(tenantId: string, serviceId: string): Promise<Provider[]>;
   listScheduleEntries(tenantId: string, providerId: string): Promise<ProviderScheduleEntry[]>;
   listProviderBusy(tenantId: string, providerId: string, range: Interval): Promise<Interval[]>;
-  listResourceDemands(
-    tenantId: string,
-    serviceId: string,
-  ): Promise<{ resource: Resource; units: number }[]>;
   listResourceAllocations(
     tenantId: string,
     resourceId: string,
     range: Interval,
   ): Promise<ResourceAllocation[]>;
-  /** Resources a provider is eligible to use; empty means unconstrained (model B). */
-  listProviderEligibleResourceIds(tenantId: string, providerId: string): Promise<string[]>;
 }
 
 export class CatalogService {
@@ -173,45 +167,20 @@ export class CatalogService {
     );
   }
 
-  async linkResource(input: {
-    tenantId: string;
-    serviceId: string;
-    resourceId: string;
-    units?: number;
-    actor: Actor;
-  }): Promise<void> {
-    await this.catalog.linkResource({
-      tenantId: input.tenantId,
-      serviceId: input.serviceId,
-      resourceId: input.resourceId,
-      units: input.units ?? 1,
-    });
-    await this.audit(
-      input.tenantId,
-      input.actor,
-      "catalog.resource-linked",
-      "service",
-      input.serviceId,
-      {
-        resourceId: input.resourceId,
-      },
-    );
-  }
-
-  async setProviderResources(input: {
+  async setProviderLocations(input: {
     tenantId: string;
     providerId: string;
-    resourceIds: string[];
+    locationIds: string[];
     actor: Actor;
   }): Promise<void> {
-    await this.catalog.setProviderResources(input.tenantId, input.providerId, input.resourceIds);
+    await this.catalog.setProviderLocations(input.tenantId, input.providerId, input.locationIds);
     await this.audit(
       input.tenantId,
       input.actor,
-      "catalog.provider-resources-updated",
+      "catalog.provider-locations-updated",
       "provider",
       input.providerId,
-      { resourceCount: input.resourceIds.length },
+      { locationCount: input.locationIds.length },
     );
   }
 

@@ -98,10 +98,18 @@ of every resource that applies to its service.
   are still tested). New Fastify routes: `PUT
   /v1/admin/resources/:id/{services,locations,employees}`, `GET
   /v1/admin/resources/:id/hub`.
-- **Known limitation:** the canonical `Provider` has no locations, so hub location
-  compatibility is treated as "any" (never wrongly blocks). **Remaining:** add
-  provider→locations canonically, then a destructive migration may drop
-  `provider_resources` and `service_resources` once no caller depends on them.
+- **Provider locations + legacy drop — done (2026-06-17).** `provider_locations`
+  (`005-provider-locations.sql`) gives the canonical `Provider` real locations, fed
+  into `hubCandidates` by availability/checkout/reschedule, so hub location
+  compatibility is now enforced (empty on either side = "any"). The legacy model-B
+  tables `provider_resources` and `service_resources` were dropped
+  (`006-drop-legacy-resource-model.sql`) along with all their plumbing
+  (`ServiceResource`/`ProviderResource`/`providerEligibleForResources`, the
+  `CatalogRepository` model-B methods, and the `POST /v1/admin/services/:id/resources`
+  route). The hub is now the sole resource model.
+- **Minor remaining cleanup (optional):** `resources.location_id` (ADR-0015 model C
+  single-site column) is superseded by `resource_locations` and could be dropped
+  in a future migration.
 - The "4 therapists / 2 rooms" capacity guarantee is preserved: the allocation
   step still rejects a booking when no eligible, location-compatible resource
   has a free unit over the interval.

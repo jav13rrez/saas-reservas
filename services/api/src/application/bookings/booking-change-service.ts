@@ -170,7 +170,8 @@ export class BookingChangeService {
     if (serving.length === 0) {
       return [];
     }
-    const candidates = hubCandidates(serving, providerId, []);
+    const providerLocationIds = await this.catalog.listProviderLocationIds(tenantId, providerId);
+    const candidates = hubCandidates(serving, providerId, providerLocationIds);
     for (const candidate of candidates) {
       const allocations = await this.catalog.listResourceAllocations(
         tenantId,

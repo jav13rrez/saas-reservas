@@ -168,8 +168,14 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
     // a free unit and an acquirable lock; if none serve the service, a single
     // provider-level lock guards the slot.
     const serving = await deps.hub.listHubResourcesForService(tenant.tenantId, body.serviceId);
+    const providerLocationIds =
+      serving.length > 0
+        ? await deps.catalog.listProviderLocationIds(tenant.tenantId, availability.provider.id)
+        : [];
     const candidates =
-      serving.length > 0 ? hubCandidates(serving, availability.provider.id, []) : [];
+      serving.length > 0
+        ? hubCandidates(serving, availability.provider.id, providerLocationIds)
+        : [];
 
     const acquired: { slot: SlotRef; token: string }[] = [];
     let allocatedResource: { resourceId: string; units: number } | null = null;

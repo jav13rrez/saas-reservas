@@ -128,27 +128,6 @@ export const serviceProviders = pgTable(
   (table) => [primaryKey({ columns: [table.tenantId, table.serviceId, table.providerId] })],
 );
 
-export const serviceResources = pgTable(
-  "service_resources",
-  {
-    tenantId: uuid("tenant_id").notNull(),
-    serviceId: uuid("service_id").notNull(),
-    resourceId: uuid("resource_id").notNull(),
-    units: integer("units").notNull(),
-  },
-  (table) => [primaryKey({ columns: [table.tenantId, table.serviceId, table.resourceId] })],
-);
-
-export const providerResources = pgTable(
-  "provider_resources",
-  {
-    tenantId: uuid("tenant_id").notNull(),
-    providerId: uuid("provider_id").notNull(),
-    resourceId: uuid("resource_id").notNull(),
-  },
-  (table) => [primaryKey({ columns: [table.tenantId, table.providerId, table.resourceId] })],
-);
-
 // --- Resource hub model (ADR-0016): resource-owned N:M associations ---
 // Additive; mirrors infra/postgres/004-resource-hub.sql. Retained alongside
 // service_resources / provider_resources for backward compatibility.
@@ -181,6 +160,17 @@ export const resourceEmployees = pgTable(
     providerId: uuid("provider_id").notNull(),
   },
   (table) => [primaryKey({ columns: [table.tenantId, table.resourceId, table.providerId] })],
+);
+
+// Provider locations (ADR-0016 follow-up); mirrors infra/postgres/005-provider-locations.sql.
+export const providerLocations = pgTable(
+  "provider_locations",
+  {
+    tenantId: uuid("tenant_id").notNull(),
+    providerId: uuid("provider_id").notNull(),
+    locationId: uuid("location_id").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.tenantId, table.providerId, table.locationId] })],
 );
 
 export const bookings = pgTable("bookings", {

@@ -61,46 +61,6 @@ export interface ServiceProvider {
   status: CatalogStatus;
 }
 
-/** Resource demand of a service: each booking consumes `units` of the resource. */
-export interface ServiceResource {
-  tenantId: string;
-  serviceId: string;
-  resourceId: string;
-  units: number;
-}
-
-/**
- * Eligibility of a provider to use a resource (model B).
- *
- * Semantics: if a provider has at least one eligibility entry, they may ONLY
- * use the resources listed. A provider with NO entries is unconstrained and may
- * use any resource (backwards compatible with single-pool tenants). This gates
- * whether a provider can perform a service that demands a given resource.
- */
-export interface ProviderResource {
-  tenantId: string;
-  providerId: string;
-  resourceId: string;
-}
-
-/**
- * Whether a provider may use every resource the service demands.
- *
- * @param eligibleResourceIds Resources the provider is eligible for, or
- *   `undefined`/empty to mean "unconstrained" (eligible for all).
- * @param requiredResourceIds Resources the queried service demands.
- */
-export function providerEligibleForResources(
-  eligibleResourceIds: string[] | undefined,
-  requiredResourceIds: string[],
-): boolean {
-  if (eligibleResourceIds === undefined || eligibleResourceIds.length === 0) {
-    return true;
-  }
-  const allowed = new Set(eligibleResourceIds);
-  return requiredResourceIds.every((id) => allowed.has(id));
-}
-
 export class InvalidCatalogEntityError extends Error {
   constructor(message: string) {
     super(message);

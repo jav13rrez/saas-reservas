@@ -138,6 +138,26 @@ describe("hub-driven availability", () => {
     expect(await startTimes()).toEqual([SLOT_11]);
   });
 
+  it("respects provider/resource location compatibility", async () => {
+    await store.insertResource({
+      id: "room-centro",
+      tenantId: TENANT,
+      name: "Room Centro",
+      quantity: 1,
+      status: "active",
+    });
+    await store.setResourceServices(TENANT, "room-centro", [SERVICE]);
+    await store.setResourceLocations(TENANT, "room-centro", ["centro"]);
+
+    // Ana works only at Norte: the only serving room is at Centro -> no slots.
+    await store.setProviderLocations(TENANT, ANA, ["norte"]);
+    expect(await startTimes(ANA)).toEqual([]);
+
+    // Move Ana to Centro: the room is now compatible -> slots return.
+    await store.setProviderLocations(TENANT, ANA, ["centro"]);
+    expect(await startTimes(ANA)).toEqual([SLOT_10, SLOT_11]);
+  });
+
   it("offers zero availability when the provider is eligible for no serving resource", async () => {
     await store.insertResource({
       id: "room-1",

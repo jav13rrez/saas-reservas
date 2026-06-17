@@ -144,7 +144,8 @@ export class AvailabilityService {
     if (serving.length === 0) {
       return [];
     }
-    const candidates = hubCandidates(serving, providerId, []);
+    const providerLocationIds = await this.catalog.listProviderLocationIds(tenantId, providerId);
+    const candidates = hubCandidates(serving, providerId, providerLocationIds);
     if (candidates.length === 0) {
       return [
         {

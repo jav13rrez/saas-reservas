@@ -13,7 +13,6 @@ import type {
   Resource,
   Service,
   ServiceProvider,
-  ServiceResource,
 } from "@saas-reservas/domain/catalog/service";
 import type { Provider, ProviderScheduleEntry } from "@saas-reservas/domain/providers/provider";
 import { intervalsOverlap, type Interval } from "@saas-reservas/domain/scheduling/time";
@@ -50,11 +49,10 @@ export class InMemoryStore implements TenantRepository, CatalogRepository, Resou
   private readonly providers: Provider[] = [];
   private readonly schedules = new Map<string, ProviderScheduleEntry[]>();
   private readonly serviceProviders: ServiceProvider[] = [];
-  private readonly serviceResources: ServiceResource[] = [];
-  private readonly providerResources: {
+  private readonly providerLocations: {
     tenantId: string;
     providerId: string;
-    resourceId: string;
+    locationId: string;
   }[] = [];
   private readonly providerBusy: ProviderBusyEntry[] = [];
   private readonly allocations: AllocationEntry[] = [];
@@ -175,28 +173,23 @@ export class InMemoryStore implements TenantRepository, CatalogRepository, Resou
     return Promise.resolve();
   }
 
-  linkResource(link: ServiceResource): Promise<void> {
-    this.serviceResources.push(link);
-    return Promise.resolve();
-  }
-
-  setProviderResources(tenantId: string, providerId: string, resourceIds: string[]): Promise<void> {
-    const kept = this.providerResources.filter(
+  setProviderLocations(tenantId: string, providerId: string, locationIds: string[]): Promise<void> {
+    const kept = this.providerLocations.filter(
       (link) => !(link.tenantId === tenantId && link.providerId === providerId),
     );
-    this.providerResources.length = 0;
-    this.providerResources.push(
+    this.providerLocations.length = 0;
+    this.providerLocations.push(
       ...kept,
-      ...resourceIds.map((resourceId) => ({ tenantId, providerId, resourceId })),
+      ...locationIds.map((locationId) => ({ tenantId, providerId, locationId })),
     );
     return Promise.resolve();
   }
 
-  listProviderEligibleResourceIds(tenantId: string, providerId: string): Promise<string[]> {
+  listProviderLocationIds(tenantId: string, providerId: string): Promise<string[]> {
     return Promise.resolve(
-      this.providerResources
+      this.providerLocations
         .filter((link) => link.tenantId === tenantId && link.providerId === providerId)
-        .map((link) => link.resourceId),
+        .map((link) => link.locationId),
     );
   }
 
@@ -259,25 +252,6 @@ export class InMemoryStore implements TenantRepository, CatalogRepository, Resou
           intervalsOverlap(busy, range),
       ),
     );
-  }
-
-  listResourceDemands(
-    tenantId: string,
-    serviceId: string,
-  ): Promise<{ resource: Resource; units: number }[]> {
-    const demands: { resource: Resource; units: number }[] = [];
-    for (const link of this.serviceResources) {
-      if (link.tenantId !== tenantId || link.serviceId !== serviceId) {
-        continue;
-      }
-      const resource = this.resources.find(
-        (candidate) => candidate.tenantId === tenantId && candidate.id === link.resourceId,
-      );
-      if (resource?.status === "active") {
-        demands.push({ resource, units: link.units });
-      }
-    }
-    return Promise.resolve(demands);
   }
 
   listResourceAllocations(

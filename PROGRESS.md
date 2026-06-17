@@ -215,6 +215,27 @@ Current clean baseline commit:
   - Known limitation: hub location compatibility is a no-op until the canonical
     `Provider` gains locations (it never wrongly blocks).
 
+### 2026-06-17 (provider locations + legacy model-B drop)
+
+- Completed the hub migration end to end:
+  - Provider locations (canonical): `provider_locations` join table
+    (`infra/postgres/005-provider-locations.sql` + `providerLocations` in
+    `schema.ts`), `CatalogRepository.{setProviderLocations,listProviderLocationIds}`
+    on both adapters, `CatalogService.setProviderLocations`, and Fastify `PUT
+    /v1/admin/providers/:id/locations`. Availability/checkout/reschedule now feed
+    the provider's locations into `hubCandidates`, making hub location
+    compatibility real (empty on either side still means "any"). New test case in
+    `hub-availability.test.ts` proves Centro/Norte compatibility.
+  - Destructive migration `infra/postgres/006-drop-legacy-resource-model.sql`
+    drops `provider_resources` and `service_resources`; removed all their plumbing
+    (domain `ServiceResource`/`ProviderResource`/`providerEligibleForResources`,
+    the four `CatalogRepository` model-B methods on both adapters, the Drizzle
+    table defs, and the `POST /v1/admin/services/:id/resources` route). The
+    availability engine is untouched (`resource-conflicts.test.ts` still green).
+  - Suite: 254 passing, 5 skipped, 0 failures. Typecheck and lint clean.
+  - Optional remaining cleanup: `resources.location_id` (superseded by
+    `resource_locations`) could be dropped in a later migration.
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.

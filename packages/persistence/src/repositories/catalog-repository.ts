@@ -11,7 +11,6 @@ import type {
   Resource,
   Service,
   ServiceProvider,
-  ServiceResource,
 } from "@saas-reservas/domain/catalog/service";
 import type { Provider, ProviderScheduleEntry } from "@saas-reservas/domain/providers/provider";
 import type { Interval } from "@saas-reservas/domain/scheduling/time";
@@ -24,9 +23,8 @@ import {
   resourceAllocations,
   resources,
   categories,
-  providerResources,
+  providerLocations,
   serviceProviders,
-  serviceResources,
   services,
 } from "../schema.js";
 
@@ -77,33 +75,29 @@ export class DrizzleCatalogRepository {
     await this.db.withTenant(link.tenantId, (tx) => tx.insert(serviceProviders).values(link));
   }
 
-  async linkResource(link: ServiceResource): Promise<void> {
-    await this.db.withTenant(link.tenantId, (tx) => tx.insert(serviceResources).values(link));
-  }
-
-  async setProviderResources(
+  async setProviderLocations(
     tenantId: string,
     providerId: string,
-    resourceIds: string[],
+    locationIds: string[],
   ): Promise<void> {
     await this.db.withTenant(tenantId, async (tx) => {
-      await tx.delete(providerResources).where(eq(providerResources.providerId, providerId));
-      if (resourceIds.length > 0) {
+      await tx.delete(providerLocations).where(eq(providerLocations.providerId, providerId));
+      if (locationIds.length > 0) {
         await tx
-          .insert(providerResources)
-          .values(resourceIds.map((resourceId) => ({ tenantId, providerId, resourceId })));
+          .insert(providerLocations)
+          .values(locationIds.map((locationId) => ({ tenantId, providerId, locationId })));
       }
     });
   }
 
-  async listProviderEligibleResourceIds(tenantId: string, providerId: string): Promise<string[]> {
+  async listProviderLocationIds(tenantId: string, providerId: string): Promise<string[]> {
     const rows = await this.db.withTenant(tenantId, (tx) =>
       tx
-        .select({ resourceId: providerResources.resourceId })
-        .from(providerResources)
-        .where(eq(providerResources.providerId, providerId)),
+        .select({ locationId: providerLocations.locationId })
+        .from(providerLocations)
+        .where(eq(providerLocations.providerId, providerId)),
     );
-    return rows.map((row) => row.resourceId);
+    return rows.map((row) => row.locationId);
   }
 
   async findProviderById(tenantId: string, providerId: string): Promise<Provider | null> {
@@ -187,25 +181,6 @@ export class DrizzleCatalogRepository {
         ),
     );
     return rows.map((row) => ({ start: row.startAt.getTime(), end: row.endAt.getTime() }));
-  }
-
-  async listResourceDemands(
-    tenantId: string,
-    serviceId: string,
-  ): Promise<{ resource: Resource; units: number }[]> {
-    return this.db.withTenant(tenantId, async (tx) => {
-      const rows = await tx
-        .select({ resource: resources, units: serviceResources.units })
-        .from(serviceResources)
-        .innerJoin(resources, eq(serviceResources.resourceId, resources.id))
-        .where(and(eq(serviceResources.serviceId, serviceId), eq(resources.status, "active")));
-      // Normalize nullable location_id (DB) to the optional domain shape.
-      return rows.map((row) => {
-        const { locationId, ...rest } = row.resource;
-        const resource: Resource = locationId === null ? rest : { ...rest, locationId };
-        return { resource, units: row.units };
-      });
-    });
   }
 
   async listResourceAllocations(

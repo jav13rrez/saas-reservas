@@ -188,6 +188,19 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return reply.code(204).send();
   });
 
+  app.put("/v1/admin/providers/:providerId/locations", async (request, reply) => {
+    const tenant = tenantOf(request);
+    const { providerId } = request.params as { providerId: string };
+    const body = request.body as { locationIds: string[] };
+    await deps.catalogService.setProviderLocations({
+      tenantId: tenant.tenantId,
+      providerId,
+      locationIds: body.locationIds,
+      actor: ADMIN_ACTOR,
+    });
+    return reply.code(204).send();
+  });
+
   app.post("/v1/admin/resources", async (request, reply) => {
     const tenant = tenantOf(request);
     const body = request.body as { name: string; quantity: number };
@@ -259,20 +272,6 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       tenantId: tenant.tenantId,
       serviceId,
       providerId: body.providerId,
-      actor: ADMIN_ACTOR,
-    });
-    return reply.code(204).send();
-  });
-
-  app.post("/v1/admin/services/:serviceId/resources", async (request, reply) => {
-    const tenant = tenantOf(request);
-    const { serviceId } = request.params as { serviceId: string };
-    const body = request.body as { resourceId: string; units?: number };
-    await deps.catalogService.linkResource({
-      tenantId: tenant.tenantId,
-      serviceId,
-      resourceId: body.resourceId,
-      ...(body.units !== undefined ? { units: body.units } : {}),
       actor: ADMIN_ACTOR,
     });
     return reply.code(204).send();
