@@ -1,0 +1,100 @@
+# Technical Debt — Pre-Production Ledger
+
+Last updated: 2026-06-18
+
+Cumulative register of known shortcuts, simplifications, and dev-only choices
+that MUST be reviewed (and most resolved) **before a real production launch on a
+VPS**. This is the flow document for "what is not production-ready yet".
+
+How to use this file:
+
+- Add an entry the moment a debt is introduced or discovered, with enough
+  context to act on it later. Keep entries factual.
+- Mark severity: **[BLOCKER]** (must fix before any real traffic), **[HIGH]**
+  (fix before serious use), **[MEDIUM]** (improve soon), **[LOW]** (nice to have).
+- When a debt is paid, move it to "Resolved" with the date and how.
+- Cross-reference ADRs / `HANDOFF.md` where relevant.
+
+---
+
+## Security & tenant isolation
+
+- **[BLOCKER] Local Postgres role is a superuser.** The Docker dev role
+  `saas_admin` is a superuser, so it **bypasses RLS** — tenant isolation is not
+  actually enforced locally. Production MUST use a dedicated application role
+  that is `NOSUPERUSER NOBYPASSRLS` (see `docs/operations/SETUP.md` §1) and run
+  the app exclusively through it. RLS is the primary tenant-isolation defense.
+- **[HIGH] Staff sessions live in an in-memory per-process map** (ADR-0017).
+  Sessions are lost on API restart and do not work across multiple API
+  instances / behind a load balancer. Needs a shared, persistent session store
+  (Redis or Postgres) before horizontal scaling or zero-downtime deploys.
+- **[HIGH] No login rate limiting** for staff auth (`/v1/admin/sessions`)
+  (ADR-0017). Add throttling / lockout before exposing the admin surface.
+- **[MEDIUM] Password hashing uses scrypt, not argon2id** (ADR-0017) — chosen
+  because argon2 had no native build in the dev environment. Re-evaluate
+  argon2id for production.
+- **[MEDIUM] Staff portal still uses the dev-only `x-provider-id` header** and
+  is not migrated to real staff sessions.
+- **[MEDIUM] No real customer registry.** Checkout assigns
+  `customerId: randomUUID()` per booking (`checkout-routes.ts`); customers are
+  not yet first-class in the canonical layer (only in the admin demo store).
+
+## Integration adapters (all fakes today)
+
+These ports are implemented but wired to fake adapters in every mode. Each needs
+a real implementation + the provider account/credentials in
+`docs/operations/SETUP.md` §4 before launch.
+
+- **[BLOCKER] Payments:** `FakePaymentGateway` → Stripe Connect (charge on behalf
+  of tenants + application fee). Until then no real money moves.
+- **[HIGH] Email / SMS:** `FakeMessageProvider` → SendGrid/SES + Twilio.
+- **[HIGH] Credential vault KMS:** `InMemoryKmsAdapter` → AWS/GCP KMS CMK.
+  `CREDENTIALS_MASTER_KEY` is currently optional and only validated when present.
+- **[MEDIUM] WhatsApp:** fake → Meta Cloud API (per-tenant credentials).
+- **[MEDIUM] Calendars:** fake HTTP → Google Calendar + Microsoft Graph OAuth +
+  push webhooks.
+- **[MEDIUM] Video meetings:** fake → Google Meet / Zoom / Teams.
+- **[MEDIUM] File storage + antivirus:** `FakeStorageAdapter` /
+  `FakeAntivirusAdapter` → S3/GCS + a real scanner before accepting uploads.
+
+## Persistence & migrations
+
+- **[HIGH] Events context persistence is in-memory.** Events, ticket types,
+  attendees, series, and the waitlist run behind `EventStore`/`WaitlistStore`
+  ports with in-memory adapters only; Drizzle tables for the events context are
+  not built yet. Event data does not survive a restart in persistent mode.
+- **[HIGH] No migration runner.** SQL migrations (`infra/postgres/00*.sql`) are
+  applied operationally — automatically only on a Postgres **first boot** with an
+  empty volume (`docker-entrypoint-initdb.d`), or manually otherwise. There is no
+  versioned migration tool to apply incremental changes to an existing managed
+  database. Needs a real migration process (ordering, idempotency, history)
+  before the schema evolves in production.
+
+## Developer experience / onboarding gotchas
+
+- **[LOW] API JSON responses embed `actor.id` before the entity `id`.** Admin
+  create responses serialize the audit `actor` (the staff member) before the
+  created entity's own `id` — e.g.
+  `{... "actor":{"type":"staff","id":"<staffId>"}, "id":"<entityId>" ...}`.
+  Naive shell parsing like `grep '"id"' | head -1` therefore captures the
+  **staff id**, not the entity id. This bit us during operator onboarding
+  (wrong service/provider ids → failed assign → `service-not-found`).
+  Workarounds: parse with `jq -r .id`, use `tail -1`, or read ids from Postgres.
+  Longer-term consideration: stop echoing the full `actor` in responses, or
+  return the entity under an unambiguous key so id extraction is robust.
+
+## Deferred product features
+
+- **[MEDIUM] Resource quantity partition** (`shared` / `per-service` /
+  `per-location`) — deferred (ADR-0016).
+- **[MEDIUM] Group booking** — deferred (ADR-0016).
+- **[MEDIUM] Per-provider scheduling UI** — Work hours / Days off / Special days
+  are a known gap vs. Amelia (`docs/analysis/amelia-ux-reference.md`).
+
+---
+
+## Resolved
+
+_(Move paid-off debts here with date + resolution.)_
+</content>
+</invoke>

@@ -180,6 +180,13 @@ The resource model was extended to **model B (provider-resource eligibility) + m
 
 Remaining for full B/C: Fastify `/v1/admin/*` routes for locations/eligibility, provider-portal eligibility editor, public-widget exposure, and resource _groups_ (interchangeable pools with per-provider subsets). See ADR-0015 "Consequences". Note the eligibility *direction* changed with the hub migration (ADR-0016): the domain `ProviderResource` association should be replaced by resource-owned `employeeIds` when the canonical layer is migrated.
 
+## Technical Debt Ledger
+
+`TECH_DEBT.md` (repo root) is the cumulative register of dev-only shortcuts and
+not-yet-production-ready choices to resolve before a real VPS launch. Add an
+entry whenever you introduce or discover a debt; mark blockers vs. lower
+severity. Read it before planning a production deployment.
+
 ## Read This First
 
 This is the fastest resume document for Codex, Claude, or any future agent. Read this before making changes.
