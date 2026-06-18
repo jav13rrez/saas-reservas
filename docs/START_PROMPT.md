@@ -38,13 +38,18 @@ bootstrap de servidor de producción (main.ts: modo Drizzle/Redis o in-memory).
 Las próximas acciones están priorizadas en PLANNING.md > "Immediate Route" y
 HANDOFF.md; quedan: adaptadores reales (Stripe Connect, email/SMS/WhatsApp, KMS,
 S3) y profundidad de producto (agenda por proveedor, quantity partition, group
-booking).
+booking). La deuda técnica acumulada antes del salto a VPS vive en TECH_DEBT.md
+(raíz): léela antes de planificar un despliegue de producción.
 
 Contexto de operación (importante): el dueño del repo viene de Supabase+Vercel y
-está en fase de onboarding — arrancando el proyecto en local por primera vez. El
-panel admin (apps/admin) ya corre en su máquina con `pnpm --filter
-@saas-reservas/admin dev` (Node 22). El siguiente paso acordado es la "Parte 2":
-levantar el stack completo en local (Postgres + Redis vía Docker + el API).
+está en fase de onboarding. La "Parte 2" (stack completo en local: Postgres +
+Redis vía Docker + API en modo persistente) está COMPLETA y validada de punta a
+punta: Docker Engine nativo en WSL2, migraciones 001–008 aplicadas, primer tenant
+real creado vía /v1/platform/tenants, admin de staff con login por cookie, y una
+reserva real cerrada (disponibilidad → checkout → webhook de pago → ocupación
+registrada). El admin (apps/admin) corre con `pnpm --filter @saas-reservas/admin
+dev` (Node 22) contra su demo-store en memoria. Próximo paso natural de operación:
+conectar apps/admin contra la API persistente, o empezar los adaptadores reales.
 Guías de apoyo: docs/operations/SETUP.md (checklist de operador) y .env.example.
 Prefiere explicaciones paso a paso, detalladas y en español.
 

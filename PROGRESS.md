@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-06-16
+Last updated: 2026-06-18
 
 ## Current State
 
@@ -296,6 +296,38 @@ Current clean baseline commit:
     overview). Payment gateway remains the fake adapter (real Stripe Connect is
     the next follow-up). Suite: 261 passing, 5 skipped, 0 failures; typecheck and
     lint clean.
+
+### 2026-06-18 (operator onboarding — Part 2: full local stack + first real tenant + checkout)
+
+- Brought up the complete local stack end to end with the repo owner (no code
+  changes to the app; operations + docs only):
+  - **Docker** reinstalled as native **Docker Engine inside WSL2** (Ubuntu, no
+    Docker Desktop, systemd enabled) after the owner's prior Desktop/WSL2
+    conflicts. Verified with `hello-world`.
+  - **Infra up:** `postgres` + `redis` via `infra/docker-compose.yml` (both
+    healthy); the SQL migrations `001`…`008` applied automatically on Postgres
+    first boot (25 tables, RLS, resource-hub join tables, staff_accounts).
+  - **Env:** `.env` from `.env.example` with generated `PASSWORDLESS_TOKEN_SECRET`
+    + `SESSION_COOKIE_SECRET`; API built and started in **persistent mode**
+    (`node --env-file=.env services/api/dist/main.js`, Drizzle/RLS + Redis).
+  - **First real tenant** provisioned over HTTP: `POST /v1/platform/tenants`
+    (`mi-negocio`), bootstrap admin via `POST /v1/platform/tenants/:id/staff`,
+    staff login (`POST /v1/admin/sessions`) returning the `staff_session` cookie.
+    Confirmed the admin gate (401 without session, 201 with) and DB persistence.
+  - **Minimal bookable operation:** category → service (Corte de pelo, 60 min,
+    30 €) → provider (Ana, Mon–Fri 09:00–17:00) → assignment → `GET
+    /v1/public/availability` returned 8 hourly slots from the engine.
+  - **First real booking (star flow):** `POST /v1/public/checkout` created a
+    `pending` booking + cart charge (fake gateway), `POST
+    /v1/public/payments/webhook` (`charge.succeeded`) approved it and recorded
+    occupancy; the booked slot then disappeared from availability (8 → 7).
+- **Technical-debt ledger:** added `TECH_DEBT.md` (repo root) as the cumulative
+  pre-VPS register (superuser local DB role bypassing RLS, in-memory staff
+  sessions, fake adapters, in-memory events persistence, no migration runner, the
+  actor-before-id JSON parsing gotcha). Linked from `HANDOFF.md`.
+- Onboarding lesson captured in `TECH_DEBT.md`: admin create responses serialize
+  `actor.id` (staff) before the entity `id`, so naive `grep | head -1` parsing
+  grabs the wrong id — use `jq -r .id`, `tail -1`, or read ids from Postgres.
 
 ## Current Backlog
 

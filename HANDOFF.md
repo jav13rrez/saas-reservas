@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-06-17
+Last updated: 2026-06-18
 
 ## Resume Point For The Next Session (operator onboarding)
 
@@ -9,20 +9,29 @@ running the project locally for the first time. Status of the walkthrough:
 
 - ✅ **Part 1 done:** the admin console (`apps/admin`) runs on their machine
   (`pnpm --filter @saas-reservas/admin dev`, Node 22 via nvm) — in-memory demo
-  data, no DB. They confirmed they see the panel at `http://localhost:3000`.
-- ⏭️ **Next: Part 2** — bring up the full local stack: Postgres + Redis via
-  `docker compose -f infra/docker-compose.yml up -d postgres redis`, copy
-  `.env.example` → `.env`, generate the two required secrets, apply
-  `infra/postgres/00*.sql`, then `pnpm --filter @saas-reservas/api start`
-  (persistent mode). The detailed, beginner-friendly Spanish steps live in chat;
-  `docs/operations/SETUP.md` is the operator checklist.
+  data, no DB. Panel at `http://localhost:3000`.
+- ✅ **Part 2 done (2026-06-18):** full local stack is up and validated end to
+  end. Docker Engine runs **natively inside WSL2** (Ubuntu, no Docker Desktop,
+  systemd on). `postgres` + `redis` healthy via `infra/docker-compose.yml`
+  (migrations `001`…`008` auto-applied on first boot). `.env` built from
+  `.env.example` with generated secrets; API runs in **persistent mode**
+  (`node --env-file=.env services/api/dist/main.js`). Verified the full chain on
+  a real tenant: provision (`/v1/platform/tenants` → `mi-negocio`) → bootstrap
+  admin + staff login (cookie) → catalog (category/service/provider/schedule) →
+  `/v1/public/availability` (8 slots) → **checkout + payment webhook** (booking
+  pending → approved, slot removed from availability). See PROGRESS 2026-06-18.
+- ⏭️ **Next options:** (a) connect `apps/admin` to the persistent API (today it
+  uses its in-memory demo-store); (b) start the real adapters (Stripe Connect
+  first); (c) per-provider scheduling depth. Plus the pre-VPS debts in
+  `TECH_DEBT.md`. The owner prefers detailed, step-by-step Spanish.
 
 Mental model to keep reinforcing: this is NOT a Supabase/Vercel stack — it is a
 self-hosted Fastify API + raw PostgreSQL (RLS) + Redis. When deploying later:
 Supabase = hosted Postgres only (custom non-superuser role, run the SQL
 migrations; not Supabase Auth), Upstash = Redis, Railway/Render = the API (not
 Vercel), Vercel = the Next.js apps (`apps/admin`, `apps/booking-widget`).
-Prefers detailed, step-by-step explanations in Spanish.
+Note (TECH_DEBT.md): the local Docker `saas_admin` role is a superuser and
+**bypasses RLS** — production must use a `NOSUPERUSER NOBYPASSRLS` app role.
 
 ## Post-Spec Work (2026-06-17f): Operator setup docs + relaxed env contract
 
