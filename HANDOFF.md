@@ -21,18 +21,27 @@ console default stays `demo` so the single-command dev loop is untouched.
   New env vars in `.env.example`: `ADMIN_DATA_MODE`, `API_ORIGIN`,
   `ADMIN_TENANT_HOST`, `ADMIN_STAFF_EMAIL`, `ADMIN_STAFF_PASSWORD`.
 
-**Next actions (ADR-0018 Phases 2–5):**
-1. **Customer registry** — canonical `CustomerService` over the existing
-   `customers` table (`GET/POST /v1/admin/customers`); also pays down the "no real
-   customer registry" tech debt and unblocks the Clientes screen in `api` mode.
-2. **Admin bookings** — staff "book on behalf" flow (`/v1/admin/bookings`
+Phase 2 (customer registry) is also done: `CustomerService` +
+`GET/POST /v1/admin/customers` over the `customers` table, and the Clientes
+screen reads/creates through the seam in `api` mode (active toggle unsupported
+there — no domain concept). Pays down the "no real customer registry" debt.
+
+**Next actions (ADR-0018 Phases 3–5):**
+1. **Admin bookings** — staff "book on behalf" flow (`/v1/admin/bookings`
    list/create/cancel) reusing the availability engine + occupancy recorder
    without the public payment path; unblocks Reservas + Calendario in `api` mode.
-3. **Catalog DTO mapping** — extend the `source/` seam to categories/services/
+   NOTE: this carries a product decision (does an admin booking take payment, or
+   is it a no-charge staff booking?) — confirm before building.
+2. **Catalog DTO mapping** — extend the `source/` seam to categories/services/
    providers/resources (read + create, mapping `category`↔`categoryId`,
    `active`↔`status`, hub fan-out) so those screens work in `api` mode.
-4. **Live validation** — run the console in `api` mode against the running stack
+3. **Live validation** — run the console in `api` mode against the running stack
    (Postgres+Redis+API) end to end; not exercisable in this dev container.
+
+Objective 3 (per-provider scheduling: Work hours / Days off / Special days) is
+the next prioritized milestone after objective 2. The API already has
+`PUT /v1/admin/providers/:id/schedule` (weekly/day-off/special entries); the gap
+is the admin UI + exposing it through the seam.
 
 ## Resume Point For The Next Session (operator onboarding)
 

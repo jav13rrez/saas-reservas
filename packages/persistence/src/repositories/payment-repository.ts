@@ -79,15 +79,13 @@ export class DrizzlePaymentRepository {
     if (row === undefined) {
       return null;
     }
-    return {
-      id: row.id,
-      tenantId: row.tenantId,
-      email: row.email,
-      firstName: row.firstName,
-      lastName: row.lastName,
-      ...(row.phone !== null ? { phone: row.phone } : {}),
-      gdprStatus: row.gdprStatus,
-    };
+    return toCustomer(row);
+  }
+
+  /** Admin registry read model: all customers for a tenant. */
+  async listCustomers(tenantId: string): Promise<Customer[]> {
+    const rows = await this.db.withTenant(tenantId, (tx) => tx.select().from(customers));
+    return rows.map(toCustomer);
   }
 
   // --- CartRepository ---
@@ -149,6 +147,18 @@ export class DrizzlePaymentRepository {
     );
     return rows[0] ?? null;
   }
+}
+
+function toCustomer(row: typeof customers.$inferSelect): Customer {
+  return {
+    id: row.id,
+    tenantId: row.tenantId,
+    email: row.email,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    ...(row.phone !== null ? { phone: row.phone } : {}),
+    gdprStatus: row.gdprStatus,
+  };
 }
 
 function fromBookingRow(row: typeof bookings.$inferSelect): Booking {

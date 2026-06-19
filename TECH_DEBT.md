@@ -35,9 +35,11 @@ How to use this file:
   argon2id for production.
 - **[MEDIUM] Staff portal still uses the dev-only `x-provider-id` header** and
   is not migrated to real staff sessions.
-- **[MEDIUM] No real customer registry.** Checkout assigns
-  `customerId: randomUUID()` per booking (`checkout-routes.ts`); customers are
-  not yet first-class in the canonical layer (only in the admin demo store).
+- **[MEDIUM] Checkout is not wired to the customer registry.** A canonical
+  customer registry now exists (`CustomerService`, `GET/POST /v1/admin/customers`,
+  ADR-0018 Phase 2), but checkout still assigns `customerId: randomUUID()` per
+  booking (`checkout-routes.ts`) instead of resolving/creating a registry
+  customer. Wire checkout to the registry (match by email, create if absent).
 
 ## Integration adapters (all fakes today)
 

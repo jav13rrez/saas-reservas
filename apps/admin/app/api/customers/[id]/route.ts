@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { setCustomerActive } from "@/server/demo-store";
+import { setCustomerActive } from "@/server/source/customers";
 
 /**
  * PATCH /api/customers/:id  -> toggle a customer active/inactive
@@ -21,7 +21,7 @@ export async function PATCH(
   if (typeof active !== "boolean") {
     return NextResponse.json({ error: "El campo 'active' debe ser booleano." }, { status: 400 });
   }
-  const result = setCustomerActive(id, active);
+  const result = await setCustomerActive(id, active);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 404 });
   }

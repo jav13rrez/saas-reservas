@@ -14,9 +14,11 @@ import { CatalogService } from "@saas-reservas/api/application/catalog/catalog-s
 import { LocationService } from "@saas-reservas/api/application/catalog/location-service";
 import { ResourceHubService } from "@saas-reservas/api/application/catalog/resource-hub-service";
 import { AvailabilityService } from "@saas-reservas/api/application/scheduling/availability-service";
+import { CustomerService } from "@saas-reservas/api/application/customers/customer-service";
 import { InMemoryEventSink } from "@saas-reservas/api/application/events";
 import { TenantAdminService } from "@saas-reservas/api/application/tenancy/tenant-admin-service";
 import { InMemoryStore } from "@saas-reservas/api/infrastructure/memory/in-memory-store";
+import { InMemoryPaymentStore } from "@saas-reservas/api/infrastructure/memory/in-memory-payment-store";
 
 const BASE_DOMAIN = "reservas.test";
 const TENANT_HOST = "clinic.reservas.test";
@@ -73,6 +75,7 @@ describe("admin read-model endpoints", () => {
       tenantAdmin: new TenantAdminService(store, events),
       catalogService: new CatalogService(store, events),
       locations: new LocationService(store, events),
+      customers: new CustomerService(new InMemoryPaymentStore(), events),
       resourceHub: new ResourceHubService(store, events),
       availability: new AvailabilityService(store, store),
       tenantTimezone: async (tenantId) =>
@@ -183,6 +186,28 @@ describe("admin read-model endpoints", () => {
     expect(room?.serviceIds).toEqual([serviceId]);
     expect(room?.employeeIds).toEqual([providerId]);
     expect(room?.locationIds).toEqual([locationId]);
+  });
+
+  it("registers, lists, and de-duplicates customers", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/v1/admin/customers",
+      headers: { host: TENANT_HOST },
+      payload: { email: "Lucia@Example.com", firstName: "Lucía", lastName: "Romero" },
+    });
+    expect(created.statusCode).toBe(201);
+    expect(created.json<{ email: string; gdprStatus: string }>().email).toBe("lucia@example.com");
+
+    const body = await adminGet<{ id: string; email: string }>("/v1/admin/customers");
+    expect(body.items.map((c) => c.email)).toEqual(["lucia@example.com"]);
+
+    const duplicate = await app.inject({
+      method: "POST",
+      url: "/v1/admin/customers",
+      headers: { host: TENANT_HOST },
+      payload: { email: "lucia@example.com", firstName: "Otra", lastName: "Persona" },
+    });
+    expect(duplicate.statusCode).toBe(409);
   });
 
   it("scopes reads to the requesting tenant (unknown host rejected)", async () => {

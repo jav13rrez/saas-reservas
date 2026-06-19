@@ -40,6 +40,7 @@ import { BookingService } from "./application/bookings/booking-service.js";
 import { CatalogService } from "./application/catalog/catalog-service.js";
 import { LocationService } from "./application/catalog/location-service.js";
 import { ResourceHubService } from "./application/catalog/resource-hub-service.js";
+import { CustomerService } from "./application/customers/customer-service.js";
 import { StaffAuthService } from "./application/identity/staff-auth-service.js";
 import { CartReconciliationService } from "./application/payments/cart-reconciliation-service.js";
 import { AvailabilityService } from "./application/scheduling/availability-service.js";
@@ -130,6 +131,7 @@ function persistentBootstrap(): Bootstrap {
     tenantAdmin: new TenantAdminService(tenantRepo, events),
     catalogService: new CatalogService(catalogRepo, events),
     locations: new LocationService(locationRepo, events),
+    customers: new CustomerService(paymentRepo, events),
     resourceHub: new ResourceHubService(hubRepo, events),
     staffAuth: new StaffAuthService(staffRepo, events),
     availability: new AvailabilityService(catalogRepo, hubRepo),
@@ -173,6 +175,7 @@ function inMemoryBootstrap(): Bootstrap {
     tenantAdmin: new TenantAdminService(store, events),
     catalogService: new CatalogService(store, events),
     locations: new LocationService(store, events),
+    customers: new CustomerService(paymentStore, events),
     resourceHub: new ResourceHubService(store, events),
     staffAuth: new StaffAuthService(new InMemoryStaffAccountStore(), events),
     availability: new AvailabilityService(store, store),

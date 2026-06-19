@@ -16,6 +16,10 @@ import type { StaffRole } from "@saas-reservas/domain/identity/staff";
 import type { CatalogService } from "../application/catalog/catalog-service.js";
 import type { LocationService } from "../application/catalog/location-service.js";
 import type { ResourceHubService } from "../application/catalog/resource-hub-service.js";
+import {
+  DuplicateCustomerEmailError,
+  type CustomerService,
+} from "../application/customers/customer-service.js";
 import type { StaffAuthService } from "../application/identity/staff-auth-service.js";
 import type { AvailabilityService } from "../application/scheduling/availability-service.js";
 import type { TenantAdminService } from "../application/tenancy/tenant-admin-service.js";
@@ -39,6 +43,8 @@ export interface AppDeps {
   catalogService: CatalogService;
   /** Multi-site location management ("ubicaciones"); omit to disable the routes. */
   locations?: LocationService;
+  /** Customer registry (admin); omit to disable the routes. */
+  customers?: CustomerService;
   /** Resource hub configuration (ADR-0016); omit to disable the hub admin routes. */
   resourceHub?: ResourceHubService;
   /**
@@ -297,6 +303,42 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         return reply.code(404).send({ error: "location-not-found" });
       }
       return reply.send(location);
+    });
+  }
+
+  // Customer registry (admin): first-class customers over the `customers` table.
+  if (deps.customers !== undefined) {
+    const customers = deps.customers;
+    app.get("/v1/admin/customers", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const items = await customers.listCustomers(tenant.tenantId);
+      return reply.send({ items });
+    });
+
+    app.post("/v1/admin/customers", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const body = request.body as {
+        email: string;
+        firstName: string;
+        lastName: string;
+        phone?: string;
+      };
+      try {
+        const customer = await customers.createCustomer({
+          tenantId: tenant.tenantId,
+          email: body.email,
+          firstName: body.firstName,
+          lastName: body.lastName,
+          ...(body.phone !== undefined ? { phone: body.phone } : {}),
+          actor: adminActor(request),
+        });
+        return await reply.code(201).send(customer);
+      } catch (error) {
+        if (error instanceof DuplicateCustomerEmailError) {
+          return reply.code(409).send({ error: "duplicate-email" });
+        }
+        throw error;
+      }
     });
   }
 

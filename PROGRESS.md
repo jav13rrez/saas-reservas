@@ -358,11 +358,32 @@ Current clean baseline commit:
     `tests/integration/catalog/locations.test.ts` (in-memory always; Drizzle
     self-skips without PostgreSQL). Full suite: 269 passing, 6 skipped, 0
     failures. Typecheck, lint, Prettier clean; admin `next build` passes.
-  - Remaining (ADR-0018 Phases 2–5): customer registry, admin bookings,
+  - Remaining after Phase 1 (ADR-0018 Phases 3–5): admin bookings,
     services/providers/resources DTO mapping + write/toggle through the seam,
     and Calendario over the API. The `api`-mode path needs a live end-to-end run
     against the running stack (like the operator's curl chain) — not exercisable
     in this environment without Postgres/Redis.
+
+### 2026-06-19 (admin ↔ persistent API — Phase 2: customer registry)
+
+- Made customers first-class for the admin over the existing `customers` table
+  (ADR-0018 Phase 2; also pays down the "no real customer registry" tech debt):
+  - **`CustomerService`** (`application/customers/customer-service.ts`) with a
+    `CustomerRegistryRepository` port — `listCustomers` and audited
+    `createCustomer` (email normalized + case-insensitive de-dup; the console's
+    single `name` is split into `firstName`/`lastName`). Implemented by adding
+    `listCustomers` to `InMemoryPaymentStore` and `DrizzlePaymentRepository`
+    (both already held the `CustomerRepository` insert/find/update).
+  - Routes `GET/POST /v1/admin/customers` (optional `customers` dep in
+    `buildApp`, `409` on duplicate email); wired into `main.ts` both bootstraps.
+  - **Admin Clientes screen** now reads/creates through the data-source seam
+    (`src/server/source/customers.ts`): list + create work in `api` mode; the
+    active toggle is unsupported there (no domain concept) and returns a clear
+    message. Demo mode unchanged.
+  - Tests: extended `admin-read-model.test.ts` (customer register/list/dedup) +
+    `tests/integration/customers/customer-registry.test.ts` (in-memory always;
+    Drizzle self-skips). Suite: 272 passing, 7 skipped, 0 failures. Typecheck,
+    lint, Prettier clean; admin `next build` passes.
 
 ## Current Backlog
 
