@@ -528,6 +528,107 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     });
   }
 
+  app.patch("/v1/admin/services/:serviceId", async (request, reply) => {
+    const tenant = tenantOf(request);
+    const { serviceId } = request.params as { serviceId: string };
+    const body = request.body as {
+      name?: string;
+      durationMinutes?: number;
+      priceAmount?: number;
+      currency?: string;
+      bufferBeforeMinutes?: number;
+      bufferAfterMinutes?: number;
+      minCapacity?: number;
+      maxCapacity?: number;
+      active?: boolean;
+    };
+    const patch: Parameters<typeof deps.catalogService.updateService>[0]["patch"] = {
+      ...(body.name !== undefined ? { name: body.name } : {}),
+      ...(body.durationMinutes !== undefined ? { durationMinutes: body.durationMinutes } : {}),
+      ...(body.priceAmount !== undefined ? { priceAmount: body.priceAmount } : {}),
+      ...(body.currency !== undefined ? { currency: body.currency } : {}),
+      ...(body.bufferBeforeMinutes !== undefined
+        ? { bufferBeforeMinutes: body.bufferBeforeMinutes }
+        : {}),
+      ...(body.bufferAfterMinutes !== undefined
+        ? { bufferAfterMinutes: body.bufferAfterMinutes }
+        : {}),
+      ...(body.minCapacity !== undefined ? { minCapacity: body.minCapacity } : {}),
+      ...(body.maxCapacity !== undefined ? { maxCapacity: body.maxCapacity } : {}),
+      ...(body.active !== undefined ? { status: body.active ? "active" : "inactive" } : {}),
+    };
+    const updated = await deps.catalogService.updateService({
+      tenantId: tenant.tenantId,
+      serviceId,
+      patch,
+      actor: adminActor(request),
+    });
+    if (updated === null) {
+      return reply.code(404).send({ error: "service-not-found" });
+    }
+    return reply.send(updated);
+  });
+
+  app.patch("/v1/admin/providers/:providerId", async (request, reply) => {
+    const tenant = tenantOf(request);
+    const { providerId } = request.params as { providerId: string };
+    const body = request.body as {
+      displayName?: string;
+      email?: string;
+      timezone?: string;
+      active?: boolean;
+    };
+    const patch: Parameters<typeof deps.catalogService.updateProvider>[0]["patch"] = {
+      ...(body.displayName !== undefined ? { displayName: body.displayName } : {}),
+      ...(body.email !== undefined ? { email: body.email } : {}),
+      ...(body.timezone !== undefined ? { timezone: body.timezone } : {}),
+      ...(body.active !== undefined ? { status: body.active ? "active" : "inactive" } : {}),
+    };
+    const updated = await deps.catalogService.updateProvider({
+      tenantId: tenant.tenantId,
+      providerId,
+      patch,
+      actor: adminActor(request),
+    });
+    if (updated === null) {
+      return reply.code(404).send({ error: "provider-not-found" });
+    }
+    return reply.send(updated);
+  });
+
+  app.patch("/v1/admin/resources/:resourceId", async (request, reply) => {
+    const tenant = tenantOf(request);
+    const { resourceId } = request.params as { resourceId: string };
+    const body = request.body as { name?: string; quantity?: number; active?: boolean };
+    const patch: Parameters<typeof deps.catalogService.updateResource>[0]["patch"] = {
+      ...(body.name !== undefined ? { name: body.name } : {}),
+      ...(body.quantity !== undefined ? { quantity: body.quantity } : {}),
+      ...(body.active !== undefined ? { status: body.active ? "active" : "inactive" } : {}),
+    };
+    const updated = await deps.catalogService.updateResource({
+      tenantId: tenant.tenantId,
+      resourceId,
+      patch,
+      actor: adminActor(request),
+    });
+    if (updated === null) {
+      return reply.code(404).send({ error: "resource-not-found" });
+    }
+    return reply.send(updated);
+  });
+
+  app.delete("/v1/admin/services/:serviceId/providers/:providerId", async (request, reply) => {
+    const tenant = tenantOf(request);
+    const { serviceId, providerId } = request.params as { serviceId: string; providerId: string };
+    await deps.catalogService.unassignProvider({
+      tenantId: tenant.tenantId,
+      serviceId,
+      providerId,
+      actor: adminActor(request),
+    });
+    return reply.code(204).send();
+  });
+
   app.post("/v1/admin/services/:serviceId/providers", async (request, reply) => {
     const tenant = tenantOf(request);
     const { serviceId } = request.params as { serviceId: string };

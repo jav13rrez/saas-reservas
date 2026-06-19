@@ -193,6 +193,50 @@ export class InMemoryStore
     return Promise.resolve();
   }
 
+  updateService(service: Service): Promise<void> {
+    const index = this.services.findIndex(
+      (existing) => existing.tenantId === service.tenantId && existing.id === service.id,
+    );
+    if (index >= 0) {
+      this.services[index] = service;
+    }
+    return Promise.resolve();
+  }
+
+  updateProvider(provider: Provider): Promise<void> {
+    const index = this.providers.findIndex(
+      (existing) => existing.tenantId === provider.tenantId && existing.id === provider.id,
+    );
+    if (index >= 0) {
+      this.providers[index] = provider;
+    }
+    return Promise.resolve();
+  }
+
+  updateResource(resource: Resource): Promise<void> {
+    const index = this.resources.findIndex(
+      (existing) => existing.tenantId === resource.tenantId && existing.id === resource.id,
+    );
+    if (index >= 0) {
+      this.resources[index] = resource;
+    }
+    return Promise.resolve();
+  }
+
+  unassignProvider(tenantId: string, serviceId: string, providerId: string): Promise<void> {
+    const kept = this.serviceProviders.filter(
+      (link) =>
+        !(
+          link.tenantId === tenantId &&
+          link.serviceId === serviceId &&
+          link.providerId === providerId
+        ),
+    );
+    this.serviceProviders.length = 0;
+    this.serviceProviders.push(...kept);
+    return Promise.resolve();
+  }
+
   setProviderSchedule(
     tenantId: string,
     providerId: string,

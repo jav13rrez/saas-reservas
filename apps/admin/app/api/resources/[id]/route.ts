@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { updateResource } from "@/server/demo-store";
+import { updateResource } from "@/server/source/resources";
 
 /**
  * PATCH /api/resources/:id  -> update resource fields (name, quantity, arrays, active)
@@ -24,7 +24,7 @@ export async function PATCH(
     employeeIds: unknown;
     active: boolean;
   }>;
-  const result = updateResource(id, {
+  const result = await updateResource(id, {
     name: input.name,
     quantity: input.quantity,
     locationIds: input.locationIds,

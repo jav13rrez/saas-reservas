@@ -188,6 +188,100 @@ describe("admin read-model endpoints", () => {
     expect(room?.locationIds).toEqual([locationId]);
   });
 
+  it("updates a service (rename + deactivate) and reflects it on read", async () => {
+    const patch = await app.inject({
+      method: "PATCH",
+      url: `/v1/admin/services/${serviceId}`,
+      headers: { host: TENANT_HOST },
+      payload: { name: "Consultation Plus", active: false },
+    });
+    expect(patch.statusCode).toBe(200);
+    expect(patch.json<{ name: string; status: string }>()).toMatchObject({
+      name: "Consultation Plus",
+      status: "inactive",
+    });
+
+    const body = await adminGet<{ id: string; name: string; status: string }>("/v1/admin/services");
+    const service = body.items.find((s) => s.id === serviceId);
+    expect(service?.name).toBe("Consultation Plus");
+    expect(service?.status).toBe("inactive");
+
+    // Restore for downstream assertions.
+    await app.inject({
+      method: "PATCH",
+      url: `/v1/admin/services/${serviceId}`,
+      headers: { host: TENANT_HOST },
+      payload: { name: "Consultation", active: true },
+    });
+  });
+
+  it("updates a provider and a resource", async () => {
+    const provider = await app.inject({
+      method: "PATCH",
+      url: `/v1/admin/providers/${providerId}`,
+      headers: { host: TENANT_HOST },
+      payload: { displayName: "Ana Torres", timezone: "Atlantic/Canary" },
+    });
+    expect(provider.statusCode).toBe(200);
+    expect(provider.json<{ displayName: string; timezone: string }>()).toMatchObject({
+      displayName: "Ana Torres",
+      timezone: "Atlantic/Canary",
+    });
+
+    const resource = await app.inject({
+      method: "PATCH",
+      url: `/v1/admin/resources/${resourceId}`,
+      headers: { host: TENANT_HOST },
+      payload: { quantity: 3, active: false },
+    });
+    expect(resource.statusCode).toBe(200);
+    expect(resource.json<{ quantity: number; status: string }>()).toMatchObject({
+      quantity: 3,
+      status: "inactive",
+    });
+
+    // Restore the resource so the hub assertions elsewhere stay stable.
+    await app.inject({
+      method: "PATCH",
+      url: `/v1/admin/resources/${resourceId}`,
+      headers: { host: TENANT_HOST },
+      payload: { quantity: 2, active: true },
+    });
+  });
+
+  it("unassigns a provider from a service", async () => {
+    // Assign a throwaway provider then unassign it.
+    const extra = await adminPost("/v1/admin/providers", {
+      email: "extra@clinic.test",
+      displayName: "Extra",
+      timezone: "Europe/Madrid",
+    });
+    await adminPost(`/v1/admin/services/${serviceId}/providers`, { providerId: extra.id });
+
+    const before = await adminGet<{ id: string; serviceIds: string[] }>("/v1/admin/providers");
+    expect(before.items.find((p) => p.id === extra.id)?.serviceIds).toEqual([serviceId]);
+
+    const removed = await app.inject({
+      method: "DELETE",
+      url: `/v1/admin/services/${serviceId}/providers/${extra.id}`,
+      headers: { host: TENANT_HOST },
+    });
+    expect(removed.statusCode).toBe(204);
+
+    const after = await adminGet<{ id: string; serviceIds: string[] }>("/v1/admin/providers");
+    expect(after.items.find((p) => p.id === extra.id)?.serviceIds).toEqual([]);
+  });
+
+  it("returns 404 updating an unknown service", async () => {
+    const response = await app.inject({
+      method: "PATCH",
+      url: "/v1/admin/services/00000000-0000-4000-8000-0000000000ff",
+      headers: { host: TENANT_HOST },
+      payload: { name: "Ghost" },
+    });
+    expect(response.statusCode).toBe(404);
+  });
+
   it("registers, lists, and de-duplicates customers", async () => {
     const created = await app.inject({
       method: "POST",

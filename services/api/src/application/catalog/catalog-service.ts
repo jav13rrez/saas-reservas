@@ -33,6 +33,14 @@ export interface CatalogRepository {
   insertExtra(extra: Extra): Promise<void>;
   insertResource(resource: Resource): Promise<void>;
   insertProvider(provider: Provider): Promise<void>;
+  /** Replace a service by id (admin edit / status toggle). */
+  updateService(service: Service): Promise<void>;
+  /** Replace a provider by id (admin edit / status toggle). */
+  updateProvider(provider: Provider): Promise<void>;
+  /** Replace a resource by id (admin edit / status toggle). */
+  updateResource(resource: Resource): Promise<void>;
+  /** Remove a provider's assignment to a service. */
+  unassignProvider(tenantId: string, serviceId: string, providerId: string): Promise<void>;
   setProviderSchedule(
     tenantId: string,
     providerId: string,
@@ -165,6 +173,104 @@ export class CatalogService {
       provider.id,
     );
     return provider;
+  }
+
+  /** Apply a partial update to a service (admin edit / active toggle). */
+  async updateService(input: {
+    tenantId: string;
+    serviceId: string;
+    patch: Partial<
+      Pick<
+        Service,
+        | "name"
+        | "durationMinutes"
+        | "priceAmount"
+        | "currency"
+        | "bufferBeforeMinutes"
+        | "bufferAfterMinutes"
+        | "minCapacity"
+        | "maxCapacity"
+        | "status"
+      >
+    >;
+    actor: Actor;
+  }): Promise<Service | null> {
+    const existing = await this.catalog.findServiceById(input.tenantId, input.serviceId);
+    if (existing === null) {
+      return null;
+    }
+    const updated: Service = { ...existing, ...input.patch };
+    validateService(updated);
+    await this.catalog.updateService(updated);
+    await this.audit(input.tenantId, input.actor, "catalog.service-updated", "service", updated.id);
+    return updated;
+  }
+
+  /** Apply a partial update to a provider (admin edit / active toggle). */
+  async updateProvider(input: {
+    tenantId: string;
+    providerId: string;
+    patch: Partial<Pick<Provider, "displayName" | "email" | "timezone" | "status">>;
+    actor: Actor;
+  }): Promise<Provider | null> {
+    const existing = await this.catalog.findProviderById(input.tenantId, input.providerId);
+    if (existing === null) {
+      return null;
+    }
+    const updated: Provider = { ...existing, ...input.patch };
+    await this.catalog.updateProvider(updated);
+    await this.audit(
+      input.tenantId,
+      input.actor,
+      "catalog.provider-updated",
+      "provider",
+      updated.id,
+    );
+    return updated;
+  }
+
+  /** Apply a partial update to a resource (admin edit / active toggle). */
+  async updateResource(input: {
+    tenantId: string;
+    resourceId: string;
+    patch: Partial<Pick<Resource, "name" | "quantity" | "status">>;
+    actor: Actor;
+  }): Promise<Resource | null> {
+    const existing = (await this.catalog.listResources(input.tenantId)).find(
+      (resource) => resource.id === input.resourceId,
+    );
+    if (existing === undefined) {
+      return null;
+    }
+    const updated: Resource = { ...existing, ...input.patch };
+    validateResource(updated);
+    await this.catalog.updateResource(updated);
+    await this.audit(
+      input.tenantId,
+      input.actor,
+      "catalog.resource-updated",
+      "resource",
+      updated.id,
+    );
+    return updated;
+  }
+
+  /** Remove a provider's assignment to a service. */
+  async unassignProvider(input: {
+    tenantId: string;
+    serviceId: string;
+    providerId: string;
+    actor: Actor;
+  }): Promise<void> {
+    await this.catalog.unassignProvider(input.tenantId, input.serviceId, input.providerId);
+    await this.audit(
+      input.tenantId,
+      input.actor,
+      "catalog.provider-unassigned",
+      "service",
+      input.serviceId,
+      { providerId: input.providerId },
+    );
   }
 
   async setProviderSchedule(input: {

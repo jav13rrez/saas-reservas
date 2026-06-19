@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
-import { createResource, listResources } from "@/server/demo-store";
+import { createResource, listResources } from "@/server/source/resources";
 
 /**
  * GET  /api/resources  -> list resources
  * POST /api/resources  -> create a resource (hub model: declares locations, services, providers)
+ *
+ * Data source (demo store or persistent API) is selected by ADMIN_DATA_MODE
+ * (ADR-0018).
  */
 
-export function GET(): NextResponse {
-  return NextResponse.json({ items: listResources() });
+export async function GET(): Promise<NextResponse> {
+  try {
+    return NextResponse.json({ items: await listResources() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error al cargar recursos.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -24,7 +32,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     serviceIds: unknown;
     employeeIds: unknown;
   }>;
-  const result = createResource({
+  const result = await createResource({
     name: typeof input.name === "string" ? input.name : "",
     quantity: typeof input.quantity === "number" ? input.quantity : NaN,
     locationIds: input.locationIds ?? [],

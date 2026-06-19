@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
-import { createProvider, listProviders } from "@/server/demo-store";
+import { createProvider, listProviders } from "@/server/source/providers";
 
 /**
  * GET  /api/providers  -> list providers (with their location/service assignments)
  * POST /api/providers  -> create a provider
  *
  * Resource eligibility is configured from /api/resources (hub model).
+ * Data source (demo store or persistent API) is selected by ADMIN_DATA_MODE
+ * (ADR-0018).
  */
 
-export function GET(): NextResponse {
-  return NextResponse.json({ items: listProviders() });
+export async function GET(): Promise<NextResponse> {
+  try {
+    return NextResponse.json({ items: await listProviders() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error al cargar proveedores.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -26,7 +33,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     locationIds: unknown;
     serviceIds: unknown;
   }>;
-  const result = createProvider({
+  const result = await createProvider({
     name: typeof input.name === "string" ? input.name : "",
     email: typeof input.email === "string" ? input.email : "",
     timezone: typeof input.timezone === "string" ? input.timezone : "",

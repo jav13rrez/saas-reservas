@@ -117,13 +117,21 @@ export async function createService(input: CreateServiceInput): Promise<StoreRes
   }
 }
 
-export function setServiceActive(id: string, active: boolean): Promise<StoreResult<AdminService>> {
+export async function setServiceActive(
+  id: string,
+  active: boolean,
+): Promise<StoreResult<AdminService>> {
   if (dataMode() === "demo") {
-    return Promise.resolve(demoSetServiceActive(id, active));
+    return demoSetServiceActive(id, active);
   }
-  // No service-update route yet (ADR-0018 Phase 5).
-  return Promise.resolve({
-    ok: false,
-    error: "Activar o desactivar servicios no está disponible en modo API todavía.",
-  });
+  const result = await apiSend<ApiService>("PATCH", `/v1/admin/services/${id}`, { active });
+  if (!result.ok || result.data === undefined) {
+    return { ok: false, error: result.error ?? "No se pudo actualizar el servicio." };
+  }
+  const service = result.data;
+  // The PATCH response carries categoryId; resolve its name for the console DTO.
+  const categories = await listCategories();
+  const categoryName =
+    categories.find((category) => category.id === service.categoryId)?.name ?? "General";
+  return { ok: true, value: toAdmin(service, categoryName) };
 }

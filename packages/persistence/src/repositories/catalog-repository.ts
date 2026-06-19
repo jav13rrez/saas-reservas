@@ -55,6 +55,63 @@ export class DrizzleCatalogRepository {
     await this.db.withTenant(provider.tenantId, (tx) => tx.insert(providers).values(provider));
   }
 
+  async updateService(service: Service): Promise<void> {
+    await this.db.withTenant(service.tenantId, (tx) =>
+      tx
+        .update(services)
+        .set({
+          categoryId: service.categoryId,
+          name: service.name,
+          durationMinutes: service.durationMinutes,
+          priceAmount: service.priceAmount,
+          currency: service.currency,
+          bufferBeforeMinutes: service.bufferBeforeMinutes,
+          bufferAfterMinutes: service.bufferAfterMinutes,
+          minCapacity: service.minCapacity,
+          maxCapacity: service.maxCapacity,
+          status: service.status,
+        })
+        .where(eq(services.id, service.id)),
+    );
+  }
+
+  async updateProvider(provider: Provider): Promise<void> {
+    await this.db.withTenant(provider.tenantId, (tx) =>
+      tx
+        .update(providers)
+        .set({
+          email: provider.email,
+          displayName: provider.displayName,
+          timezone: provider.timezone,
+          permissions: provider.permissions,
+          status: provider.status,
+        })
+        .where(eq(providers.id, provider.id)),
+    );
+  }
+
+  async updateResource(resource: Resource): Promise<void> {
+    await this.db.withTenant(resource.tenantId, (tx) =>
+      tx
+        .update(resources)
+        .set({ name: resource.name, quantity: resource.quantity, status: resource.status })
+        .where(eq(resources.id, resource.id)),
+    );
+  }
+
+  async unassignProvider(tenantId: string, serviceId: string, providerId: string): Promise<void> {
+    await this.db.withTenant(tenantId, (tx) =>
+      tx
+        .delete(serviceProviders)
+        .where(
+          and(
+            eq(serviceProviders.serviceId, serviceId),
+            eq(serviceProviders.providerId, providerId),
+          ),
+        ),
+    );
+  }
+
   async setProviderSchedule(
     tenantId: string,
     providerId: string,

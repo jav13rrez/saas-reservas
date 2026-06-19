@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { updateProvider, type UpdateProviderInput } from "@/server/demo-store";
+import { updateProvider } from "@/server/source/providers";
+import { type UpdateProviderInput } from "@/server/demo-store";
 
 /**
  * PATCH /api/providers/:id  -> update a provider's profile, location/service
@@ -37,7 +38,7 @@ export async function PATCH(
   if (raw.serviceIds !== undefined) patch.serviceIds = raw.serviceIds;
   if (typeof raw.active === "boolean") patch.active = raw.active;
 
-  const result = updateProvider(id, patch);
+  const result = await updateProvider(id, patch);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
