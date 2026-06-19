@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { setLocationActive } from "@/server/demo-store";
+import { setLocationActive } from "@/server/source/locations";
 
 /**
  * PATCH /api/locations/:id  -> toggle a location active/inactive
@@ -21,7 +21,7 @@ export async function PATCH(
   if (typeof active !== "boolean") {
     return NextResponse.json({ error: "El campo 'active' debe ser booleano." }, { status: 400 });
   }
-  const result = setLocationActive(id, active);
+  const result = await setLocationActive(id, active);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 404 });
   }

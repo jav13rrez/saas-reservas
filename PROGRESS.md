@@ -329,6 +329,41 @@ Current clean baseline commit:
   `actor.id` (staff) before the entity `id`, so naive `grep | head -1` parsing
   grabs the wrong id — use `jq -r .id`, `tail -1`, or read ids from Postgres.
 
+### 2026-06-19 (admin ↔ persistent API integration — Phase 1: read surface + Locations)
+
+- Started connecting `apps/admin` to the persistent Fastify API (ADR-0018), the
+  prioritized next objective. The blocker was that `/v1/admin/*` was almost
+  entirely **write-only** — the console had no read endpoints to render from, and
+  locations had no canonical CRUD. Delivered the backend foundation, tests first:
+  - **Admin read model:** `GET /v1/admin/{categories,services,providers,resources}`.
+    Providers come enriched with their service assignments + work locations;
+    resources come enriched with their hub associations (ADR-0016). Added
+    `listCategories/listServices/listProviders/listResources/listProviderServiceIds`
+    to the `CatalogRepository` port and both adapters (`InMemoryStore`,
+    `DrizzleCatalogRepository`), plus `CatalogService.listProviders` composing the
+    enrichment.
+  - **Locations CRUD (canonical):** new `LocationService` + `LocationRepository`
+    port over the existing `locations` table, with in-memory and Drizzle/RLS
+    (`DrizzleLocationRepository`) adapters; routes `GET/POST/PATCH
+    /v1/admin/locations` (optional `locations` dep in `buildApp`). Wired into
+    `main.ts` (both bootstraps).
+  - **Admin client foundation (ADR-0018):** `ADMIN_DATA_MODE` env (`demo` default
+    | `api`), a server-only API client (`apps/admin/src/server/api-client.ts`)
+    that handles the tenant Host header + cached staff-session login with
+    re-auth on 401, and a `DataSource` seam. **Locations** route handlers now go
+    through the seam (`src/server/source/locations.ts`) — the proven end-to-end
+    vertical. Demo stays the default; the admin still builds with a single
+    `pnpm dev`.
+  - Tests: `tests/e2e/admin-read-model.test.ts` (6) and
+    `tests/integration/catalog/locations.test.ts` (in-memory always; Drizzle
+    self-skips without PostgreSQL). Full suite: 269 passing, 6 skipped, 0
+    failures. Typecheck, lint, Prettier clean; admin `next build` passes.
+  - Remaining (ADR-0018 Phases 2–5): customer registry, admin bookings,
+    services/providers/resources DTO mapping + write/toggle through the seam,
+    and Calendario over the API. The `api`-mode path needs a live end-to-end run
+    against the running stack (like the operator's curl chain) — not exercisable
+    in this environment without Postgres/Redis.
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.

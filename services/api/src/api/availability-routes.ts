@@ -14,6 +14,7 @@ import { SYSTEM_ACTOR, type Actor } from "@saas-reservas/domain/audit/events";
 import type { ProviderScheduleEntry } from "@saas-reservas/domain/providers/provider";
 import type { StaffRole } from "@saas-reservas/domain/identity/staff";
 import type { CatalogService } from "../application/catalog/catalog-service.js";
+import type { LocationService } from "../application/catalog/location-service.js";
 import type { ResourceHubService } from "../application/catalog/resource-hub-service.js";
 import type { StaffAuthService } from "../application/identity/staff-auth-service.js";
 import type { AvailabilityService } from "../application/scheduling/availability-service.js";
@@ -36,6 +37,8 @@ export interface AppDeps {
   tenantLookup: TenantLookup;
   tenantAdmin: TenantAdminService;
   catalogService: CatalogService;
+  /** Multi-site location management ("ubicaciones"); omit to disable the routes. */
+  locations?: LocationService;
   /** Resource hub configuration (ADR-0016); omit to disable the hub admin routes. */
   resourceHub?: ResourceHubService;
   /**
@@ -253,6 +256,91 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       return reply.code(201).send({ id: account.id, email: account.email, role: account.role });
     });
   }
+
+  // Locations ("ubicaciones"): the root of the admin assignment chain. Optional
+  // dep so existing fast tests that omit it are unaffected.
+  if (deps.locations !== undefined) {
+    const locations = deps.locations;
+    app.get("/v1/admin/locations", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const items = await locations.listLocations(tenant.tenantId);
+      return reply.send({ items });
+    });
+
+    app.post("/v1/admin/locations", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const body = request.body as { name: string; timezone?: string; address?: string };
+      const location = await locations.createLocation({
+        tenantId: tenant.tenantId,
+        name: body.name,
+        ...(body.timezone !== undefined ? { timezone: body.timezone } : {}),
+        ...(body.address !== undefined ? { address: body.address } : {}),
+        actor: adminActor(request),
+      });
+      return reply.code(201).send(location);
+    });
+
+    app.patch("/v1/admin/locations/:locationId", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const { locationId } = request.params as { locationId: string };
+      const body = request.body as { active?: unknown };
+      if (typeof body.active !== "boolean") {
+        return reply.code(400).send({ error: "active must be a boolean" });
+      }
+      const location = await locations.setLocationActive({
+        tenantId: tenant.tenantId,
+        locationId,
+        active: body.active,
+        actor: adminActor(request),
+      });
+      if (location === null) {
+        return reply.code(404).send({ error: "location-not-found" });
+      }
+      return reply.send(location);
+    });
+  }
+
+  // Admin read model: list endpoints the console renders from. These mirror the
+  // create routes above and are gated by the same staff-auth hook.
+  app.get("/v1/admin/categories", async (request, reply) => {
+    const tenant = tenantOf(request);
+    const categories = await deps.catalogService.listCategories(tenant.tenantId);
+    return reply.send({ items: categories });
+  });
+
+  app.get("/v1/admin/services", async (request, reply) => {
+    const tenant = tenantOf(request);
+    const services = await deps.catalogService.listServices(tenant.tenantId);
+    return reply.send({ items: services });
+  });
+
+  app.get("/v1/admin/providers", async (request, reply) => {
+    const tenant = tenantOf(request);
+    const providers = await deps.catalogService.listProviders(tenant.tenantId);
+    return reply.send({
+      items: providers.map((entry) => ({
+        ...entry.provider,
+        serviceIds: entry.serviceIds,
+        locationIds: entry.locationIds,
+      })),
+    });
+  });
+
+  app.get("/v1/admin/resources", async (request, reply) => {
+    const tenant = tenantOf(request);
+    const resources = await deps.catalogService.listResources(tenant.tenantId);
+    const resourceHub = deps.resourceHub;
+    if (resourceHub === undefined) {
+      return reply.send({ items: resources });
+    }
+    const items = await Promise.all(
+      resources.map(async (resource) => {
+        const hub = await resourceHub.getHub(tenant.tenantId, resource.id);
+        return { ...resource, ...hub };
+      }),
+    );
+    return reply.send({ items });
+  });
 
   app.post("/v1/admin/categories", async (request, reply) => {
     const tenant = tenantOf(request);

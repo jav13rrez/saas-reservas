@@ -149,6 +149,36 @@ export class DrizzleCatalogRepository {
     });
   }
 
+  // --- Admin read model ---
+
+  async listCategories(tenantId: string): Promise<Category[]> {
+    return this.db.withTenant(tenantId, (tx) => tx.select().from(categories));
+  }
+
+  async listServices(tenantId: string): Promise<Service[]> {
+    return this.db.withTenant(tenantId, (tx) => tx.select().from(services));
+  }
+
+  async listProviders(tenantId: string): Promise<Provider[]> {
+    return this.db.withTenant(tenantId, (tx) => tx.select().from(providers));
+  }
+
+  async listResources(tenantId: string): Promise<Resource[]> {
+    return this.db.withTenant(tenantId, (tx) => tx.select().from(resources));
+  }
+
+  async listProviderServiceIds(tenantId: string, providerId: string): Promise<string[]> {
+    const rows = await this.db.withTenant(tenantId, (tx) =>
+      tx
+        .select({ serviceId: serviceProviders.serviceId })
+        .from(serviceProviders)
+        .where(
+          and(eq(serviceProviders.providerId, providerId), eq(serviceProviders.status, "active")),
+        ),
+    );
+    return rows.map((row) => row.serviceId);
+  }
+
   async listScheduleEntries(
     tenantId: string,
     providerId: string,

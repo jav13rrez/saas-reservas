@@ -2,6 +2,7 @@ export { createTenantDb, TenantDb, type Db, type Tx } from "./db.js";
 export * as schema from "./schema.js";
 export { DrizzleTenantRepository } from "./repositories/tenant-repository.js";
 export { DrizzleCatalogRepository } from "./repositories/catalog-repository.js";
+export { DrizzleLocationRepository } from "./repositories/location-repository.js";
 export { DrizzleResourceHubRepository } from "./repositories/resource-hub-repository.js";
 export { DrizzlePaymentRepository } from "./repositories/payment-repository.js";
 export { DrizzleEventSink } from "./repositories/event-sink.js";

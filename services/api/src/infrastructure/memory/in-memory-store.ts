@@ -17,8 +17,10 @@ import type {
 import type { Provider, ProviderScheduleEntry } from "@saas-reservas/domain/providers/provider";
 import { intervalsOverlap, type Interval } from "@saas-reservas/domain/scheduling/time";
 import type { Tenant, TenantDomain } from "@saas-reservas/domain/tenancy/tenant";
+import type { Location } from "@saas-reservas/domain/locations/location";
 import type { ResolvedTenant, TenantLookup } from "../tenancy/tenant-resolver.js";
 import type { CatalogRepository } from "../../application/catalog/catalog-service.js";
+import type { LocationRepository } from "../../application/catalog/location-service.js";
 import type {
   ResourceHubRepository,
   ResourceWithHub,
@@ -39,9 +41,12 @@ interface AllocationEntry extends ResourceAllocation {
   bookingId?: string;
 }
 
-export class InMemoryStore implements TenantRepository, CatalogRepository, ResourceHubRepository {
+export class InMemoryStore
+  implements TenantRepository, CatalogRepository, ResourceHubRepository, LocationRepository
+{
   private readonly tenants = new Map<string, Tenant>();
   private readonly domains = new Map<string, TenantDomain>();
+  private readonly locations: Location[] = [];
   private readonly categories: Category[] = [];
   private readonly services: Service[] = [];
   private readonly extras: Extra[] = [];
@@ -130,6 +135,35 @@ export class InMemoryStore implements TenantRepository, CatalogRepository, Resou
         return tenant === null ? null : toResolved(tenant);
       },
     };
+  }
+
+  // --- LocationRepository ---
+
+  insertLocation(location: Location): Promise<void> {
+    this.locations.push(location);
+    return Promise.resolve();
+  }
+
+  updateLocation(location: Location): Promise<void> {
+    const index = this.locations.findIndex(
+      (existing) => existing.tenantId === location.tenantId && existing.id === location.id,
+    );
+    if (index >= 0) {
+      this.locations[index] = location;
+    }
+    return Promise.resolve();
+  }
+
+  listLocations(tenantId: string): Promise<Location[]> {
+    return Promise.resolve(this.locations.filter((location) => location.tenantId === tenantId));
+  }
+
+  findLocationById(tenantId: string, locationId: string): Promise<Location | null> {
+    return Promise.resolve(
+      this.locations.find(
+        (location) => location.tenantId === tenantId && location.id === locationId,
+      ) ?? null,
+    );
   }
 
   // --- CatalogRepository ---
@@ -241,6 +275,37 @@ export class InMemoryStore implements TenantRepository, CatalogRepository, Resou
 
   listScheduleEntries(tenantId: string, providerId: string): Promise<ProviderScheduleEntry[]> {
     return Promise.resolve(this.schedules.get(`${tenantId}:${providerId}`) ?? []);
+  }
+
+  // --- CatalogRepository: admin read model ---
+
+  listCategories(tenantId: string): Promise<Category[]> {
+    return Promise.resolve(this.categories.filter((category) => category.tenantId === tenantId));
+  }
+
+  listServices(tenantId: string): Promise<Service[]> {
+    return Promise.resolve(this.services.filter((service) => service.tenantId === tenantId));
+  }
+
+  listProviders(tenantId: string): Promise<Provider[]> {
+    return Promise.resolve(this.providers.filter((provider) => provider.tenantId === tenantId));
+  }
+
+  listResources(tenantId: string): Promise<Resource[]> {
+    return Promise.resolve(this.resources.filter((resource) => resource.tenantId === tenantId));
+  }
+
+  listProviderServiceIds(tenantId: string, providerId: string): Promise<string[]> {
+    return Promise.resolve(
+      this.serviceProviders
+        .filter(
+          (link) =>
+            link.tenantId === tenantId &&
+            link.providerId === providerId &&
+            link.status === "active",
+        )
+        .map((link) => link.serviceId),
+    );
   }
 
   listProviderBusy(tenantId: string, providerId: string, range: Interval): Promise<Interval[]> {

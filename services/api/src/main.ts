@@ -17,6 +17,7 @@ import { loadEnvironment } from "@saas-reservas/contracts/environment";
 import {
   createTenantDb,
   DrizzleCatalogRepository,
+  DrizzleLocationRepository,
   DrizzleEventSink,
   DrizzleHoldStore,
   DrizzlePaymentRepository,
@@ -37,6 +38,7 @@ import { DEFAULT_BRANDING, DEFAULT_POLICIES } from "@saas-reservas/domain/tenanc
 import { buildApp, type AppDeps } from "./api/availability-routes.js";
 import { BookingService } from "./application/bookings/booking-service.js";
 import { CatalogService } from "./application/catalog/catalog-service.js";
+import { LocationService } from "./application/catalog/location-service.js";
 import { ResourceHubService } from "./application/catalog/resource-hub-service.js";
 import { StaffAuthService } from "./application/identity/staff-auth-service.js";
 import { CartReconciliationService } from "./application/payments/cart-reconciliation-service.js";
@@ -115,6 +117,7 @@ function persistentBootstrap(): Bootstrap {
 
   const tenantRepo = new DrizzleTenantRepository(db);
   const catalogRepo = new DrizzleCatalogRepository(db);
+  const locationRepo = new DrizzleLocationRepository(db);
   const hubRepo = new DrizzleResourceHubRepository(db);
   const staffRepo = new DrizzleStaffAccountRepository(db);
   const paymentRepo = new DrizzlePaymentRepository(db);
@@ -126,6 +129,7 @@ function persistentBootstrap(): Bootstrap {
     tenantLookup: tenantRepo.tenantLookup(),
     tenantAdmin: new TenantAdminService(tenantRepo, events),
     catalogService: new CatalogService(catalogRepo, events),
+    locations: new LocationService(locationRepo, events),
     resourceHub: new ResourceHubService(hubRepo, events),
     staffAuth: new StaffAuthService(staffRepo, events),
     availability: new AvailabilityService(catalogRepo, hubRepo),
@@ -168,6 +172,7 @@ function inMemoryBootstrap(): Bootstrap {
     tenantLookup: store.tenantLookup(),
     tenantAdmin: new TenantAdminService(store, events),
     catalogService: new CatalogService(store, events),
+    locations: new LocationService(store, events),
     resourceHub: new ResourceHubService(store, events),
     staffAuth: new StaffAuthService(new InMemoryStaffAccountStore(), events),
     availability: new AvailabilityService(store, store),

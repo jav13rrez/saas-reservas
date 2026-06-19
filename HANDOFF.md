@@ -1,6 +1,38 @@
 # Handoff
 
-Last updated: 2026-06-18
+Last updated: 2026-06-19
+
+## Post-Spec Work (2026-06-19): Admin ↔ persistent API — Phase 1 (read surface + Locations)
+
+Started the prioritized objective: connect `apps/admin` to the persistent Fastify
+API instead of its in-memory demo store. Architecture + staged plan in
+**ADR-0018**. Phase 1 (backend foundation + Locations vertical) is done; the
+console default stays `demo` so the single-command dev loop is untouched.
+
+- **API read surface:** `GET /v1/admin/{categories,services,providers,resources}`
+  (providers enriched with service assignments + locations; resources with hub
+  associations). New `CatalogRepository.list*` methods on both adapters.
+- **Locations CRUD (canonical):** `LocationService` + `LocationRepository`,
+  routes `GET/POST/PATCH /v1/admin/locations`, in-memory + Drizzle adapters,
+  wired in `main.ts`. Shared-contract + e2e tests (269 passing, 6 skipped).
+- **Admin client seam:** `ADMIN_DATA_MODE` env (`demo`|`api`), server-only
+  `api-client.ts` (Host header + cached staff login, re-auth on 401), and the
+  **Locations** route handlers delegated through `src/server/source/locations.ts`.
+  New env vars in `.env.example`: `ADMIN_DATA_MODE`, `API_ORIGIN`,
+  `ADMIN_TENANT_HOST`, `ADMIN_STAFF_EMAIL`, `ADMIN_STAFF_PASSWORD`.
+
+**Next actions (ADR-0018 Phases 2–5):**
+1. **Customer registry** — canonical `CustomerService` over the existing
+   `customers` table (`GET/POST /v1/admin/customers`); also pays down the "no real
+   customer registry" tech debt and unblocks the Clientes screen in `api` mode.
+2. **Admin bookings** — staff "book on behalf" flow (`/v1/admin/bookings`
+   list/create/cancel) reusing the availability engine + occupancy recorder
+   without the public payment path; unblocks Reservas + Calendario in `api` mode.
+3. **Catalog DTO mapping** — extend the `source/` seam to categories/services/
+   providers/resources (read + create, mapping `category`↔`categoryId`,
+   `active`↔`status`, hub fan-out) so those screens work in `api` mode.
+4. **Live validation** — run the console in `api` mode against the running stack
+   (Postgres+Redis+API) end to end; not exercisable in this dev container.
 
 ## Resume Point For The Next Session (operator onboarding)
 

@@ -48,6 +48,16 @@ export interface CatalogRepository {
   findProviderById(tenantId: string, providerId: string): Promise<Provider | null>;
   listExtras(tenantId: string, serviceId: string, extraIds: string[]): Promise<Extra[]>;
   listActiveProvidersForService(tenantId: string, serviceId: string): Promise<Provider[]>;
+
+  // Admin read model (console listing surface). Unlike the availability lookups
+  // above, these return every entity for the tenant regardless of status so the
+  // admin can render and toggle inactive items.
+  listCategories(tenantId: string): Promise<Category[]>;
+  listServices(tenantId: string): Promise<Service[]>;
+  listProviders(tenantId: string): Promise<Provider[]>;
+  listResources(tenantId: string): Promise<Resource[]>;
+  /** Service ids a provider is assigned to deliver (active assignments). */
+  listProviderServiceIds(tenantId: string, providerId: string): Promise<string[]>;
   listScheduleEntries(tenantId: string, providerId: string): Promise<ProviderScheduleEntry[]>;
   listProviderBusy(tenantId: string, providerId: string, range: Interval): Promise<Interval[]>;
   listResourceAllocations(
@@ -57,11 +67,44 @@ export interface CatalogRepository {
   ): Promise<ResourceAllocation[]>;
 }
 
+/** A provider enriched with its service assignments and work locations. */
+export interface ProviderWithAssignments {
+  provider: Provider;
+  serviceIds: string[];
+  locationIds: string[];
+}
+
 export class CatalogService {
   constructor(
     private readonly catalog: CatalogRepository,
     private readonly events: EventSink,
   ) {}
+
+  // --- Admin read model ------------------------------------------------------
+
+  listCategories(tenantId: string): Promise<Category[]> {
+    return this.catalog.listCategories(tenantId);
+  }
+
+  listServices(tenantId: string): Promise<Service[]> {
+    return this.catalog.listServices(tenantId);
+  }
+
+  listResources(tenantId: string): Promise<Resource[]> {
+    return this.catalog.listResources(tenantId);
+  }
+
+  /** Providers with their service assignments and work locations resolved. */
+  async listProviders(tenantId: string): Promise<ProviderWithAssignments[]> {
+    const providers = await this.catalog.listProviders(tenantId);
+    return Promise.all(
+      providers.map(async (provider) => ({
+        provider,
+        serviceIds: await this.catalog.listProviderServiceIds(tenantId, provider.id),
+        locationIds: await this.catalog.listProviderLocationIds(tenantId, provider.id),
+      })),
+    );
+  }
 
   async createCategory(
     input: Omit<Category, "id" | "status"> & { actor: Actor },

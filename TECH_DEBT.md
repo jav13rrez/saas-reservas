@@ -83,6 +83,23 @@ a real implementation + the provider account/credentials in
   Longer-term consideration: stop echoing the full `actor` in responses, or
   return the entity under an unambiguous key so id extraction is robust.
 
+## Admin ↔ persistent API integration (ADR-0018)
+
+- **[MEDIUM] `api`-mode admin uses a shared staff service-account credential.**
+  When `ADMIN_DATA_MODE=api`, `apps/admin` authenticates to the API with a single
+  `ADMIN_STAFF_EMAIL`/`ADMIN_STAFF_PASSWORD` and caches one process-wide
+  `staff_session`. There is no per-operator login UI yet, so admin actions are not
+  attributable to individual humans and the credential sits in the admin's env.
+  Replace with a real operator login before multi-user admin use.
+- **[MEDIUM] Customers and Bookings screens have no API yet.** In `api` mode they
+  cannot be backed by the persistent stack until ADR-0018 Phases 2–3 land
+  (customer registry, admin "book on behalf"). Today only Locations is wired
+  through the data-source seam; the rest still read the demo store.
+- **[LOW] `api`-mode admin client is not covered by an automated end-to-end
+  test.** The Host-header + staff-session path is typechecked and the API side is
+  e2e-tested, but the admin→API round trip needs Postgres+Redis+API running and
+  was validated only structurally in this environment.
+
 ## Deferred product features
 
 - **[MEDIUM] Resource quantity partition** (`shared` / `per-service` /
