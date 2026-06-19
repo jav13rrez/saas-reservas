@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { setServiceActive } from "@/server/demo-store";
+import { setServiceActive } from "@/server/source/services";
 
 /**
  * PATCH /api/services/:id  -> toggle a service active/inactive
@@ -21,7 +21,7 @@ export async function PATCH(
   if (typeof active !== "boolean") {
     return NextResponse.json({ error: "El campo 'active' debe ser booleano." }, { status: 400 });
   }
-  const result = setServiceActive(id, active);
+  const result = await setServiceActive(id, active);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 404 });
   }

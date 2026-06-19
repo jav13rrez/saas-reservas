@@ -385,6 +385,22 @@ Current clean baseline commit:
     Drizzle self-skips). Suite: 272 passing, 7 skipped, 0 failures. Typecheck,
     lint, Prettier clean; admin `next build` passes.
 
+### 2026-06-19 (admin ↔ persistent API — Services seam)
+
+- Wired the **Servicios** screen through the data-source seam
+  (`src/server/source/services.ts`): list + create work in `api` mode. This
+  module owns the catalog impedance — the console's free-text `category` string
+  is resolved to a `categoryId` on write (creating the Category if absent) and
+  mapped back to its name on read; the active toggle is unsupported in `api` mode
+  (no service-update route yet, Phase 5). Demo mode unchanged; admin `next build`
+  + typecheck + lint + Prettier clean.
+- **Providers and Resources** screens are intentionally NOT yet wired to `api`
+  mode: their console PATCH does partial profile/assignment edits that the API
+  has no clean routes for (provider update + service-unassign; resource
+  name/quantity update). Wiring them belongs with ADR-0018 Phase 5 (writes/
+  toggles) so they can be done fully rather than partially. `create` orchestration
+  for both is supported by the existing routes when that phase lands.
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.

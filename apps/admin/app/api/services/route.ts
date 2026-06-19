@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createService, listServices } from "@/server/demo-store";
+import { createService, listServices } from "@/server/source/services";
 
 /**
  * GET  /api/services  -> list services
@@ -7,10 +7,17 @@ import { createService, listServices } from "@/server/demo-store";
  *
  * Resource association is configured from /api/resources (hub model): the
  * resource declares which services consume its capacity, not the service.
+ * Data source (demo store or persistent API) is selected by ADMIN_DATA_MODE
+ * (ADR-0018).
  */
 
-export function GET(): NextResponse {
-  return NextResponse.json({ items: listServices() });
+export async function GET(): Promise<NextResponse> {
+  try {
+    return NextResponse.json({ items: await listServices() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error al cargar servicios.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -29,7 +36,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     currency: string;
   }>;
 
-  const result = createService({
+  const result = await createService({
     name: typeof input.name === "string" ? input.name : "",
     category: typeof input.category === "string" ? input.category : "",
     durationMinutes: typeof input.durationMinutes === "number" ? input.durationMinutes : NaN,

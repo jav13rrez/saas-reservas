@@ -32,9 +32,12 @@ there — no domain concept). Pays down the "no real customer registry" debt.
    without the public payment path; unblocks Reservas + Calendario in `api` mode.
    NOTE: this carries a product decision (does an admin booking take payment, or
    is it a no-charge staff booking?) — confirm before building.
-2. **Catalog DTO mapping** — extend the `source/` seam to categories/services/
-   providers/resources (read + create, mapping `category`↔`categoryId`,
-   `active`↔`status`, hub fan-out) so those screens work in `api` mode.
+2. **Catalog DTO mapping** — DONE for Locations, Customers, and Services (list +
+   create through the `source/` seam; Services resolves `category`→`categoryId`).
+   Remaining: Providers and Resources, which need new API write routes (provider
+   update + service-unassign; resource name/quantity update) to wire without
+   partial-edit gaps — pair this with Phase 5 (writes/toggles). Service/customer
+   active toggles also wait on Phase 5 update routes.
 3. **Live validation** — run the console in `api` mode against the running stack
    (Postgres+Redis+API) end to end; not exercisable in this dev container.
 
