@@ -2,12 +2,43 @@
 
 Last updated: 2026-06-19
 
-## Post-Spec Work (2026-06-19): Admin ↔ persistent API — Phase 1 (read surface + Locations)
+## Post-Spec Work (2026-06-19): Admin ↔ persistent API — COMPLETE (ADR-0018)
 
-Started the prioritized objective: connect `apps/admin` to the persistent Fastify
-API instead of its in-memory demo store. Architecture + staged plan in
-**ADR-0018**. Phase 1 (backend foundation + Locations vertical) is done; the
-console default stays `demo` so the single-command dev loop is untouched.
+Objective 2 (connect `apps/admin` to the persistent Fastify API) is functionally
+**complete**. In `api` mode (`ADMIN_DATA_MODE=api`) the console drives the real
+PostgreSQL/RLS stack for Locations, Customers, Servicios, Proveedores, Recursos,
+Reservas, and Calendario; `demo` stays the default so the single-command dev loop
+is untouched. Full architecture + decisions in **ADR-0018**.
+
+Built across the session (all committed locally, no push):
+- **Read surface + Locations:** `GET /v1/admin/{categories,services,providers,
+  resources}` and Locations CRUD.
+- **Customer registry:** `GET/POST /v1/admin/customers`.
+- **Catalog writes:** `PATCH` service/provider/resource + `DELETE` service↔provider
+  unassign; the seam wires create/update/toggle for all catalog screens.
+- **Admin bookings (no-charge, decided):** `AdminBookingService` +
+  `GET/POST /v1/admin/bookings` + cancel, reusing the availability engine and
+  occupancy recorder; Reservas + Calendario wired.
+
+**Decisions taken (owner):** admin booking is no-charge "book on behalf"; finish
+objective-2 tail before objective 3.
+
+**Remaining for objective 2 (small / deferred):**
+- Live end-to-end validation in `api` mode against the running stack (needs
+  Postgres+Redis+API; not exercisable in this container).
+- Customer active-toggle in `api` mode (no domain concept yet) and wiring checkout
+  to the customer registry (TECH_DEBT).
+
+**Next prioritized milestone — Objective 3: per-provider scheduling** (Work hours
+/ Days off / Special days), the known gap vs. Amelia. The API already has
+`PUT /v1/admin/providers/:providerId/schedule` accepting weekly/day-off/special
+`ProviderScheduleEntry[]`; the work is the admin editor UI + a `GET` schedule
+endpoint + wiring through the seam.
+
+### Earlier 2026-06-19 detail: Phase 1 (read surface + Locations)
+
+Phase 1 (backend foundation + Locations vertical); the console default stays
+`demo` so the single-command dev loop is untouched.
 
 - **API read surface:** `GET /v1/admin/{categories,services,providers,resources}`
   (providers enriched with service assignments + locations; resources with hub

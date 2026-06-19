@@ -20,6 +20,7 @@ import {
   DuplicateCustomerEmailError,
   type CustomerService,
 } from "../application/customers/customer-service.js";
+import type { AdminBookingService } from "../application/bookings/admin-booking-service.js";
 import type { StaffAuthService } from "../application/identity/staff-auth-service.js";
 import type { AvailabilityService } from "../application/scheduling/availability-service.js";
 import type { TenantAdminService } from "../application/tenancy/tenant-admin-service.js";
@@ -45,6 +46,8 @@ export interface AppDeps {
   locations?: LocationService;
   /** Customer registry (admin); omit to disable the routes. */
   customers?: CustomerService;
+  /** Admin no-charge bookings ("book on behalf"); omit to disable the routes. */
+  adminBookings?: AdminBookingService;
   /** Resource hub configuration (ADR-0016); omit to disable the hub admin routes. */
   resourceHub?: ResourceHubService;
   /**
@@ -339,6 +342,52 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         }
         throw error;
       }
+    });
+  }
+
+  // Admin bookings (ADR-0018 Phase 3): staff "book on behalf", no charge.
+  if (deps.adminBookings !== undefined) {
+    const adminBookings = deps.adminBookings;
+    app.get("/v1/admin/bookings", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const items = await adminBookings.listBookings(tenant.tenantId);
+      return reply.send({ items });
+    });
+
+    app.post("/v1/admin/bookings", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const body = request.body as {
+        serviceId: string;
+        providerId: string;
+        customerId: string;
+        startAt: string;
+        date: string;
+      };
+      const result = await adminBookings.createBooking({
+        tenantId: tenant.tenantId,
+        serviceId: body.serviceId,
+        providerId: body.providerId,
+        customerId: body.customerId,
+        startAt: body.startAt,
+        date: body.date,
+        actor: adminActor(request),
+      });
+      if (!result.ok) {
+        const status = result.reason === "service-not-found" ? 404 : 409;
+        return reply.code(status).send({ error: result.reason });
+      }
+      return reply.code(201).send(result.booking);
+    });
+
+    app.post("/v1/admin/bookings/:bookingId/cancel", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const { bookingId } = request.params as { bookingId: string };
+      const canceled = await adminBookings.cancelBooking({
+        tenantId: tenant.tenantId,
+        bookingId,
+        actor: adminActor(request),
+      });
+      return reply.send(canceled);
     });
   }
 

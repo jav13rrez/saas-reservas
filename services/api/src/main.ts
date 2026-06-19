@@ -36,6 +36,7 @@ import {
 import type { Tenant } from "@saas-reservas/domain/tenancy/tenant";
 import { DEFAULT_BRANDING, DEFAULT_POLICIES } from "@saas-reservas/domain/tenancy/tenant";
 import { buildApp, type AppDeps } from "./api/availability-routes.js";
+import { AdminBookingService } from "./application/bookings/admin-booking-service.js";
 import { BookingService } from "./application/bookings/booking-service.js";
 import { CatalogService } from "./application/catalog/catalog-service.js";
 import { LocationService } from "./application/catalog/location-service.js";
@@ -125,6 +126,11 @@ function persistentBootstrap(): Bootstrap {
   const events = new DrizzleEventSink(db);
   const gateway = new FakePaymentGateway();
 
+  const tenantTimezone = async (id: string): Promise<string> =>
+    (await tenantRepo.findTenantById(id))?.defaultTimezone ?? "UTC";
+  const availabilityService = new AvailabilityService(catalogRepo, hubRepo);
+  const bookingService = new BookingService(paymentRepo, events);
+
   const deps: AppDeps = {
     platformBaseDomain: env.PLATFORM_BASE_DOMAIN,
     tenantLookup: tenantRepo.tenantLookup(),
@@ -134,13 +140,22 @@ function persistentBootstrap(): Bootstrap {
     customers: new CustomerService(paymentRepo, events),
     resourceHub: new ResourceHubService(hubRepo, events),
     staffAuth: new StaffAuthService(staffRepo, events),
-    availability: new AvailabilityService(catalogRepo, hubRepo),
-    tenantTimezone: async (id) => (await tenantRepo.findTenantById(id))?.defaultTimezone ?? "UTC",
+    availability: availabilityService,
+    adminBookings: new AdminBookingService({
+      availability: availabilityService,
+      catalog: catalogRepo,
+      hub: hubRepo,
+      bookings: bookingService,
+      reads: paymentRepo,
+      occupancy: catalogRepo,
+      tenantTimezone,
+    }),
+    tenantTimezone,
     checkout: {
       catalog: catalogRepo,
       hub: hubRepo,
       locks: new CheckoutLockService(new RedisLockStore(redis)),
-      bookings: new BookingService(paymentRepo, events),
+      bookings: bookingService,
       carts: new CartReconciliationService(paymentRepo, gateway, events),
       webhooks: new WebhookProcessor(new DrizzleProcessedWebhookStore(db), events),
       occupancy: catalogRepo,
@@ -169,6 +184,11 @@ function inMemoryBootstrap(): Bootstrap {
   const gateway = new FakePaymentGateway();
   const events = new InMemoryEventSink();
 
+  const tenantTimezone = async (id: string): Promise<string> =>
+    (await store.findTenantById(id))?.defaultTimezone ?? "UTC";
+  const availabilityService = new AvailabilityService(store, store);
+  const bookingService = new BookingService(paymentStore, events);
+
   const deps: AppDeps = {
     platformBaseDomain: "localhost",
     tenantLookup: store.tenantLookup(),
@@ -178,13 +198,22 @@ function inMemoryBootstrap(): Bootstrap {
     customers: new CustomerService(paymentStore, events),
     resourceHub: new ResourceHubService(store, events),
     staffAuth: new StaffAuthService(new InMemoryStaffAccountStore(), events),
-    availability: new AvailabilityService(store, store),
-    tenantTimezone: async (id) => (await store.findTenantById(id))?.defaultTimezone ?? "UTC",
+    availability: availabilityService,
+    adminBookings: new AdminBookingService({
+      availability: availabilityService,
+      catalog: store,
+      hub: store,
+      bookings: bookingService,
+      reads: paymentStore,
+      occupancy: store,
+      tenantTimezone,
+    }),
+    tenantTimezone,
     checkout: {
       catalog: store,
       hub: store,
       locks: new CheckoutLockService(new InMemoryLockStore()),
-      bookings: new BookingService(paymentStore, events),
+      bookings: bookingService,
       carts: new CartReconciliationService(paymentStore, gateway, events),
       webhooks: new WebhookProcessor(new InMemoryProcessedWebhookStore(), events),
       occupancy: store,

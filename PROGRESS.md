@@ -401,6 +401,37 @@ Current clean baseline commit:
   toggles) so they can be done fully rather than partially. `create` orchestration
   for both is supported by the existing routes when that phase lands.
 
+### 2026-06-19 (admin ↔ persistent API — catalog write routes + Phases 3/5: bookings, full wiring)
+
+- **Catalog write routes (Phase 5):** `PATCH /v1/admin/{services,providers,
+  resources}/:id` (active toggle maps to status) and
+  `DELETE /v1/admin/services/:serviceId/providers/:providerId` (unassign). New
+  `CatalogRepository` methods (updateService/updateProvider/updateResource/
+  unassignProvider) on both adapters + audited `CatalogService` partial-update
+  methods. Wired the **Servicios** toggle and the **Proveedores**/**Recursos**
+  screens through the seam (provider create fans out to create + per-service
+  assignment + locations PUT; update diffs assignments; resource create/update
+  apply the hub via the three PUTs).
+- **Admin bookings (Phase 3) — no-charge "book on behalf" (decided):**
+  `AdminBookingService` reuses the availability engine + occupancy recorder
+  (constitution principle II) with no cart/gateway/webhook: validates the slot,
+  allocates a serving hub resource with a free unit, creates + approves the
+  booking through the state machine, and records occupancy so the slot
+  disappears. Routes `GET/POST /v1/admin/bookings` and
+  `POST /v1/admin/bookings/:id/cancel` (cancel frees occupancy). `listBookings`
+  added to both payment-store adapters. The **Reservas** and **Calendario**
+  screens are wired through `source/bookings.ts` (ids enriched to names; status
+  mapped). Wired in `main.ts` both bootstraps.
+- Tests: `tests/e2e/admin-bookings.test.ts` (create occupies slot → list →
+  cancel frees it; off-schedule slot rejected) + catalog-mutation cases in
+  `admin-read-model.test.ts`. Suite: 278 passing, 7 skipped, 0 failures.
+  Typecheck, lint, Prettier clean; admin `next build` passes.
+- **Objective 2 (connect admin to persistent API) is functionally complete** in
+  `api` mode for Locations, Customers, Servicios, Proveedores, Recursos, Reservas,
+  and Calendario (demo stays the default). Remaining: live end-to-end validation
+  against the running stack, the customer active-toggle (no domain concept), and
+  wiring checkout to the customer registry. Decisions recorded in ADR-0018.
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.

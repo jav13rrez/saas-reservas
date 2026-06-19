@@ -101,6 +101,16 @@ a real implementation + the provider account/credentials in
   test.** The Host-header + staff-session path is typechecked and the API side is
   e2e-tested, but the admin→API round trip needs Postgres+Redis+API running and
   was validated only structurally in this environment.
+- **[MEDIUM] Admin no-charge booking takes no slot lock.** Unlike public checkout,
+  `AdminBookingService` validates availability and records occupancy immediately
+  with no Redis lock, so two simultaneous admin bookings for the same slot could
+  both pass the check. Acceptable for a single trusted operator (ADR-0018); add a
+  lock if admin booking becomes concurrent/multi-user.
+- **[LOW] Admin booking date is derived from the UTC date of `startAt`.** The
+  admin `source/bookings.ts` derives the availability-query `date` from the UTC
+  calendar date, which can be off by one for late-evening slots in eastern
+  offsets. Fine for the demo Europe/Madrid daytime case; pass the picked date
+  explicitly when the booking UI is timezone-aware.
 
 ## Deferred product features
 

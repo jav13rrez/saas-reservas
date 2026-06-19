@@ -33,6 +33,11 @@ export class DrizzlePaymentRepository {
     return row === undefined ? null : fromBookingRow(row);
   }
 
+  async listBookings(tenantId: string): Promise<Booking[]> {
+    const rows = await this.db.withTenant(tenantId, (tx) => tx.select().from(bookings));
+    return rows.map(fromBookingRow);
+  }
+
   async listBookingsForCustomer(tenantId: string, customerId: string): Promise<Booking[]> {
     const rows = await this.db.withTenant(tenantId, (tx) =>
       tx.select().from(bookings).where(eq(bookings.customerId, customerId)),

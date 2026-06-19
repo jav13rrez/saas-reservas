@@ -1,7 +1,7 @@
 # ADR-0018: Admin Console ↔ Persistent API Integration
 
 **Date**: 2026-06-19
-**Status**: accepted (staged; Phase 1 implemented)
+**Status**: accepted (Phases 1–5 implemented; live `api`-mode validation pending)
 **Deciders**: Project owner + agent
 **Relates to**: ADR-0002 (Fastify API), ADR-0016 (resource hub), ADR-0017 (staff auth)
 

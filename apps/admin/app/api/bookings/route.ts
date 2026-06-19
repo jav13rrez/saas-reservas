@@ -1,13 +1,21 @@
 import { NextResponse } from "next/server";
-import { createBooking, listBookings } from "@/server/demo-store";
+import { createBooking, listBookings } from "@/server/source/bookings";
 
 /**
  * GET  /api/bookings  -> list bookings (newest start first)
  * POST /api/bookings  -> create a booking for an existing service
+ *
+ * Data source (demo store or persistent API) is selected by ADMIN_DATA_MODE
+ * (ADR-0018). Admin bookings are no-charge "book on behalf".
  */
 
-export function GET(): NextResponse {
-  return NextResponse.json({ items: listBookings() });
+export async function GET(): Promise<NextResponse> {
+  try {
+    return NextResponse.json({ items: await listBookings() });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Error al cargar reservas.";
+    return NextResponse.json({ error: message }, { status: 502 });
+  }
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
@@ -24,7 +32,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     startAt: string;
   }>;
 
-  const result = createBooking({
+  const result = await createBooking({
     serviceId: typeof input.serviceId === "string" ? input.serviceId : "",
     providerId: typeof input.providerId === "string" ? input.providerId : "",
     customerId: typeof input.customerId === "string" ? input.customerId : "",

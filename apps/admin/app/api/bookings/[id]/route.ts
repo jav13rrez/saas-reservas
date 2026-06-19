@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cancelBooking } from "@/server/demo-store";
+import { cancelBooking } from "@/server/source/bookings";
 
 /**
  * PATCH /api/bookings/:id  -> cancel a booking
@@ -24,7 +24,7 @@ export async function PATCH(
       { status: 400 },
     );
   }
-  const result = cancelBooking(id);
+  const result = await cancelBooking(id);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

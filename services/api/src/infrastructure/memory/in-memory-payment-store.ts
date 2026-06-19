@@ -37,6 +37,13 @@ export class InMemoryPaymentStore implements BookingRepository, CartRepository, 
     );
   }
 
+  /** Admin read model: all bookings for a tenant. */
+  listBookings(tenantId: string): Promise<Booking[]> {
+    return Promise.resolve(
+      [...this.bookings.values()].filter((booking) => booking.tenantId === tenantId),
+    );
+  }
+
   /** Customer-portal read model: bookings owned by one customer. */
   listBookingsForCustomer(tenantId: string, customerId: string): Promise<Booking[]> {
     return Promise.resolve(
