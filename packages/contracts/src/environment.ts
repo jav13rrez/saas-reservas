@@ -47,6 +47,15 @@ export const environmentSchema = z.object({
   /** Root key for envelope encryption of tenant integration credentials. */
   CREDENTIALS_MASTER_KEY: z.string().min(32).optional(),
 
+  // Stripe (platform-level Connect). Optional until the payment gateway is wired;
+  // when STRIPE_SECRET_KEY is present, main.ts selects the real Stripe adapter.
+  STRIPE_SECRET_KEY: z.string().min(1).optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+  /** Platform application fee in basis points for destination charges (200 = 2%). */
+  STRIPE_APPLICATION_FEE_BPS: z.coerce.number().int().min(0).max(10_000).default(0),
+  /** Override Stripe's API base URL (e.g. a local mock for smoke tests). */
+  STRIPE_API_BASE_URL: z.url().optional(),
+
   // Observability
   LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
 });

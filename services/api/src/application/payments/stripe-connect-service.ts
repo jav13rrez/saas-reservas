@@ -7,19 +7,12 @@
  */
 
 import type { CredentialVault } from "@saas-reservas/integrations/security/credential-vault";
+import type { StripeHttpAdapter } from "@saas-reservas/integrations/payments/stripe-http";
 
-// ---------------------------------------------------------------------------
-// Stripe HTTP adapter boundary
-// ---------------------------------------------------------------------------
-
-export interface StripeHttpAdapter {
-  post(
-    path: string,
-    body: Record<string, string>,
-    secretKey: string,
-  ): Promise<{ status: number; data: unknown }>;
-  get(path: string, secretKey: string): Promise<{ status: number; data: unknown }>;
-}
+// The Stripe HTTP adapter boundary lives in @saas-reservas/integrations so the
+// connect service and the payment gateway share one transport (FetchStripeHttp
+// in production, a fake in tests). Re-exported here for existing importers.
+export type { StripeHttpAdapter };
 
 // ---------------------------------------------------------------------------
 // Domain types

@@ -1,6 +1,6 @@
 # Technical Debt — Pre-Production Ledger
 
-Last updated: 2026-06-18
+Last updated: 2026-06-19
 
 Cumulative register of known shortcuts, simplifications, and dev-only choices
 that MUST be reviewed (and most resolved) **before a real production launch on a
@@ -47,8 +47,19 @@ These ports are implemented but wired to fake adapters in every mode. Each needs
 a real implementation + the provider account/credentials in
 `docs/operations/SETUP.md` §4 before launch.
 
-- **[BLOCKER] Payments:** `FakePaymentGateway` → Stripe Connect (charge on behalf
-  of tenants + application fee). Until then no real money moves.
+- **[HIGH] Payments:** `StripePaymentGateway` is wired (ADR-0019, selected by
+  `STRIPE_SECRET_KEY`; fake stays default) but **not yet validated against live
+  Stripe**, and three gaps remain before real money moves safely:
+  - **[BLOCKER] Connected-account resolution is in-memory.** The boot vault
+    (`resolvePaymentGateway`) only holds the platform secret key, so per-tenant
+    `stripe_connect/account_id` ids do not resolve in production — destination
+    charges silently fall back to plain platform charges. Needs a DB-backed
+    `VaultStorage` before multi-tenant Connect payouts.
+  - **[BLOCKER] No payment method in the public checkout.** `createCharge`
+    confirms synchronously only when a `paymentMethod` is supplied; the real
+    checkout still needs the client-confirm + webhook-capture flow to pass one.
+  - **[HIGH] Stripe webhook signatures are not verified.** `STRIPE_WEBHOOK_SECRET`
+    is in the env contract but the webhook processor does not yet enforce it.
 - **[HIGH] Email / SMS:** `FakeMessageProvider` → SendGrid/SES + Twilio.
 - **[HIGH] Credential vault KMS:** `InMemoryKmsAdapter` → AWS/GCP KMS CMK.
   `CREDENTIALS_MASTER_KEY` is currently optional and only validated when present.

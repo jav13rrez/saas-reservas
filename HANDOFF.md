@@ -2,6 +2,35 @@
 
 Last updated: 2026-06-19
 
+## Post-Spec Work (2026-06-19): Real Stripe Connect gateway — WIRED (ADR-0019)
+
+The first real payment adapter is in place behind the existing `PaymentGateway`
+port. `StripePaymentGateway` (`packages/integrations/payments/stripe-gateway.ts`)
+does destination charges with an application fee when a tenant has an onboarded
+Connect account, and a plain platform charge otherwise; refunds reverse the
+transfer and claw back the fee. A real transport (`FetchStripeHttp`, shared with
+`StripeConnectService`) talks to `api.stripe.com` with idempotency keys; `fetch`
+and base URL are injectable. `main.ts` selects it via `resolvePaymentGateway()`
+when `STRIPE_SECRET_KEY` is set, else keeps the deterministic fake (dev loop
+untouched). New optional env: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+`STRIPE_APPLICATION_FEE_BPS`, `STRIPE_API_BASE_URL`. Full decision + known gaps in
+**ADR-0019**. Green: typecheck, lint, Prettier, 293 tests (14 new payment tests).
+
+**Next actions (priority order):**
+
+1. **Live end-to-end validation of `api` mode** against the running stack
+   (Postgres + Redis + API) — the one thing not exercisable in this container.
+   Covers objective-2 tail and objective-3 (per-provider agenda), plus a Stripe
+   **test-mode** smoke (set `STRIPE_SECRET_KEY=sk_test_…`, `STRIPE_API_BASE_URL`
+   optional) through checkout.
+2. **Remaining real adapters:** SendGrid/Twilio (messaging), AWS KMS (real
+   `KmsAdapter` for the vault), S3 (attachments). See `PLANNING.md` Immediate
+   Route #4.
+3. **Stripe follow-ups (TECH_DEBT, from ADR-0019):** DB-backed `VaultStorage` so
+   per-tenant connected-account ids resolve in production; pass a payment method
+   through the public checkout (client-confirm + webhook-capture); enforce Stripe
+   webhook signature verification with `STRIPE_WEBHOOK_SECRET`.
+
 ## Post-Spec Work (2026-06-19): Admin ↔ persistent API — COMPLETE (ADR-0018)
 
 Objective 2 (connect `apps/admin` to the persistent Fastify API) is functionally
@@ -11,8 +40,9 @@ Reservas, and Calendario; `demo` stays the default so the single-command dev loo
 is untouched. Full architecture + decisions in **ADR-0018**.
 
 Built across the session (all committed locally, no push):
+
 - **Read surface + Locations:** `GET /v1/admin/{categories,services,providers,
-  resources}` and Locations CRUD.
+resources}` and Locations CRUD.
 - **Customer registry:** `GET/POST /v1/admin/customers`.
 - **Catalog writes:** `PATCH` service/provider/resource + `DELETE` service↔provider
   unassign; the seam wires create/update/toggle for all catalog screens.
@@ -24,6 +54,7 @@ Built across the session (all committed locally, no push):
 objective-2 tail before objective 3.
 
 **Remaining for objective 2 (small / deferred):**
+
 - Live end-to-end validation in `api` mode against the running stack (needs
   Postgres+Redis+API; not exercisable in this container).
 - Customer active-toggle in `api` mode (no domain concept yet) and wiring checkout
@@ -33,6 +64,7 @@ objective-2 tail before objective 3.
 
 The per-provider agenda (Work hours / Days off / Special days), the known gap vs.
 Amelia, is implemented end to end and works in both `demo` and `api` modes:
+
 - API `GET /v1/admin/providers/:id/schedule` (PUT already existed);
   `CatalogService.listProviderSchedule`.
 - Admin demo store gained a validated schedule map; new `source/schedules.ts`
@@ -42,6 +74,7 @@ Amelia, is implemented end to end and works in both `demo` and `api` modes:
   (`/providers/[id]/schedule`).
 
 **Both prioritized objectives (2 and 3) are complete.** Suggested next work:
+
 - Live end-to-end validation of `api` mode against the running stack
   (Postgres+Redis+API) — the one thing not exercisable in this container.
 - Remaining deferred items in `TECH_DEBT.md` (customer active-toggle in api mode,
@@ -71,6 +104,7 @@ screen reads/creates through the seam in `api` mode (active toggle unsupported
 there — no domain concept). Pays down the "no real customer registry" debt.
 
 **Next actions (ADR-0018 Phases 3–5):**
+
 1. **Admin bookings** — staff "book on behalf" flow (`/v1/admin/bookings`
    list/create/cancel) reusing the availability engine + occupancy recorder
    without the public payment path; unblocks Reservas + Calendario in `api` mode.
@@ -157,7 +191,7 @@ Stripe Connect (and the other real adapters) is the next follow-up; it sits
 behind the existing `PaymentGateway` port. Migrations are applied operationally
 (the SQL files in `infra/postgres/`), not at boot.
 
-## Post-Spec Work (2026-06-17d): Staff authentication for /v1/admin/*
+## Post-Spec Work (2026-06-17d): Staff authentication for /v1/admin/\*
 
 `/v1/admin/*` now has real staff auth (ADR-0005, implementation in ADR-0017),
 replacing the `SYSTEM_ACTOR` placeholder.
@@ -219,15 +253,15 @@ hub instead of the legacy model-B tables:
   `HUB_POOL_RESOURCE_ID`): quantity = Σ candidate quantities, allocations = union,
   so `unitsInUse + 1 <= total` means "≥1 free unit". No resource serving the
   service → no constraint; resources exist but provider eligible for none → zero
-  availability. The availability *engine* itself is unchanged (the legacy
+  availability. The availability _engine_ itself is unchanged (the legacy
   `resources`/`providerEligibleResourceIds` fields still exist and are still
   covered by `resource-conflicts.test.ts`).
 - `checkout-routes` and `BookingChangeService` (reschedule) allocate one eligible,
   location-compatible pool resource with a free unit (iterating candidates so a
   contended room falls through to a free one), via the new `hub` dep.
 - Fastify admin hub routes (optional `resourceHub` dep): `PUT
-  /v1/admin/resources/:id/{services,locations,employees}` and `GET
-  /v1/admin/resources/:id/hub`.
+/v1/admin/resources/:id/{services,locations,employees}` and `GET
+/v1/admin/resources/:id/hub`.
 - New test: `tests/integration/scheduling/hub-availability.test.ts` proves the
   pool capacity ("2 rooms") and eligibility-zero behavior. Suite: 257 passing,
   5 skipped, 0 failures.
@@ -240,7 +274,7 @@ The hub cutover is now complete end to end and the legacy model-B tables are gon
   (`infra/postgres/005-provider-locations.sql`, `providerLocations` in
   `schema.ts`), `CatalogRepository.{setProviderLocations,listProviderLocationIds}`
   on both adapters, `CatalogService.setProviderLocations`, and Fastify `PUT
-  /v1/admin/providers/:id/locations`. Availability, checkout, and reschedule now
+/v1/admin/providers/:id/locations`. Availability, checkout, and reschedule now
   pass the provider's locations into `hubCandidates`, so hub location
   compatibility is real (empty on either side still means "any").
 - **Destructive migration:** `infra/postgres/006-drop-legacy-resource-model.sql`
@@ -249,7 +283,7 @@ The hub cutover is now complete end to end and the legacy model-B tables are gon
   the `CatalogRepository` methods `linkResource`/`setProviderResources`/
   `listResourceDemands`/`listProviderEligibleResourceIds` (both adapters), the
   Drizzle table defs, and the `POST /v1/admin/services/:id/resources` route.
-- The availability *engine* is untouched (its generic `resources` /
+- The availability _engine_ is untouched (its generic `resources` /
   `providerEligibleResourceIds` inputs remain, still covered by
   `resource-conflicts.test.ts`).
 - Suite: 254 passing, 5 skipped, 0 failures. Typecheck and lint clean.
@@ -266,7 +300,7 @@ Beyond T001–T086, the admin console (`apps/admin`) gained a sidebar shell with
 
 The full assignment chain is now wired end to end in the admin demo store: `Ubicación -> Recurso -> Proveedor -> Servicio -> Reserva -> Cliente`. Customers (`AdminCustomer`) are first-class (Clientes screen) and bookings link a `customerId` + `providerId`. The Calendario screen renders a weekly grid of confirmed bookings grouped by provider. (This is admin-demo-store wiring; the Fastify `/v1/admin/*` provider/customer/eligibility routes remain the productionization step.)
 
-**Resource hub model (2026-06-16, ADR-0016).** After a full Amelia admin sweep (`docs/analysis/amelia-ux-reference.md`), the admin resource model was migrated to a *hub*: `AdminResource` now declares `locationIds[]`, `serviceIds[]` and `employeeIds[]` (empty = "any"). `AdminService` lost `resourceId`/`resourceUnits` and `AdminProvider` lost `resourceIds` — eligibility now lives only on the resource (single source of truth). The **Recursos** screen is the hub config page (three checkbox groups + edit/save); Proveedores and Servicios dropped their resource controls. `createBooking` allocates: for the booked service it finds active resources whose `serviceIds` include it, filters by provider eligibility and location compatibility, then requires at least one with a free unit (capacity stays 1 unit/booking). Deferred on purpose: quantity partition (`shared/per-service/per-location`) and group booking. **Scope:** this lands only in `apps/admin/src/server/demo-store.ts` + its route handlers; the canonical domain/persistence layer (ADR-0015) still carries the old shape and needs a follow-up migration (join tables `resource_services`/`resource_locations`/`resource_employees`, drop `provider_resources` + `service.resource_id`).
+**Resource hub model (2026-06-16, ADR-0016).** After a full Amelia admin sweep (`docs/analysis/amelia-ux-reference.md`), the admin resource model was migrated to a _hub_: `AdminResource` now declares `locationIds[]`, `serviceIds[]` and `employeeIds[]` (empty = "any"). `AdminService` lost `resourceId`/`resourceUnits` and `AdminProvider` lost `resourceIds` — eligibility now lives only on the resource (single source of truth). The **Recursos** screen is the hub config page (three checkbox groups + edit/save); Proveedores and Servicios dropped their resource controls. `createBooking` allocates: for the booked service it finds active resources whose `serviceIds` include it, filters by provider eligibility and location compatibility, then requires at least one with a free unit (capacity stays 1 unit/booking). Deferred on purpose: quantity partition (`shared/per-service/per-location`) and group booking. **Scope:** this lands only in `apps/admin/src/server/demo-store.ts` + its route handlers; the canonical domain/persistence layer (ADR-0015) still carries the old shape and needs a follow-up migration (join tables `resource_services`/`resource_locations`/`resource_employees`, drop `provider_resources` + `service.resource_id`).
 
 The resource model was extended to **model B (provider-resource eligibility) + model C (multi-site locations)** per ADR-0015:
 
@@ -275,7 +309,7 @@ The resource model was extended to **model B (provider-resource eligibility) + m
 - Persistence: `locations` + `provider_resources` tables, `resources.location_id`, migration `infra/postgres/003-locations-eligibility.sql`; in-memory + Drizzle adapters.
 - Admin UI enforces concurrent resource capacity in bookings (the "4 therapists / 2 rooms" constraint is observable). See `docs/analysis/resources-model-review.md`.
 
-Remaining for full B/C: Fastify `/v1/admin/*` routes for locations/eligibility, provider-portal eligibility editor, public-widget exposure, and resource _groups_ (interchangeable pools with per-provider subsets). See ADR-0015 "Consequences". Note the eligibility *direction* changed with the hub migration (ADR-0016): the domain `ProviderResource` association should be replaced by resource-owned `employeeIds` when the canonical layer is migrated.
+Remaining for full B/C: Fastify `/v1/admin/*` routes for locations/eligibility, provider-portal eligibility editor, public-widget exposure, and resource _groups_ (interchangeable pools with per-provider subsets). See ADR-0015 "Consequences". Note the eligibility _direction_ changed with the hub migration (ADR-0016): the domain `ProviderResource` association should be replaced by resource-owned `employeeIds` when the canonical layer is migrated.
 
 ## Technical Debt Ledger
 

@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-06-18
+Last updated: 2026-06-19
 
 ## Current State
 
@@ -206,8 +206,8 @@ Current clean baseline commit:
     location-compatible pool resource with a free unit (iterating candidates), via a
     new `hub` dependency.
   - Fastify admin hub routes (optional `resourceHub` dep in `buildApp`): `PUT
-    /v1/admin/resources/:id/{services,locations,employees}`, `GET
-    /v1/admin/resources/:id/hub`.
+/v1/admin/resources/:id/{services,locations,employees}`, `GET
+/v1/admin/resources/:id/hub`.
   - New `tests/integration/scheduling/hub-availability.test.ts` proves pool capacity
     ("2 rooms") and eligibility-zero. Also fixed `customer-passwordless` flaky test
     (nonce expiry now honors the injected clock). Suite: 257 passing, 5 skipped, 0
@@ -222,7 +222,7 @@ Current clean baseline commit:
     (`infra/postgres/005-provider-locations.sql` + `providerLocations` in
     `schema.ts`), `CatalogRepository.{setProviderLocations,listProviderLocationIds}`
     on both adapters, `CatalogService.setProviderLocations`, and Fastify `PUT
-    /v1/admin/providers/:id/locations`. Availability/checkout/reschedule now feed
+/v1/admin/providers/:id/locations`. Availability/checkout/reschedule now feed
     the provider's locations into `hubCandidates`, making hub location
     compatibility real (empty on either side still means "any"). New test case in
     `hub-availability.test.ts` proves Centro/Norte compatibility.
@@ -239,7 +239,7 @@ Current clean baseline commit:
     in `resource_locations`. The hub is the complete and sole resource model with
     no legacy remnants.
 
-### 2026-06-17 (staff authentication for /v1/admin/*)
+### 2026-06-17 (staff authentication for /v1/admin/\*)
 
 - Implemented staff auth (ADR-0005, recorded in ADR-0017), replacing the
   `SYSTEM_ACTOR` placeholder on `/v1/admin/*`:
@@ -308,18 +308,18 @@ Current clean baseline commit:
     healthy); the SQL migrations `001`…`008` applied automatically on Postgres
     first boot (25 tables, RLS, resource-hub join tables, staff_accounts).
   - **Env:** `.env` from `.env.example` with generated `PASSWORDLESS_TOKEN_SECRET`
-    + `SESSION_COOKIE_SECRET`; API built and started in **persistent mode**
-    (`node --env-file=.env services/api/dist/main.js`, Drizzle/RLS + Redis).
+    - `SESSION_COOKIE_SECRET`; API built and started in **persistent mode**
+      (`node --env-file=.env services/api/dist/main.js`, Drizzle/RLS + Redis).
   - **First real tenant** provisioned over HTTP: `POST /v1/platform/tenants`
     (`mi-negocio`), bootstrap admin via `POST /v1/platform/tenants/:id/staff`,
     staff login (`POST /v1/admin/sessions`) returning the `staff_session` cookie.
     Confirmed the admin gate (401 without session, 201 with) and DB persistence.
   - **Minimal bookable operation:** category → service (Corte de pelo, 60 min,
     30 €) → provider (Ana, Mon–Fri 09:00–17:00) → assignment → `GET
-    /v1/public/availability` returned 8 hourly slots from the engine.
+/v1/public/availability` returned 8 hourly slots from the engine.
   - **First real booking (star flow):** `POST /v1/public/checkout` created a
     `pending` booking + cart charge (fake gateway), `POST
-    /v1/public/payments/webhook` (`charge.succeeded`) approved it and recorded
+/v1/public/payments/webhook` (`charge.succeeded`) approved it and recorded
     occupancy; the booked slot then disappeared from availability (8 → 7).
 - **Technical-debt ledger:** added `TECH_DEBT.md` (repo root) as the cumulative
   pre-VPS register (superuser local DB role bypassing RLS, in-memory staff
@@ -345,7 +345,7 @@ Current clean baseline commit:
   - **Locations CRUD (canonical):** new `LocationService` + `LocationRepository`
     port over the existing `locations` table, with in-memory and Drizzle/RLS
     (`DrizzleLocationRepository`) adapters; routes `GET/POST/PATCH
-    /v1/admin/locations` (optional `locations` dep in `buildApp`). Wired into
+/v1/admin/locations` (optional `locations` dep in `buildApp`). Wired into
     `main.ts` (both bootstraps).
   - **Admin client foundation (ADR-0018):** `ADMIN_DATA_MODE` env (`demo` default
     | `api`), a server-only API client (`apps/admin/src/server/api-client.ts`)
@@ -393,7 +393,7 @@ Current clean baseline commit:
   is resolved to a `categoryId` on write (creating the Category if absent) and
   mapped back to its name on read; the active toggle is unsupported in `api` mode
   (no service-update route yet, Phase 5). Demo mode unchanged; admin `next build`
-  + typecheck + lint + Prettier clean.
+  - typecheck + lint + Prettier clean.
 - **Providers and Resources** screens are intentionally NOT yet wired to `api`
   mode: their console PATCH does partial profile/assignment edits that the API
   has no clean routes for (provider update + service-unassign; resource
@@ -404,7 +404,7 @@ Current clean baseline commit:
 ### 2026-06-19 (admin ↔ persistent API — catalog write routes + Phases 3/5: bookings, full wiring)
 
 - **Catalog write routes (Phase 5):** `PATCH /v1/admin/{services,providers,
-  resources}/:id` (active toggle maps to status) and
+resources}/:id` (active toggle maps to status) and
   `DELETE /v1/admin/services/:serviceId/providers/:providerId` (unassign). New
   `CatalogRepository` methods (updateService/updateProvider/updateResource/
   unassignProvider) on both adapters + audited `CatalogService` partial-update
@@ -454,6 +454,34 @@ Current clean baseline commit:
   - Tests: schedule GET/PUT case in `admin-read-model.test.ts`. Suite: 279
     passing, 7 skipped, 0 failures. Typecheck, lint, Prettier clean; admin
     `next build` passes. Works in both `demo` and `api` modes.
+
+### 2026-06-19 (Real adapter wiring — Stripe Connect gateway, ADR-0019)
+
+- First real payment adapter behind the existing `PaymentGateway` port; fake
+  stays the default so the single-command dev loop is untouched.
+  - **Transport:** `FetchStripeHttp` (`packages/integrations/payments/
+stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
+    pinned `Stripe-Version`, `Idempotency-Key`, optional `Stripe-Account`),
+    injectable `fetch`/base URL, network failures mapped to a status-0 connection
+    error instead of throwing. The `StripeHttpAdapter` interface moved here and is
+    re-exported from `stripe-connect-service.ts`, so the connect service and the
+    gateway share one transport.
+  - **Gateway:** `StripePaymentGateway` — `createCharge` builds a PaymentIntent;
+    with a tenant Connect account (vault `stripe_connect/account_id`) it is a
+    destination charge (`transfer_data[destination]` + `application_fee_amount`
+    from configurable bps), else a plain platform charge. Optional generic
+    `paymentMethod` on `ChargeRequest` confirms synchronously. `refund` reverses
+    the transfer + claws back the fee for destination charges. Status/error
+    mapping → accepted/declined/gateway-error and charge-not-found/exceeds-charge.
+  - **Boot:** `resolvePaymentGateway()` in `main.ts` picks Stripe when
+    `STRIPE_SECRET_KEY` is set (key sealed in an envelope vault), else the fake.
+    New optional env in the contract + `.env.example`: `STRIPE_SECRET_KEY`,
+    `STRIPE_WEBHOOK_SECRET`, `STRIPE_APPLICATION_FEE_BPS`, `STRIPE_API_BASE_URL`.
+  - Tests: 14 new (10 gateway contract + 4 transport unit). Suite: 293 passing,
+    7 skipped, 0 failures. Typecheck, lint, Prettier clean.
+  - Known gaps recorded in `TECH_DEBT.md` / ADR-0019: DB-backed `VaultStorage`
+    for per-tenant connected-account ids; checkout payment-method + webhook
+    capture; Stripe webhook signature verification.
 
 ## Current Backlog
 

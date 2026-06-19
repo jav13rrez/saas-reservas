@@ -8,8 +8,10 @@
  * - Otherwise it falls back to the in-memory adapters for local dev, seeds the
  *   first DEMO_TENANT, and listens on port 3001.
  *
- * The payment gateway is still the fake adapter in both modes; swapping it for
- * Stripe Connect is the next follow-up (it sits behind the existing port).
+ * The payment gateway is selected at boot: with `STRIPE_SECRET_KEY` set it wires
+ * the real Stripe Connect adapter (destination charges + application fee, behind
+ * the existing PaymentGateway port); otherwise it stays the deterministic fake so
+ * the single-command dev loop is untouched.
  */
 
 import { Redis } from "ioredis";
@@ -26,7 +28,17 @@ import {
   DrizzleStaffAccountRepository,
   DrizzleTenantRepository,
 } from "@saas-reservas/persistence";
-import { FakePaymentGateway } from "@saas-reservas/integrations/payments/payment-gateway";
+import {
+  FakePaymentGateway,
+  type PaymentGateway,
+} from "@saas-reservas/integrations/payments/payment-gateway";
+import { StripePaymentGateway } from "@saas-reservas/integrations/payments/stripe-gateway";
+import { FetchStripeHttp } from "@saas-reservas/integrations/payments/stripe-http";
+import {
+  EnvelopeCredentialVault,
+  InMemoryKmsAdapter,
+  InMemoryVaultStorage,
+} from "@saas-reservas/integrations/security/credential-vault";
 import type { BillingPlan } from "@saas-reservas/domain/billing/billing";
 import {
   ENTERPRISE_PLAN,
@@ -99,6 +111,36 @@ const TENANT_OVERVIEWS: TenantOverview[] = DEMO_TENANTS.map((dt) => {
 });
 
 // ---------------------------------------------------------------------------
+// Payment gateway selection
+// ---------------------------------------------------------------------------
+
+/**
+ * Real Stripe gateway when `STRIPE_SECRET_KEY` is configured, otherwise the
+ * deterministic fake. The platform secret key is sealed in an envelope vault so
+ * the gateway never receives a bare key; per-tenant Stripe Connect account ids
+ * (written by StripeConnectService) turn charges into destination charges with
+ * an application fee. Without a connected account it falls back to a plain
+ * platform charge, so a single-merchant deployment also works.
+ */
+async function resolvePaymentGateway(): Promise<PaymentGateway> {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (secretKey === undefined || secretKey.length === 0) {
+    return new FakePaymentGateway();
+  }
+
+  const vault = new EnvelopeCredentialVault(new InMemoryKmsAdapter(), new InMemoryVaultStorage());
+  await vault.store("platform", "stripe", "secret_key", secretKey);
+
+  const feeBps = Number.parseInt(process.env.STRIPE_APPLICATION_FEE_BPS ?? "0", 10);
+  const baseUrl = process.env.STRIPE_API_BASE_URL;
+  return new StripePaymentGateway({
+    http: baseUrl !== undefined ? new FetchStripeHttp(baseUrl) : new FetchStripeHttp(),
+    vault,
+    applicationFeeBasisPoints: Number.isFinite(feeBps) ? feeBps : 0,
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Composition roots
 // ---------------------------------------------------------------------------
 
@@ -112,7 +154,7 @@ interface Bootstrap {
 }
 
 /** Production stack: Drizzle/RLS persistence + Redis checkout locks. */
-function persistentBootstrap(): Bootstrap {
+async function persistentBootstrap(): Promise<Bootstrap> {
   const env = loadEnvironment(process.env);
   const db = createTenantDb(env.DATABASE_URL);
   const redis = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
@@ -124,7 +166,7 @@ function persistentBootstrap(): Bootstrap {
   const staffRepo = new DrizzleStaffAccountRepository(db);
   const paymentRepo = new DrizzlePaymentRepository(db);
   const events = new DrizzleEventSink(db);
-  const gateway = new FakePaymentGateway();
+  const gateway = await resolvePaymentGateway();
 
   const tenantTimezone = async (id: string): Promise<string> =>
     (await tenantRepo.findTenantById(id))?.defaultTimezone ?? "UTC";
@@ -178,10 +220,10 @@ function persistentBootstrap(): Bootstrap {
 }
 
 /** Local dev stack: in-memory adapters seeded with the first demo tenant. */
-function inMemoryBootstrap(): Bootstrap {
+async function inMemoryBootstrap(): Promise<Bootstrap> {
   const store = new InMemoryStore();
   const paymentStore = new InMemoryPaymentStore();
-  const gateway = new FakePaymentGateway();
+  const gateway = await resolvePaymentGateway();
   const events = new InMemoryEventSink();
 
   const tenantTimezone = async (id: string): Promise<string> =>
@@ -251,7 +293,7 @@ function inMemoryBootstrap(): Bootstrap {
 // ---------------------------------------------------------------------------
 
 const bootstrap =
-  process.env.DATABASE_URL !== undefined ? persistentBootstrap() : inMemoryBootstrap();
+  process.env.DATABASE_URL !== undefined ? await persistentBootstrap() : await inMemoryBootstrap();
 
 const app = buildApp(bootstrap.deps);
 

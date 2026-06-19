@@ -15,6 +15,13 @@ export interface ChargeRequest {
   /** Stable per checkout attempt; gateways deduplicate on it. */
   idempotencyKey: string;
   description?: string;
+  /**
+   * Tokenized funding source to charge (e.g. a Stripe PaymentMethod id). When
+   * provided, real gateways confirm the charge synchronously; when omitted they
+   * may create an unconfirmed intent to be completed client-side. The fake
+   * gateway ignores it.
+   */
+  paymentMethod?: string;
 }
 
 export type ChargeResult =
