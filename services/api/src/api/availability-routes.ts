@@ -488,6 +488,13 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     return reply.code(201).send(provider);
   });
 
+  app.get("/v1/admin/providers/:providerId/schedule", async (request, reply) => {
+    const tenant = tenantOf(request);
+    const { providerId } = request.params as { providerId: string };
+    const entries = await deps.catalogService.listProviderSchedule(tenant.tenantId, providerId);
+    return reply.send({ entries });
+  });
+
   app.put("/v1/admin/providers/:providerId/schedule", async (request, reply) => {
     const tenant = tenantOf(request);
     const { providerId } = request.params as { providerId: string };

@@ -432,6 +432,29 @@ Current clean baseline commit:
   against the running stack, the customer active-toggle (no domain concept), and
   wiring checkout to the customer registry. Decisions recorded in ADR-0018.
 
+### 2026-06-19 (Objective 3: per-provider scheduling — Work hours / Days off / Special days)
+
+- Built the per-provider agenda editor, the known gap vs. Amelia, end to end:
+  - **API:** `GET /v1/admin/providers/:providerId/schedule` (the `PUT` already
+    existed) via `CatalogService.listProviderSchedule` over the existing
+    `listScheduleEntries` repository method. Entries are the domain
+    `ProviderScheduleEntry` union (weekly window + breaks, special-day, day-off);
+    the `PUT` validates via `validateScheduleEntry`.
+  - **Admin demo store:** added a `schedules` map + `getProviderSchedule` /
+    validated `setProviderSchedule` (HH:mm windows, breaks inside the window,
+    weekday 0–6, ISO dates), seeded Ana (Mon–Fri 09–17 with lunch) and Carlos
+    (Mon–Wed mornings).
+  - **Seam + route:** `source/schedules.ts` (demo vs API) and
+    `app/api/providers/[id]/schedule/route.ts` (GET/PUT).
+  - **UI:** `features/provider-schedule` editor — weekly hours (per-day toggle,
+    start/end, add/remove breaks), days off (date list), and special days
+    (date + window + breaks), saved as one schedule replace. Reached from an
+    "Agenda" link per row on the Proveedores screen
+    (`/providers/[id]/schedule`). Design tokens, lucide icons, no emojis.
+  - Tests: schedule GET/PUT case in `admin-read-model.test.ts`. Suite: 279
+    passing, 7 skipped, 0 failures. Typecheck, lint, Prettier clean; admin
+    `next build` passes. Works in both `demo` and `api` modes.
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.

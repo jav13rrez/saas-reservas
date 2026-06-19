@@ -88,6 +88,33 @@ export interface AdminCustomer {
   createdAt: string;
 }
 
+/** A break inside a working window, "HH:mm" wall clock. */
+export interface AdminScheduleBreak {
+  start: string;
+  end: string;
+}
+
+/**
+ * Provider schedule entry (mirrors the domain `ProviderScheduleEntry`): a weekly
+ * working window, a special-day override, or a day off. Times are "HH:mm".
+ */
+export type AdminScheduleEntry =
+  | {
+      kind: "weekly";
+      weekday: number;
+      startTime: string;
+      endTime: string;
+      breaks: AdminScheduleBreak[];
+    }
+  | {
+      kind: "special-day";
+      date: string;
+      startTime: string;
+      endTime: string;
+      breaks: AdminScheduleBreak[];
+    }
+  | { kind: "day-off"; date: string };
+
 export type BookingStatus = "confirmed" | "cancelled";
 
 export interface AdminBooking {
@@ -114,6 +141,8 @@ interface DemoData {
   providers: AdminProvider[];
   customers: AdminCustomer[];
   bookings: AdminBooking[];
+  /** Provider schedules keyed by provider id. */
+  schedules: Record<string, AdminScheduleEntry[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -315,7 +344,26 @@ function seed(): DemoData {
     });
   }
 
-  return { locations, resources, services, providers, customers, bookings };
+  // Ana works Mon-Fri 09:00-17:00 with a lunch break; Carlos Mon-Wed mornings.
+  const weekdayWindow = (weekday: number): AdminScheduleEntry => ({
+    kind: "weekly",
+    weekday,
+    startTime: "09:00",
+    endTime: "17:00",
+    breaks: [{ start: "13:00", end: "14:00" }],
+  });
+  const schedules: Record<string, AdminScheduleEntry[]> = {
+    [ana.id]: [1, 2, 3, 4, 5].map(weekdayWindow),
+    [carlos.id]: [1, 2, 3].map((weekday) => ({
+      kind: "weekly",
+      weekday,
+      startTime: "09:00",
+      endTime: "13:00",
+      breaks: [],
+    })),
+  };
+
+  return { locations, resources, services, providers, customers, bookings, schedules };
 }
 
 const globalForStore = globalThis as typeof globalThis & {
@@ -454,10 +502,7 @@ export function updateResource(id: string, input: UpdateResourceInput): StoreRes
     resource.serviceIds = keepKnown(input.serviceIds, new Set(data().services.map((s) => s.id)));
   }
   if (input.employeeIds !== undefined) {
-    resource.employeeIds = keepKnown(
-      input.employeeIds,
-      new Set(data().providers.map((p) => p.id)),
-    );
+    resource.employeeIds = keepKnown(input.employeeIds, new Set(data().providers.map((p) => p.id)));
   }
   if (input.active !== undefined) {
     resource.active = input.active;
@@ -634,6 +679,94 @@ export function providersForService(serviceId: string): AdminProvider[] {
 }
 
 // ---------------------------------------------------------------------------
+// Provider schedules (Work hours / Days off / Special days)
+// ---------------------------------------------------------------------------
+
+export function getProviderSchedule(providerId: string): AdminScheduleEntry[] {
+  return data().schedules[providerId] ?? [];
+}
+
+/** "HH:mm" -> minutes since midnight, or NaN when malformed. */
+function timeToMinutes(value: string): number {
+  const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
+  if (match === null) {
+    return Number.NaN;
+  }
+  return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function isoDateIsValid(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function validateWindow(entry: {
+  startTime: string;
+  endTime: string;
+  breaks: AdminScheduleBreak[];
+}): string | null {
+  const start = timeToMinutes(entry.startTime);
+  const end = timeToMinutes(entry.endTime);
+  if (Number.isNaN(start) || Number.isNaN(end)) {
+    return "Las horas deben tener formato HH:mm.";
+  }
+  if (end <= start) {
+    return "La hora de fin debe ser posterior a la de inicio.";
+  }
+  for (const brk of entry.breaks) {
+    const bStart = timeToMinutes(brk.start);
+    const bEnd = timeToMinutes(brk.end);
+    if (Number.isNaN(bStart) || Number.isNaN(bEnd) || bEnd <= bStart) {
+      return "Cada descanso debe tener un rango HH:mm válido.";
+    }
+    if (bStart < start || bEnd > end) {
+      return "Los descansos deben caer dentro del horario de trabajo.";
+    }
+  }
+  return null;
+}
+
+/** Validate and replace a provider's full schedule. */
+export function setProviderSchedule(
+  providerId: string,
+  entries: AdminScheduleEntry[],
+): StoreResult<AdminScheduleEntry[]> {
+  if (findProvider(providerId) === undefined) {
+    return { ok: false, error: "Proveedor no encontrado." };
+  }
+  if (!Array.isArray(entries)) {
+    return { ok: false, error: "El cuerpo debe incluir una lista de entradas." };
+  }
+  for (const entry of entries) {
+    if (entry.kind === "day-off") {
+      if (!isoDateIsValid(entry.date)) {
+        return { ok: false, error: "Fecha de día libre no válida (YYYY-MM-DD)." };
+      }
+      continue;
+    }
+    if (entry.kind === "weekly") {
+      if (!Number.isInteger(entry.weekday) || entry.weekday < 0 || entry.weekday > 6) {
+        return { ok: false, error: "El día de la semana debe estar entre 0 y 6." };
+      }
+    } else {
+      // special-day
+      if (!isoDateIsValid(entry.date)) {
+        return { ok: false, error: "Fecha de día especial no válida (YYYY-MM-DD)." };
+      }
+    }
+    const windowError = validateWindow(entry);
+    if (windowError !== null) {
+      return { ok: false, error: windowError };
+    }
+  }
+  data().schedules[providerId] = entries;
+  return { ok: true, value: entries };
+}
+
+// ---------------------------------------------------------------------------
 // Customers
 // ---------------------------------------------------------------------------
 
@@ -795,9 +928,7 @@ export function createBooking(input: CreateBookingInput): StoreResult<AdminBooki
     }
 
     // Capacity: at least one compatible resource must have a free slot.
-    const hasCapacity = locationCompatible.some(
-      (r) => unitsInUse(r, startAt, endAt) < r.quantity,
-    );
+    const hasCapacity = locationCompatible.some((r) => unitsInUse(r, startAt, endAt) < r.quantity);
     if (!hasCapacity) {
       const names = locationCompatible.map((r) => r.name).join(", ");
       return {

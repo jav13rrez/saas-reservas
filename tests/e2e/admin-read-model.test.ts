@@ -272,6 +272,36 @@ describe("admin read-model endpoints", () => {
     expect(after.items.find((p) => p.id === extra.id)?.serviceIds).toEqual([]);
   });
 
+  it("reads and replaces a provider schedule", async () => {
+    // Initially empty.
+    const empty = await app.inject({
+      method: "GET",
+      url: `/v1/admin/providers/${providerId}/schedule`,
+      headers: { host: TENANT_HOST },
+    });
+    expect(empty.statusCode).toBe(200);
+    expect(empty.json<{ entries: unknown[] }>().entries).toEqual([]);
+
+    const entries = [
+      { kind: "weekly", weekday: 1, startTime: "09:00", endTime: "17:00", breaks: [] },
+      { kind: "day-off", date: "2026-12-25" },
+    ];
+    const put = await app.inject({
+      method: "PUT",
+      url: `/v1/admin/providers/${providerId}/schedule`,
+      headers: { host: TENANT_HOST },
+      payload: { entries },
+    });
+    expect(put.statusCode).toBe(204);
+
+    const read = await app.inject({
+      method: "GET",
+      url: `/v1/admin/providers/${providerId}/schedule`,
+      headers: { host: TENANT_HOST },
+    });
+    expect(read.json<{ entries: typeof entries }>().entries).toEqual(entries);
+  });
+
   it("returns 404 updating an unknown service", async () => {
     const response = await app.inject({
       method: "PATCH",

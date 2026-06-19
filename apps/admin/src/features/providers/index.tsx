@@ -345,6 +345,22 @@ export function Providers() {
                   <StatusBadge active={p.active} />
                 </td>
                 <td style={{ ...CELL, textAlign: "right", whiteSpace: "nowrap" }}>
+                  <a
+                    href={`/providers/${p.id}/schedule`}
+                    style={{
+                      display: "inline-block",
+                      height: 30,
+                      lineHeight: "30px",
+                      padding: "0 var(--ui-space-3)",
+                      marginRight: 6,
+                      borderRadius: "var(--ui-radius-sm)",
+                      border: "1px solid var(--ui-color-border)",
+                      color: "var(--ui-color-text)",
+                      textDecoration: "none",
+                    }}
+                  >
+                    Agenda
+                  </a>
                   <button
                     onClick={() => {
                       startEdit(p);

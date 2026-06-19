@@ -29,11 +29,24 @@ objective-2 tail before objective 3.
 - Customer active-toggle in `api` mode (no domain concept yet) and wiring checkout
   to the customer registry (TECH_DEBT).
 
-**Next prioritized milestone — Objective 3: per-provider scheduling** (Work hours
-/ Days off / Special days), the known gap vs. Amelia. The API already has
-`PUT /v1/admin/providers/:providerId/schedule` accepting weekly/day-off/special
-`ProviderScheduleEntry[]`; the work is the admin editor UI + a `GET` schedule
-endpoint + wiring through the seam.
+## Post-Spec Work (2026-06-19): Objective 3 — per-provider scheduling (DONE)
+
+The per-provider agenda (Work hours / Days off / Special days), the known gap vs.
+Amelia, is implemented end to end and works in both `demo` and `api` modes:
+- API `GET /v1/admin/providers/:id/schedule` (PUT already existed);
+  `CatalogService.listProviderSchedule`.
+- Admin demo store gained a validated schedule map; new `source/schedules.ts`
+  seam and `app/api/providers/[id]/schedule` route handler.
+- New editor `features/provider-schedule` (weekly hours with breaks, days off,
+  special days), reached from an "Agenda" link per provider row
+  (`/providers/[id]/schedule`).
+
+**Both prioritized objectives (2 and 3) are complete.** Suggested next work:
+- Live end-to-end validation of `api` mode against the running stack
+  (Postgres+Redis+API) — the one thing not exercisable in this container.
+- Remaining deferred items in `TECH_DEBT.md` (customer active-toggle in api mode,
+  checkout→customer-registry wiring, admin-booking slot lock) and the real
+  adapters (Stripe Connect first, per `PLANNING.md` Immediate Route).
 
 ### Earlier 2026-06-19 detail: Phase 1 (read surface + Locations)
 

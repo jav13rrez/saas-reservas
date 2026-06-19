@@ -102,6 +102,11 @@ export class CatalogService {
     return this.catalog.listResources(tenantId);
   }
 
+  /** A provider's schedule entries (weekly windows, special days, days off). */
+  listProviderSchedule(tenantId: string, providerId: string): Promise<ProviderScheduleEntry[]> {
+    return this.catalog.listScheduleEntries(tenantId, providerId);
+  }
+
   /** Providers with their service assignments and work locations resolved. */
   async listProviders(tenantId: string): Promise<ProviderWithAssignments[]> {
     const providers = await this.catalog.listProviders(tenantId);
