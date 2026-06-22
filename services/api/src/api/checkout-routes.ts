@@ -357,14 +357,13 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
     return reply.send({ outcome });
   });
 
-  // Real Stripe webhook: verifies the signature over the raw body, then settles
-  // the cart named in the PaymentIntent metadata. PaymentIntent succeeded ->
-  // approve; payment_failed/canceled -> reject. Idempotent per Stripe event id.
+  // Real Stripe webhook (PLATFORM-level: one endpoint for all tenants, exempt
+  // from Host-based tenant resolution). Verifies the signature over the raw body,
+  // then resolves the tenant + cart from the PaymentIntent metadata we set at
+  // charge time. PaymentIntent succeeded -> approve; payment_failed/canceled ->
+  // reject. Idempotent per Stripe event id. Trusting the metadata is safe because
+  // the signature proves the event (and its metadata) originated from our charge.
   app.post("/v1/public/payments/stripe-webhook", async (request, reply) => {
-    const tenant = request.tenant;
-    if (tenant === undefined) {
-      return reply.code(404).send({ error: "unknown-host" });
-    }
     if (deps.stripeWebhookSecret !== undefined) {
       const rawBody = (request as unknown as RawBodyRequest).rawBody ?? "";
       const header = request.headers["stripe-signature"];
@@ -382,8 +381,10 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
     if (event.id === undefined || event.type === undefined) {
       return reply.code(400).send({ error: "invalid-event" });
     }
-    const cartId = event.data?.object?.metadata?.cartId;
-    if (cartId === undefined) {
+    const metadata = event.data?.object?.metadata;
+    const cartId = metadata?.cartId;
+    const tenantId = metadata?.tenantId;
+    if (cartId === undefined || tenantId === undefined) {
       // Not a checkout-originated PaymentIntent (no cart to settle); ack so Stripe stops retrying.
       return reply.send({ outcome: "ignored" });
     }
@@ -394,12 +395,12 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
       event.type === "payment_intent.payment_failed" ||
       event.type === "payment_intent.canceled";
     const outcome = await deps.webhooks.process(
-      tenant.tenantId,
+      tenantId,
       "stripe",
       { id: event.id, type: event.type, payload: event },
       async () => {
         if (settleable) {
-          await settle(tenant.tenantId, cartId, succeeded);
+          await settle(tenantId, cartId, succeeded);
         }
       },
     );

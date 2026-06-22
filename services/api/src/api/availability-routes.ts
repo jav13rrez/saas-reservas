@@ -175,8 +175,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   );
 
   app.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
-    // Platform-level routes carry no tenant.
-    if (request.url.startsWith("/v1/platform/") || request.url.startsWith("/v1/ops/")) {
+    // Platform-level routes carry no tenant. The Stripe webhook is one platform
+    // endpoint for all tenants (Stripe posts with no tenant Host), so it resolves
+    // its tenant from the signed event metadata instead — see checkout-routes.
+    if (
+      request.url.startsWith("/v1/platform/") ||
+      request.url.startsWith("/v1/ops/") ||
+      request.url.startsWith("/v1/public/payments/stripe-webhook")
+    ) {
       return;
     }
     // Tenant routing prefers X-Forwarded-Host over Host. Server-to-server callers

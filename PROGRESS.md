@@ -577,9 +577,11 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
     verifies the signature (`verifyStripeSignature`, HMAC-SHA256 over the raw body,
     constant-time compare, timestamp tolerance) when `STRIPE_WEBHOOK_SECRET` is
     set, maps `payment_intent.succeeded` → approve (+ occupancy) and
-    `payment_failed`/`canceled` → reject, keyed by `metadata.cartId`, idempotent
-    per Stripe event id via the existing `WebhookProcessor`. The settle logic is
-    now shared with the generic (fake) webhook.
+    `payment_failed`/`canceled` → reject, idempotent per Stripe event id via the
+    existing `WebhookProcessor`. It is a **platform-level endpoint** (one URL for
+    all tenants, exempt from Host-based tenant resolution) that resolves the tenant
+    - cart from the signed event metadata (`tenantId`/`cartId`). The settle logic
+      is shared with the generic (fake) webhook.
   - **Raw body.** `buildApp` adds a JSON content-type parser that stashes the raw
     body (needed because signature verification must hash the exact bytes);
     handlers still receive parsed JSON.

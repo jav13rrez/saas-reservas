@@ -94,7 +94,13 @@ describe("stripe webhook capture", () => {
   }
 
   function stripeEvent(id: string, type: string, cartId: string): string {
-    return JSON.stringify({ id, type, data: { object: { id: "pi_test", metadata: { cartId } } } });
+    // Tenant + cart ride in the PaymentIntent metadata (set at charge time); the
+    // platform webhook resolves the tenant from there, not from the Host.
+    return JSON.stringify({
+      id,
+      type,
+      data: { object: { id: "pi_test", metadata: { cartId, tenantId } } },
+    });
   }
 
   beforeAll(async () => {

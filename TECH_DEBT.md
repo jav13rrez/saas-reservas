@@ -69,11 +69,13 @@ a real implementation + the provider account/credentials in
   - **[RESOLVED 2026-06-22] Payment method passthrough + webhook capture.** The
     public checkout now accepts an optional `paymentMethod` (e.g. `pm_card_visa`)
     and threads it through `chargeCart` → `createCharge`, which confirms the
-    PaymentIntent synchronously. The charge carries `metadata.cartId`, and a new
-    `POST /v1/public/payments/stripe-webhook` settles the booking on
+    PaymentIntent synchronously. The charge carries `metadata.{cartId,tenantId}`,
+    and a new `POST /v1/public/payments/stripe-webhook` settles the booking on
     `payment_intent.succeeded` (reject on `payment_failed`/`canceled`), idempotent
-    per Stripe event id. NOTE: still not validated against a live Stripe webhook
-    delivery (needs `stripe listen` / a public endpoint).
+    per Stripe event id. The webhook is a **platform-level endpoint** (one URL for
+    all tenants, exempt from Host-based tenant routing) that resolves the tenant +
+    cart from the signed event metadata. NOTE: still not validated against a live
+    Stripe webhook delivery (needs `stripe listen` / a public endpoint).
   - **[RESOLVED 2026-06-22] Stripe webhook signature verification.**
     `verifyStripeSignature` (HMAC-SHA256 over the raw body, constant-time compare,
     timestamp tolerance) gates the Stripe webhook route when

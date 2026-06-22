@@ -66,7 +66,9 @@ stripe-http.ts`) implements a `StripeHttpAdapter` moved into the integrations
   `chargeCart` → `createCharge` for synchronous confirmation, and
   `POST /v1/public/payments/stripe-webhook` captures `payment_intent.succeeded`
   (signature-verified via `verifyStripeSignature` when `STRIPE_WEBHOOK_SECRET` is
-  set) to approve the booking. Remaining gap **(a)**: the connected-account id is
+  set) to approve the booking. The webhook is a platform-level endpoint (exempt
+  from Host-based tenant routing) that resolves the tenant + cart from the signed
+  PaymentIntent metadata. Remaining gap **(a)**: the connected-account id is
   read from an in-memory vault at boot, so multi-tenant destination charges still
   need a DB-backed `VaultStorage`. The succeeded flow is also **not yet validated
   against a live Stripe webhook delivery** (`stripe listen`).
