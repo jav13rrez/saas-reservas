@@ -8,19 +8,19 @@ SaaS multitenant de reservas inspirado en Amelia Premium, rediseñado como produ
 
 La fuente de verdad de cada capa:
 
-| Qué necesitas | Dónde mirarlo |
-|---|---|
-| Reanudar trabajo (cualquier agente) | `HANDOFF.md` |
-| Mapa del proyecto y ruta | `PLANNING.md` |
-| Historial de progreso | `PROGRESS.md` |
-| Principios no negociables | `.specify/memory/constitution.md` |
-| Especificación funcional | `specs/001-saas-multitenant-booking/spec.md` |
-| Plan técnico y arquitectura | `specs/001-saas-multitenant-booking/plan.md` |
-| Backlog de tareas | `specs/001-saas-multitenant-booking/tasks.md` |
-| Decisiones de arquitectura | `docs/adr/` (ADR-0001 a ADR-0016) |
-| Referencia UX de Amelia | `docs/analysis/amelia-ux-reference.md` |
-| Modelo de datos | `specs/001-saas-multitenant-booking/data-model.md` |
-| Sistema de diseño UI | `docs/design-system.md` (ADR-0008) |
+| Qué necesitas                       | Dónde mirarlo                                      |
+| ----------------------------------- | -------------------------------------------------- |
+| Reanudar trabajo (cualquier agente) | `HANDOFF.md`                                       |
+| Mapa del proyecto y ruta            | `PLANNING.md`                                      |
+| Historial de progreso               | `PROGRESS.md`                                      |
+| Principios no negociables           | `.specify/memory/constitution.md`                  |
+| Especificación funcional            | `specs/001-saas-multitenant-booking/spec.md`       |
+| Plan técnico y arquitectura         | `specs/001-saas-multitenant-booking/plan.md`       |
+| Backlog de tareas                   | `specs/001-saas-multitenant-booking/tasks.md`      |
+| Decisiones de arquitectura          | `docs/adr/` (ADR-0001 a ADR-0016)                  |
+| Referencia UX de Amelia             | `docs/analysis/amelia-ux-reference.md`             |
+| Modelo de datos                     | `specs/001-saas-multitenant-booking/data-model.md` |
+| Sistema de diseño UI                | `docs/design-system.md` (ADR-0008)                 |
 
 ## Flujo Agnóstico de Agentes
 

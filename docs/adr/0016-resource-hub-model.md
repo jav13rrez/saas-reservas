@@ -9,7 +9,7 @@ admin console; ADR-0015's domain/persistence layer is not yet migrated (see Cons
 
 A full sweep of the Amelia Premium admin console (notes in
 `docs/analysis/amelia-ux-reference.md`) revealed that Amelia treats the
-**Resource** as a configuration *hub*: a single Resource entity declares the
+**Resource** as a configuration _hub_: a single Resource entity declares the
 Services, Locations and Employees it applies to (each defaulting to "All"), plus
 a quantity partition (`shared / per-service / per-location`) and a group-booking
 usage toggle.
@@ -72,7 +72,7 @@ of every resource that applies to its service.
 - A single source of truth for eligibility (the resource) removes the model B
   duplication.
 - **Canonical layer — additive migration done (2026-06-17).** The hub now also
-  exists in the canonical domain/persistence layer as an *additive, non-destructive*
+  exists in the canonical domain/persistence layer as an _additive, non-destructive_
   change that preserves backward compatibility:
   - Domain helpers `packages/domain/src/catalog/resource-hub.ts`
     (`resourceServesService`, `resourceAllowsProvider`,
@@ -96,8 +96,8 @@ of every resource that applies to its service.
   so `unitsInUse + 1 <= total` expresses "≥1 free unit". The availability engine
   is unchanged (legacy `resources`/`providerEligibleResourceIds` inputs remain and
   are still tested). New Fastify routes: `PUT
-  /v1/admin/resources/:id/{services,locations,employees}`, `GET
-  /v1/admin/resources/:id/hub`.
+/v1/admin/resources/:id/{services,locations,employees}`, `GET
+/v1/admin/resources/:id/hub`.
 - **Provider locations + legacy drop — done (2026-06-17).** `provider_locations`
   (`005-provider-locations.sql`) gives the canonical `Provider` real locations, fed
   into `hubCandidates` by availability/checkout/reschedule, so hub location

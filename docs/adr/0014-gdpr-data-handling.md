@@ -11,22 +11,26 @@ The platform processes personal data (customer PII: name, email, phone) on behal
 ## Decision
 
 **Export (Article 15 / 20):**
+
 - `GdprExportService.export(tenantId, customerId)` returns a JSON bundle of all booking, notification, and audit records for that customer.
 - Export is restricted to tenants on plans with the `gdpr_export` feature flag.
 - The export job runs as a background task with a download link delivered via email; the bundle expires after 48 hours.
 
 **Anonymization (Article 17):**
+
 - `GdprAnonymizationService.anonymize(tenantId, customerId)` replaces PII fields with hashed or redacted values in-place.
 - Booking records are retained (for financial audit) but customer identifying fields are zeroed: `customerEmail → anon_{sha256(email)}@deleted.invalid`, `customerName → [deleted]`, `customerPhone → null`.
 - The anonymization is irreversible and records an audit event `gdpr.anonymized`.
 
 **Retention:**
+
 - Booking financial records: 7-year retention (EU accounting rules).
 - Audit logs: 2-year retention, then archived to cold storage.
 - Attachment files: deleted on customer anonymization request.
 - Credential vault entries: deleted immediately on tenant offboarding.
 
 **Lawful basis tracking:**
+
 - Each tenant configures the lawful basis for processing (contract, legitimate interest, or consent) in their tenant settings.
 - Consent records (where applicable) are stored separately from bookings and are purged on withdrawal.
 

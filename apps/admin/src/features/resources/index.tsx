@@ -405,7 +405,13 @@ function CheckboxGroup(props: {
       }}
     >
       <legend style={{ fontWeight: 600, fontSize: "var(--ui-text-sm)" }}>{props.title}</legend>
-      <p style={{ color: "var(--ui-color-text-muted)", fontSize: "var(--ui-text-sm)", margin: "0 0 var(--ui-space-2)" }}>
+      <p
+        style={{
+          color: "var(--ui-color-text-muted)",
+          fontSize: "var(--ui-text-sm)",
+          margin: "0 0 var(--ui-space-2)",
+        }}
+      >
         {props.hint}
       </p>
       {props.options.length === 0 ? (

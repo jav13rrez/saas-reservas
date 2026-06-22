@@ -18,6 +18,7 @@ Google Calendar and Microsoft Outlook require OAuth 2.0 Authorization Code flow 
 4. **Token refresh** – called by calendar adapters before any API call; renews via refresh token and updates the vault.
 
 Credential isolation:
+
 - Platform mode: vault key = `("platform", provider, field)` — all tenants share the same app credentials but have independent refresh tokens under their own tenant vault namespace.
 - Tenant mode: vault key = `(tenantId, provider, field)` — tenant owns the OAuth app.
 

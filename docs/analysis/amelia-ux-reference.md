@@ -76,6 +76,7 @@ Dashboard
 ```
 
 Observaciones / ideas a robar:
+
 - **Dos dashboards en uno** (Appointments vs Events) con tabs. Citas y eventos son modelos
   distintos y los KPIs cambian (horas vs asientos). Nuestro split Reservas/Eventos encaja.
 - **Occupancy rate** es un KPI central y se mide en la unidad del recurso limitante: horas de
@@ -90,6 +91,7 @@ Implicación para nuestro `Inicio`: hoy es un placeholder. Un primer dashboard �
 proveedor. Lo dejamos anotado para una iteración posterior.
 
 Preguntas pendientes:
+
 - ¿El filtro avanzado (icono) permite filtrar por Employee/Service/Location?
 - ¿El heatmap de Daily occupancy es clicable hacia el día en Calendar?
 
@@ -112,6 +114,7 @@ Calendar
 ```
 
 Observaciones / ideas a robar:
+
 - **Selector de vista** Month/Week/Day/List en un dropdown único, no tabs. Nuestra pantalla
   Calendario hoy es solo semanal por proveedor; Amelia usa vista temporal (mes/semana/día) y deja
   el filtrado por empleado al panel de filtros, no como eje de la rejilla.
@@ -122,6 +125,7 @@ Observaciones / ideas a robar:
 - **`Today`** y flechas `< >` para navegación — ya lo tenemos en nuestra vista semanal.
 
 Diferencia de enfoque importante:
+
 - Amelia: eje = **tiempo** (mes/semana/día), el empleado es un **filtro**.
 - Nosotros (ahora): eje = **proveedor** (filas) × días (columnas), una sola semana.
 - Ambos son válidos. La vista "por proveedor" nuestra es buena para ver carga/solapes de cada
@@ -129,6 +133,7 @@ Diferencia de enfoque importante:
   global. **Posible objetivo:** ofrecer ambas (toggle "Por tiempo" / "Por proveedor").
 
 Preguntas pendientes:
+
 - ¿El panel de filtro (icono) permite filtrar por Employee / Service / Location a la vez?
 - En vista Week/Day, ¿hay columnas por empleado o una sola línea temporal?
 - ¿Click en una cita abre detalle o el modal de edición?
@@ -164,6 +169,7 @@ Bookings
 ```
 
 Observaciones / ideas a robar:
+
 - **Selección masiva** (checkbox por fila + acciones "···" arriba) — útil para cancelar/exportar
   en lote. Hoy no lo tenemos.
 - **Búsqueda + rango de fechas + filtro avanzado** siempre presentes. Nuestra tabla de Reservas no
@@ -202,6 +208,7 @@ Orden Amelia: **Category → Service → Employee → Date → Time → Location
 Nuestro orden actual: Service → Provider → Customer → Start.
 
 Diferencias a considerar:
+
 - **Category como primer filtro** (opcional) para acotar la lista de servicios. No lo tenemos;
   encaja con agrupar el catálogo por categorías.
 - **Location es un campo explícito** del appointment. Nosotros la derivamos del recurso; Amelia
@@ -234,6 +241,7 @@ del modal. Y **cada tipo de booking tiene su propio modal** con sus campos (cohe
 tabs separadas).
 
 Pendiente:
+
 - Acciones del menú "···" por fila (editar, cancelar, status, eliminar).
 - Los **status** de una cita (no como columna; ¿en el detalle o como filtro?).
 - Cómo es el `Time` dropdown: ¿muestra solo slots libres según disponibilidad del empleado?
@@ -286,6 +294,7 @@ Settings:  ajustes adicionales del evento
 ```
 
 Observaciones / ideas a robar:
+
 - **STATUS de evento como dropdown coloreado e inline** (Open/Closed/Full/Canceled). El nuestro de
   reservas es solo confirmed/cancelled; los eventos necesitan más estados (aforo lleno, cerrado).
 - **BOOKED = reservados / capacidad** visible en la tabla — el aforo es protagonista, coherente con
@@ -350,9 +359,10 @@ Special days: jornadas con horario especial
 ```
 
 Observaciones / ideas a robar:
+
 - **No hay tab "Resources" en el empleado** — pero OJO: esto NO significa que Amelia no ligue
   recursos a empleados. **Sí lo hace**, solo que la relación se configura **desde el Recurso**
-  (selector *Employees* en la ficha de Resource — ver Catalog → Resources). Corrección de una
+  (selector _Employees_ en la ficha de Resource — ver Catalog → Resources). Corrección de una
   conclusión previa: nuestro modelo B (elegibilidad proveedor↔recurso) **coincide con Amelia**, con
   la dirección de configuración invertida (`provider.resourceIds` vs `resource.employeeIds`).
 - **Scheduling propio del empleado** (Work hours / Days off / Special days) que **nosotros aún no
@@ -413,6 +423,7 @@ Gallery / Settings
 ```
 
 Observaciones:
+
 - **Employees se asigna desde el Servicio** (además de desde el Employee → tab Services). Relación
   N:M editable desde ambos lados. Nosotros lo hacemos solo desde el proveedor (serviceIds checkboxes).
 - **Color por servicio** → otra confirmación para colorear el calendario de forma estable.
@@ -423,7 +434,7 @@ Observaciones:
   Nuestro servicio ya tiene duración/buffer/precio inline; falta capacidad min/max.
 - **Recurring appointments** y **Limit per customer**: políticas por servicio que no tenemos.
 
-### Resources — ficha (New resource)  ⭐ CLAVE — CORRIGE NOTA PREVIA
+### Resources — ficha (New resource) ⭐ CLAVE — CORRIGE NOTA PREVIA
 
 ```
 Tab: Details (única)
@@ -442,7 +453,7 @@ Tab: Details (única)
 ```
 
 **CORRECCIÓN IMPORTANTE a la nota de Employees:** dije que "Amelia no liga recursos a empleados".
-**Es inexacto.** El vínculo existe, pero se configura **desde el Recurso** (selector *Employees*),
+**Es inexacto.** El vínculo existe, pero se configura **desde el Recurso** (selector _Employees_),
 no desde la ficha del Empleado. Es decir: la elegibilidad proveedor↔recurso **SÍ existe en Amelia**
 — justo lo que intuyó el dueño del proyecto. Nuestro modelo B no es un invento ajeno a Amelia, sino
 la misma idea con la **dirección de configuración invertida** (nosotros: `provider.resourceIds`;
@@ -450,16 +461,17 @@ Amelia: `resource.employeeIds`).
 
 El modelo de recursos de Amelia es, de hecho, **más rico** que el nuestro:
 
-| Concepto | Amelia | Nosotros (hoy) |
-| --- | --- | --- |
-| Pool con cantidad | Sí (Quantity) | Sí (quantity) |
-| Resource ↔ Services | Selector *Services* (multi / All) | `service.resourceId` (1 servicio→1 recurso) |
-| Resource ↔ Locations | Selector *Locations* (multi / All) | `resource.locationId` (1 recurso→1 sede) |
-| Resource ↔ Employees (elegibilidad) | Selector *Employees* (multi / All) | `provider.resourceIds` (desde el proveedor) |
-| Partición de cantidad | **shared / per-service / per-location** | Solo "shared" implícito |
-| Uso en group booking | Toggle (consume N o 1) | No (1 reserva = 1 unidad) |
+| Concepto                            | Amelia                                  | Nosotros (hoy)                              |
+| ----------------------------------- | --------------------------------------- | ------------------------------------------- |
+| Pool con cantidad                   | Sí (Quantity)                           | Sí (quantity)                               |
+| Resource ↔ Services                 | Selector _Services_ (multi / All)       | `service.resourceId` (1 servicio→1 recurso) |
+| Resource ↔ Locations                | Selector _Locations_ (multi / All)      | `resource.locationId` (1 recurso→1 sede)    |
+| Resource ↔ Employees (elegibilidad) | Selector _Employees_ (multi / All)      | `provider.resourceIds` (desde el proveedor) |
+| Partición de cantidad               | **shared / per-service / per-location** | Solo "shared" implícito                     |
+| Uso en group booking                | Toggle (consume N o 1)                  | No (1 reserva = 1 unidad)                   |
 
 Ideas a robar / decisiones:
+
 - **Configurar el recurso como hub** que declara a la vez Services × Locations × Employees a los que
   aplica, con "All" como default, es más potente y centralizado que dispersar la relación. Posible
   refactor: que nuestro Recurso tenga `serviceIds[]`, `locationIds[]`, `providerIds[]`.
@@ -489,6 +501,7 @@ Gallery / Settings
 ```
 
 Observaciones:
+
 - Package = bono de varias sesiones de uno o varios servicios, con **validez temporal** (Duration).
   Coincide con nuestra entidad `Package` del data-model (validity_days, rules). UI no construida.
 - Mismo patrón visual que Service/Event (image, name, color, show on website, description).
@@ -520,6 +533,7 @@ Locations
 ```
 
 Observaciones:
+
 - **Una Location puede ser online** ("Zoom Meeting / Online", Address = "Online"). La sede no es
   solo física → encaja con servicios/eventos virtuales. Nuestro `Location` asume sitio físico.
 - **No hay campo timezone en el modal** de este ejemplo (Amelia lo gestiona global o por empleado).
@@ -558,6 +572,7 @@ Customers
 ```
 
 Observaciones / ideas a robar:
+
 - **LAST BOOKING en la lista** — métrica de actividad del cliente muy útil. No la tenemos.
 - **Nota inline desde la tabla** (botón "+") además de la Note interna en la ficha.
 - **Notification language por cliente** — idioma de sus notificaciones. Encaja con i18n.
@@ -611,6 +626,7 @@ Modal New coupon (tabs: Details | Notification):
 ```
 
 Observaciones / ideas a robar:
+
 - **Finance = Transactions + Invoices + Coupons** en un solo área con tabs. Nuestro "Facturación"
   es placeholder; este es el mapa.
 - **Transaction enlaza pago ↔ reserva ↔ cliente ↔ empleado** — trazabilidad completa. Coincide con
@@ -654,6 +670,7 @@ Notifications
 ```
 
 Observaciones / ideas a robar:
+
 - **Matriz canal × destinatario × trigger**: Email/SMS, a cliente/empleado, por cada evento del
   ciclo de vida. Muy completo. Coincide con nuestro `NotificationTemplate` (channel, trigger,
   placeholders) y `NotificationJob` ya en backend.
@@ -687,12 +704,13 @@ Galería de **6 experiencias de front-end personalizables**, cada una con previe
 Cada una abre un editor visual (colores, textos/labels, layout) para que el widget encaje con la
 marca del sitio.
 
-Nota del dueño del proyecto (2026-06-16): *Amelia ha invertido mucho aquí porque, al ser un plugin
+Nota del dueño del proyecto (2026-06-16): _Amelia ha invertido mucho aquí porque, al ser un plugin
 de WordPress, integrarse en el diseño del sitio es crítico. Para nosotros NO necesitamos tanta
-complejidad; sí integraremos algo de personalización, pero se abordará más adelante.* No se entra
+complejidad; sí integraremos algo de personalización, pero se abordará más adelante._ No se entra
 en cada editor por ahora.
 
 Implicación para nosotros:
+
 - Corresponde a `apps/booking-widget` (front-end público) + el portal de cliente/empleado.
 - Nuestro enfoque: branding por tenant (logo, color primario, labels básicos) vía design tokens
   (`packages/ui`), sin un editor visual tan elaborado. Decisión diferida.
@@ -716,6 +734,7 @@ Custom Fields
 ```
 
 Observaciones:
+
 - **Campos custom para Booking y para Customer** (dos ámbitos). Reordenables (drag).
 - Tipos de campo (Radio button, Text area, …) — formularios dinámicos sin tocar código.
 - Coincide con nuestra entidad `FileAttachment.custom_field_id` y los placeholders "Custom fields"
@@ -745,6 +764,7 @@ API (Elite)
 ```
 
 Observaciones / ideas a robar:
+
 - **`Resources` es una feature conmutable**, no un área siempre presente. Confirma que para muchos
   tenants el constraint de recursos no aplica. En nuestro modelo, recurso es opcional por servicio
   (`service.resourceId` puede ser null), lo que da el mismo efecto sin un flag global.
@@ -786,12 +806,14 @@ Settings es un panel con sub-secciones (nav izquierda):
 ```
 
 Observaciones / ideas a robar:
+
 - **Slot step** (p.ej. 30min) — granularidad del motor de disponibilidad. Nosotros lo calculamos;
   habría que exponerlo como ajuste del tenant.
 - **Políticas de tiempo**: mínimo antes de reservar/cancelar/reagendar + ventana de antelación
   (365 días). Coincide con nuestro motor de políticas de cambio (US3, ya en backend). Falta UI.
 - **Mostrar slots en el huso del cliente**, **Add to Calendar**, **redirect tras reservar** —
   ajustes del widget público.
+
 ### Company (revisado)
 
 Sub-árbol propio dentro de Settings:
@@ -814,6 +836,7 @@ Company
 ```
 
 Observaciones / ideas a robar:
+
 - **Working hours / Days off existen a DOS niveles**: empresa (aquí) y empleado (tab del empleado).
   El horario efectivo de un slot es la **intersección** empresa ∩ empleado ∩ (servicio). Nosotros
   hoy no modelamos horario de empresa; conviene añadirlo como capa base del tenant.
@@ -833,6 +856,7 @@ Payment methods
 ```
 
 Observaciones / ideas a robar:
+
 - **Formato monetario configurable** (símbolo, posición, separador, decimales) → ajuste del tenant.
   Hoy formateamos en `@/lib/format`; falta exponerlo como preferencia.
 - **"On-site" como método por defecto**: pago presencial. Útil para el caso terapias/consulta.
@@ -851,6 +875,7 @@ People counting logic:  (○) Customer plus additional people   ( ) Total people
 ```
 
 Observaciones / ideas a robar:
+
 - **`Default appointment status`** (Approved vs Pending) = reserva auto-confirmada o pendiente de
   aprobación. Nosotros hoy creamos siempre `confirmed`; añadir un modo "pending" es backlog.
 - **`Employee selection logic` (Random / Least busy / …)**: clave para nuestro selector de
@@ -899,6 +924,7 @@ Admin
 ```
 
 Observaciones / ideas a robar:
+
 - **Tres roles base = Employee / Customer / Admin**, cada uno con un panel propio (URL) y un set de
   permisos. Mapea a nuestro RBAC multi-tenant: `owner/admin`, `staff` (=Employee), `customer`.
 - **El permiso es por capability, no por pantalla**: "manage their schedule", "manage customers",
@@ -930,7 +956,7 @@ Observaciones / ideas a robar:
 
 ## Observaciones transversales
 
-*(Se irán añadiendo a medida que veamos más pantallas)*
+_(Se irán añadiendo a medida que veamos más pantallas)_
 
 - **Patrón "el hub declara sus relaciones":** las relaciones N:M (resource↔service↔location↔
   employee) se editan desde la entidad "central" de cada caso, con "All" como default, no desde
@@ -950,4 +976,4 @@ Observaciones / ideas a robar:
 
 ---
 
-*Última actualización: 2026-06-16*
+_Última actualización: 2026-06-16_
