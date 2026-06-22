@@ -126,6 +126,20 @@ function failureStatus(resolution: Exclude<TenantResolution, { ok: true }>): num
   }
 }
 
+/**
+ * The first value of the X-Forwarded-Host header, if present. Proxies may append
+ * a comma-separated list; the left-most entry is the original client-facing host.
+ */
+function forwardedHost(request: FastifyRequest): string | undefined {
+  const raw = request.headers["x-forwarded-host"];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (value === undefined) {
+    return undefined;
+  }
+  const first = value.split(",")[0]?.trim();
+  return first !== undefined && first.length > 0 ? first : undefined;
+}
+
 function tenantOf(request: FastifyRequest): RequestTenant {
   if (request.tenant === undefined) {
     throw new Error("tenant resolution hook did not run for a tenant-scoped route");
@@ -141,8 +155,16 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     if (request.url.startsWith("/v1/platform/") || request.url.startsWith("/v1/ops/")) {
       return;
     }
+    // Tenant routing prefers X-Forwarded-Host over Host. Server-to-server callers
+    // (e.g. the admin console's api-client, ADR-0018) cannot set Host: the fetch
+    // spec lists it as a forbidden header and undici strips it, so they would
+    // otherwise route to the API's own host and fail to resolve. The resolver
+    // re-validates the value against the tenant registry on every request and the
+    // staff-auth gate binds sessions to the host-resolved tenant, so a forged
+    // header cannot widen access. SECURITY: a production edge proxy MUST strip any
+    // inbound X-Forwarded-Host and set its own before this hop.
     const resolution = await resolveRequestTenant({
-      host: request.headers.host,
+      host: forwardedHost(request) ?? request.headers.host,
       platformBaseDomain: deps.platformBaseDomain,
       lookup: deps.tenantLookup,
     });

@@ -483,6 +483,41 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
     for per-tenant connected-account ids; checkout payment-method + webhook
     capture; Stripe webhook signature verification.
 
+### 2026-06-22 (live end-to-end validation of `api` mode + X-Forwarded-Host fix)
+
+- Ran the prioritized **live validation of `api` mode** against a real stack stood
+  up inside the session (PostgreSQL 16 + Redis 7 native, app role
+  `saas_app` `NOSUPERUSER NOBYPASSRLS`, migrations `001`–`008`, API in persistent
+  mode). No code changes to the app for the validation itself.
+  - **RLS proven for real:** with a non-superuser role, fail-closed without tenant
+    context (0 rows), visible under the correct tenant, 0 rows under another
+    tenant. Confirms the `TECH_DEBT` RLS blocker is the compose superuser role
+    only, not a policy gap.
+  - **API chain (curl):** tenant provision → staff gate (401/201) → Ubicación →
+    Categoría → Servicio → Proveedor (assign + locations) → Agenda → Recurso (hub)
+    → Cliente → Disponibilidad (8 slots) → reserva admin no-charge (8→7) → cancel
+    (7→8); all persisted in Postgres.
+- **Found + fixed a blocking `api`-mode bug (ADR-0018).** The admin `api-client`
+  routed the tenant via the `Host` header, but `Host` is a forbidden fetch header
+  and `undici` strips it → every call got `404 unknown-host`. Fix: the client now
+  sends `X-Forwarded-Host`, and the API tenant hook
+  (`availability-routes.ts`) prefers a validated `X-Forwarded-Host` over `Host`
+  (resolver re-validates against the registry; staff-auth tenant binding prevents
+  a forged header from widening access; production edge proxy must strip inbound
+  `X-Forwarded-Host`). Added regression test "resolves the tenant from
+  X-Forwarded-Host". With the fix, the **console seam works end to end**: all six
+  internal route handlers read real data, and a console write (`POST
+  /api/locations`) persisted to Postgres.
+- **Stripe smoke (Fase B) blocked by network egress:** `api.stripe.com` is not in
+  this environment's egress allowlist, so the live round-trip could not run here
+  (the checkout's `payment-declined` was the egress block surfacing as a
+  connection error, not a real Stripe call). Needs the host allowlisted or a run
+  on the operator's machine. Also recorded a correctness finding: the public
+  checkout collapses any charge failure (including `gateway-error`) into
+  `402 payment-declined`, so a Stripe outage looks like a card decline.
+- Green: typecheck, lint, Prettier; full suite **298 passing / 6 skipped, 0
+  failures** (Redis up un-skipped the lock tests; +1 new regression test).
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.

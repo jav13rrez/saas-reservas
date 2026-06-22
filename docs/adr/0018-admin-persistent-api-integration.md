@@ -1,7 +1,7 @@
 # ADR-0018: Admin Console ↔ Persistent API Integration
 
-**Date**: 2026-06-19
-**Status**: accepted (Phases 1–5 implemented; live `api`-mode validation pending)
+**Date**: 2026-06-19 (updated 2026-06-22)
+**Status**: accepted (Phases 1–5 implemented; live `api`-mode validation **done** 2026-06-22)
 **Deciders**: Project owner + agent
 **Relates to**: ADR-0002 (Fastify API), ADR-0016 (resource hub), ADR-0017 (staff auth)
 
@@ -55,11 +55,23 @@ demo store as the default so the single-command dev experience never breaks.
 
 2. **Server-side API client owns auth and tenancy.** In `api` mode a server-only
    client (`apps/admin/src/server/api-client.ts`) calls the Fastify API with the
-   tenant **Host header** (`ADMIN_TENANT_HOST`) and a cached **staff session
+   tenant routing header (`ADMIN_TENANT_HOST`) and a cached **staff session
    cookie** obtained by logging in with configured staff credentials
    (`ADMIN_STAFF_EMAIL` / `ADMIN_STAFF_PASSWORD`), re-authenticating on 401. The
    browser never sees API origins or staff credentials. (A real per-operator
    login UI replacing the service-account credentials is a later step.)
+
+   **Tenant routing uses `X-Forwarded-Host`, not `Host` (corrected 2026-06-22).**
+   The original design sent the tenant host in the `Host` header. This silently
+   failed in `api` mode: `Host` is a [forbidden header](https://fetch.spec.whatwg.org/#forbidden-header-name)
+   in the fetch spec and Node's `undici` strips it, so every API call routed to
+   the API's own host and got `404 unknown-host`. The fix: the client sends
+   `X-Forwarded-Host`, and the API tenant hook (`availability-routes.ts`) prefers
+   a validated `X-Forwarded-Host` over `Host`. The resolver re-validates the value
+   against the tenant registry on every request and the staff-auth gate binds
+   sessions to the host-resolved tenant, so a forged header cannot widen access.
+   SECURITY: a production edge proxy MUST strip any inbound `X-Forwarded-Host` and
+   set its own before this hop.
 
 3. **The API client maps shapes and orchestrates multi-call writes.** The
    demo-store DTOs remain the console's contract; the `api` `DataSource`
@@ -103,6 +115,28 @@ demo store as the default so the single-command dev experience never breaks.
   mapping lives in one place (the admin API client) to contain it.
 - `ADMIN_DATA_MODE`, `API_ORIGIN`, `ADMIN_TENANT_HOST`, `ADMIN_STAFF_EMAIL`,
   `ADMIN_STAFF_PASSWORD` join the operator setup surface (`docs/operations/SETUP.md`).
+
+## Live validation (2026-06-22)
+
+The full `api`-mode chain was exercised end to end against a real stack (PostgreSQL
+16 + Redis 7 + the persistent API), the one thing not reproducible earlier:
+
+- Stack stood up in-session with an app role that is `NOSUPERUSER NOBYPASSRLS`
+  (not the compose `saas_admin` superuser), so **RLS is genuinely enforced**:
+  no tenant context → 0 rows (fail-closed); correct context → visible; another
+  tenant's context → 0 rows. This confirms the `TECH_DEBT` RLS blocker is purely
+  the superuser role choice, not a policy gap.
+- API chain (curl): tenant provision → staff login gate (401/201) → Ubicación →
+  Categoría → Servicio → Proveedor (assign + locations) → Agenda → Recurso (hub)
+  → Cliente → Disponibilidad (8 slots) → reserva admin no-charge (8→7) → cancel
+  (7→8). All persisted in Postgres.
+- Console seam (`apps/admin` in `ADMIN_DATA_MODE=api`): all six internal route
+  handlers (`/api/{locations,services,providers,resources,customers,bookings}`)
+  read real data through `source/* → api-client → API`, and a write through the
+  console (`POST /api/locations`) persisted to Postgres. This surfaced and fixed
+  the `Host`/undici routing bug above. A regression test
+  (`admin-read-model.test.ts`, "resolves the tenant from X-Forwarded-Host") now
+  locks the behavior in.
 
 ## Alternatives considered
 

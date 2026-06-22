@@ -342,4 +342,19 @@ describe("admin read-model endpoints", () => {
     });
     expect(response.statusCode).toBe(404);
   });
+
+  it("resolves the tenant from X-Forwarded-Host, taking precedence over Host", async () => {
+    // Server-to-server callers (admin api-client, ADR-0018) cannot set Host:
+    // undici strips that forbidden header, so tenant routing rides on
+    // X-Forwarded-Host. The hook must prefer it even when Host points elsewhere.
+    const response = await app.inject({
+      method: "GET",
+      url: "/v1/admin/services",
+      headers: { host: "127.0.0.1:3001", "x-forwarded-host": TENANT_HOST },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json<ListBody<{ name: string }>>().items.map((s) => s.name)).toContain(
+      "Consultation",
+    );
+  });
 });

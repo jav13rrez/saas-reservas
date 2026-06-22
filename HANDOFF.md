@@ -1,6 +1,53 @@
 # Handoff
 
-Last updated: 2026-06-19
+Last updated: 2026-06-22
+
+## Post-Spec Work (2026-06-22): Live `api`-mode validation + X-Forwarded-Host fix
+
+The prioritized **live end-to-end validation of `api` mode** is **done**. A real
+stack (PostgreSQL 16 + Redis 7 + persistent API) was stood up inside the session
+with an app role that is `NOSUPERUSER NOBYPASSRLS`, and the full admin chain was
+exercised both via the API (curl) and via the console (`apps/admin` in
+`ADMIN_DATA_MODE=api`):
+
+- **RLS proven** with a non-superuser role: fail-closed without tenant context,
+  isolation across tenants. Confirms the RLS blocker is the compose superuser role
+  only (no policy gap).
+- **Chain validated end to end:** Ubicación → Categoría → Servicio → Proveedor
+  (assign + locations) → Agenda → Recurso (hub) → Cliente → Disponibilidad (8
+  slots) → reserva admin no-charge (8→7) → cancel (7→8); persisted in Postgres.
+- **Blocking bug found + fixed (ADR-0018):** the admin `api-client` routed the
+  tenant via the `Host` header, which `undici` strips (forbidden fetch header) →
+  `404 unknown-host`. Now it sends `X-Forwarded-Host`; the API tenant hook prefers
+  a validated `X-Forwarded-Host` over `Host`. Regression test added. The console
+  seam now works end to end (reads + a write that persisted to Postgres). Green:
+  typecheck, lint, Prettier, full suite 298 passing / 6 skipped.
+
+**Next actions (priority order):**
+
+1. **Stripe test-mode smoke is still pending** — blocked here by network egress
+   (`api.stripe.com` not in the session allowlist). Run it after allowlisting the
+   host, or on the operator's machine: `STRIPE_SECRET_KEY=sk_test_…` through the
+   public checkout. Also fix the checkout correctness finding (it reports
+   `gateway-error` as `payment-declined`) — see `TECH_DEBT.md`.
+2. **Remaining real adapters:** SendGrid/Twilio (messaging), AWS KMS (real
+   `KmsAdapter`), S3 (attachments). See `PLANNING.md` Immediate Route #4.
+3. **Stripe follow-ups (TECH_DEBT):** DB-backed `VaultStorage` for connected-account
+   ids; payment-method + webhook-capture in the public checkout; webhook signature
+   verification.
+
+### How to re-stand the local stack in a fresh session (no Docker needed)
+
+Postgres 16 server binaries live at `/usr/lib/postgresql/16/bin`; `redis-server`
+is on PATH. Run Postgres as a non-root user with a `NOSUPERUSER NOBYPASSRLS`
+`saas_app` role owning the DB (so RLS is genuinely enforced), apply migrations
+`001`–`008` as that role, start Redis, then boot the API with `node
+--env-file=.env services/api/dist/main.js`. The admin runs with
+`ADMIN_DATA_MODE=api API_ORIGIN=http://127.0.0.1:3001
+ADMIN_TENANT_HOST=<slug>.reservas.localhost` + staff creds. Note: `api.stripe.com`
+egress is blocked in-session.
+
+
 
 ## Post-Spec Work (2026-06-19): Real Stripe Connect gateway — WIRED (ADR-0019)
 

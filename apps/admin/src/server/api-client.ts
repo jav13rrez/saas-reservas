@@ -43,7 +43,10 @@ function parseSessionCookie(setCookie: string | null): string | null {
 async function login(cfg: AdminApiConfig): Promise<string> {
   const response = await fetch(`${cfg.origin}/v1/admin/sessions`, {
     method: "POST",
-    headers: { host: cfg.tenantHost, "content-type": "application/json" },
+    // Tenant routing uses X-Forwarded-Host: `Host` is a forbidden fetch header and
+    // undici drops it, so the API would otherwise route to its own host. The API
+    // hook prefers X-Forwarded-Host and re-validates it against the registry.
+    headers: { "x-forwarded-host": cfg.tenantHost, "content-type": "application/json" },
     body: JSON.stringify({ email: cfg.staffEmail, password: cfg.staffPassword }),
   });
   if (response.status !== 201) {
@@ -85,7 +88,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     fetch(`${cfg.origin}${path}`, {
       method,
       headers: {
-        host: cfg.tenantHost,
+        // See login(): tenant routing uses X-Forwarded-Host, not the forbidden Host.
+        "x-forwarded-host": cfg.tenantHost,
         cookie: `staff_session=${cookie}`,
         ...(body !== undefined ? { "content-type": "application/json" } : {}),
       },

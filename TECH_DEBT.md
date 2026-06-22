@@ -24,6 +24,11 @@ How to use this file:
   actually enforced locally. Production MUST use a dedicated application role
   that is `NOSUPERUSER NOBYPASSRLS` (see `docs/operations/SETUP.md` §1) and run
   the app exclusively through it. RLS is the primary tenant-isolation defense.
+  _Validated 2026-06-22:_ running the stack with a `NOSUPERUSER NOBYPASSRLS`
+  `saas_app` role makes RLS enforce correctly (fail-closed without tenant context;
+  isolation across tenants), confirming this is purely a role-choice fix — no
+  policy gap. The compose default still ships the superuser role, so the blocker
+  stands for any deployment that reuses it.
 - **[HIGH] Staff sessions live in an in-memory per-process map** (ADR-0017).
   Sessions are lost on API restart and do not work across multiple API
   instances / behind a load balancer. Needs a shared, persistent session store
@@ -60,6 +65,19 @@ a real implementation + the provider account/credentials in
     checkout still needs the client-confirm + webhook-capture flow to pass one.
   - **[HIGH] Stripe webhook signatures are not verified.** `STRIPE_WEBHOOK_SECRET`
     is in the env contract but the webhook processor does not yet enforce it.
+  - **[MEDIUM] Checkout reports infrastructure errors as card declines.** The
+    public checkout (`checkout-routes.ts`) collapses any cart charge failure into
+    `402 payment-declined`, including the gateway's `gateway-error` outcome
+    (Stripe unreachable / 5xx / connectivity). A Stripe outage therefore looks to
+    the customer like a declined card and is indistinguishable in logs. Surface
+    `gateway-error` distinctly (e.g. `502/503`, retriable) vs. real declines.
+    Found during the 2026-06-22 live validation (egress to `api.stripe.com` is
+    blocked in the session environment, which exercised this exact path).
+  - **[INFRA] `api.stripe.com` not in the session egress allowlist.** The live
+    Stripe test-mode smoke could not run inside the dev container because outbound
+    `api.stripe.com` is blocked by the environment network policy. Allowlist the
+    host (or run the smoke on the operator's machine) to validate the real gateway
+    round-trip; the key/account themselves were not exercised.
 - **[HIGH] Email / SMS:** `FakeMessageProvider` → SendGrid/SES + Twilio.
 - **[HIGH] Credential vault KMS:** `InMemoryKmsAdapter` → AWS/GCP KMS CMK.
   `CREDENTIALS_MASTER_KEY` is currently optional and only validated when present.
@@ -108,10 +126,15 @@ a real implementation + the provider account/credentials in
   cannot be backed by the persistent stack until ADR-0018 Phases 2–3 land
   (customer registry, admin "book on behalf"). Today only Locations is wired
   through the data-source seam; the rest still read the demo store.
-- **[LOW] `api`-mode admin client is not covered by an automated end-to-end
-  test.** The Host-header + staff-session path is typechecked and the API side is
-  e2e-tested, but the admin→API round trip needs Postgres+Redis+API running and
-  was validated only structurally in this environment.
+- **[RESOLVED 2026-06-22] `api`-mode admin client validated end to end.** Ran the
+  console in `ADMIN_DATA_MODE=api` against a real PostgreSQL+Redis+API stack: all
+  six internal route handlers read real data and a console write persisted to
+  Postgres. This surfaced and fixed a blocking bug — the client routed the tenant
+  via `Host`, which `undici` strips (forbidden fetch header), so every call got
+  `404 unknown-host`; it now sends `X-Forwarded-Host` and the API tenant hook
+  prefers a validated `X-Forwarded-Host` over `Host` (ADR-0018). Regression test
+  added (`admin-read-model.test.ts`). NOTE: production edge proxy MUST strip
+  inbound `X-Forwarded-Host` and set its own before the API hop.
 - **[MEDIUM] Admin no-charge booking takes no slot lock.** Unlike public checkout,
   `AdminBookingService` validates availability and records occupancy immediately
   with no Redis lock, so two simultaneous admin bookings for the same slot could
