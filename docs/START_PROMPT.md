@@ -27,49 +27,72 @@ Apoyo según contexto:
   - docs/analysis/amelia-ux-reference.md — LEER antes de diseñar cualquier UI o
     feature nueva. Es el barrido completo del admin de Amelia (referencia UX, no
     código). Sus "Decisiones pendientes" marcan lo que falta por decidir.
-  - docs/adr/ (ADR-0001 a ADR-0019) — el porqué de cada decisión de arquitectura.
+  - docs/adr/ (ADR-0001 a ADR-0020) — el porqué de cada decisión de arquitectura.
     El modelo de recursos vigente es el HUB de ADR-0016; la auth de staff es
-    ADR-0017; la integración admin↔API persistente es ADR-0018; el gateway real
-    de Stripe Connect es ADR-0019.
+    ADR-0017; la integración admin↔API persistente es ADR-0018 (incl. el ruteo de
+    tenant por X-Forwarded-Host); el gateway real de Stripe es ADR-0019 (incl.
+    payment-method + webhook firmado); el adaptador de email Brevo es ADR-0020.
 
 Estado actual (a fecha de este prompt): las tareas de spec T001–T086 están
-COMPLETAS. El trabajo es post-spec (productivización). Ya completado: migración
-de la capa canónica al modelo HUB de recursos (ADR-0016, incl. drop del modelo B
-legacy y ubicaciones de proveedor), auth de staff para /v1/admin/* (ADR-0017),
-bootstrap de servidor de producción (main.ts: modo Drizzle/Redis o in-memory),
-integración de apps/admin contra la API persistente en modo `api` (ADR-0018),
-agenda por proveedor (Work hours / Days off / Special days), y el PRIMER
-adaptador real: Stripe Connect detrás del puerto PaymentGateway, seleccionado por
-STRIPE_SECRET_KEY (el fake sigue siendo el default) — ADR-0019.
+COMPLETAS y TODO el trabajo post-spec hasta aquí está fusionado en `main`. Hecho:
+modelo HUB de recursos (ADR-0016), auth de staff para /v1/admin/* (ADR-0017),
+bootstrap de servidor (main.ts: Drizzle/Redis o in-memory), integración de
+apps/admin contra la API persistente en modo `api` **validada en vivo** y con el
+bug de ruteo `Host`/undici corregido vía X-Forwarded-Host (ADR-0018), agenda por
+proveedor, Stripe real con payment-method + webhook firmado platform-level
+(ADR-0019, seleccionado por STRIPE_SECRET_KEY; el fake sigue de default), y el
+adaptador de **email Brevo** detrás del puerto MessageProvider (ADR-0020,
+seleccionado por BREVO_API_KEY; el fake sigue de default). La suite está en 318
+tests verdes.
 
-ESTA SESIÓN ARRANCA AQUÍ (acción prioritaria #1): **Validación end-to-end en vivo
-del modo `api`** contra el stack real (Postgres + Redis + API levantados) — es lo
-único no ejercitable en el contenedor de la sesión anterior. Recorre la cadena
-admin (Ubicación → Recurso → Proveedor → Servicio → Reserva → Cliente →
-Calendario + agenda por proveedor) y un *smoke* de Stripe en **modo test**
-(STRIPE_SECRET_KEY=sk_test_…, STRIPE_API_BASE_URL opcional) a través del checkout.
-Después, continúa con el resto de adaptadores reales del item #4 de la Immediate
-Route: **SendGrid/Twilio (mensajería), AWS KMS (KmsAdapter real para el vault) y
-S3 (adjuntos)**, más los follow-ups de Stripe en TECH_DEBT.md (VaultStorage en BD
-para los account_id de Connect, payment-method + webhook-capture en el checkout
-público, verificación de firma de webhooks de Stripe). Las acciones están
-priorizadas en PLANNING.md > "Immediate Route" y HANDOFF.md > "Next actions". La
-deuda técnica acumulada antes del salto a VPS vive en TECH_DEBT.md (raíz): léela
-antes de planificar un despliegue de producción.
+ESTA SESIÓN ARRANCA AQUÍ (objetivo del dueño): **correr el SaaS en local y
+recorrer el panel admin ÁREA POR ÁREA desde el menú** (Dashboard, Calendario,
+Reservas, Servicios, Recursos, Ubicaciones, Proveedores, Clientes, Ajustes…) para
+analizar qué hace cada funcionalidad y qué falta. En paralelo, el dueño quiere
+**resolver la autenticación de operador y dejar establecidas y recordadas dos
+cuentas**: (a) una **cuenta de tenant** (negocio) con su admin, y (b) una **cuenta
+superadmin / de plataforma**.
 
-Contexto de operación (importante): el dueño del repo viene de Supabase+Vercel y
-está en fase de onboarding. La "Parte 2" (stack completo en local: Postgres +
-Redis vía Docker + API en modo persistente) está COMPLETA y validada de punta a
-punta: Docker Engine nativo en WSL2, migraciones 001–008 aplicadas, primer tenant
-real creado vía /v1/platform/tenants, admin de staff con login por cookie, y una
-reserva real cerrada (disponibilidad → checkout → webhook de pago → ocupación
-registrada). El admin (apps/admin) corre con `pnpm --filter @saas-reservas/admin
-dev` (Node 22) y ya puede correr contra la API persistente en modo `api`
-(ADMIN_DATA_MODE=api) además de su demo-store en memoria. Próximo paso natural de
-operación: la validación en vivo del modo `api` (acción #1 de arriba) y seguir con
-los adaptadores reales restantes.
+Contexto clave para ese objetivo (léelo antes de proponer):
+  - Para un **recorrido visual rápido del menú**, `apps/admin` en modo demo
+    (ADMIN_DATA_MODE por defecto, `pnpm --filter @saas-reservas/admin dev`, Node 22)
+    trae la cadena completa sembrada en memoria — es lo más cómodo para ver la UI.
+    Para datos reales/persistentes y auth, usar modo `api` contra el stack
+    (Postgres + Redis + API), ya validado en vivo.
+  - **Auth hoy (gap a resolver):** existe auth de staff a nivel API (ADR-0017:
+    `staff_accounts` por tenant, cookie de sesión scrypt), pero el admin en modo
+    `api` usa UNA credencial de servicio por env (ADMIN_STAFF_EMAIL/PASSWORD), SIN
+    pantalla de login por operador; y el modo demo no tiene auth. Provisionar
+    tenants (`POST /v1/platform/tenants`) está ABIERTO: **no hay aún auth de
+    plataforma/superadmin**. Diseñar/implementar: una pantalla de login real para
+    el operador y el concepto de cuenta superadmin de plataforma; registrar las
+    credenciales de forma durable (seed/doc local fuera de git, nunca secretos en
+    el repo). Si tomas decisiones de auth, regístralas en un ADR.
+  - Antes de diseñar UI nueva, lee docs/analysis/amelia-ux-reference.md.
+
+
+Contexto de operación (importante): el dueño es **principiante** (viene de
+Supabase+Vercel, en onboarding). Trabaja en WSL2 (Ubuntu). REGLAS DE TRATO:
+explica paso a paso, en español, **un comando cada vez**; **NUNCA le pidas pegar
+bloques grandes multilínea en su terminal** (se corrompen) — usa comandos de una
+sola línea o un archivo + `bash archivo.sh`; no des por hecho herramientas (p.ej.
+`jq` puede faltar). No te adelantes: confirma antes de profundizar.
+
+Estado de operación: el stack local (Postgres + Redis vía Docker en WSL2 + API
+persistente) está montado y validado de punta a punta, incluido el modo `api` del
+admin (un tenant real, login de staff por cookie, una reserva real cerrada). El
+admin corre con `pnpm --filter @saas-reservas/admin dev` (Node 22), en demo
+(memoria) o en modo `api` (ADMIN_DATA_MODE=api).
+
+Dirección actual (acordada al cerrar la sesión previa): se **pausó profundizar en
+pagos**; la prioridad de producto es el **camino a un MVP desplegable** (desplegar
+en dominio/host real, widget público de reserva, notificaciones email mínimas vía
+worker). El objetivo inmediato del dueño (recorrer el menú + resolver Auth y las
+cuentas tenant/superadmin) encaja en ese rumbo. La deuda pre-VPS vive en
+TECH_DEBT.md (raíz): léela antes de planificar despliegue. Lado operador (en su
+máquina, no en el repo): Stripe CLI instalado + logueado y un `whsec_…` guardado
+en su `.env` local — preparado pero sin usar hasta que haya despliegue.
 Guías de apoyo: docs/operations/SETUP.md (checklist de operador) y .env.example.
-Prefiere explicaciones paso a paso, detalladas y en español.
 
 Reglas de operación (de CLAUDE.md / AGENTS.md):
   - Spec Kit es la fuente de verdad de producto. PLANNING/PROGRESS/HANDOFF son la
