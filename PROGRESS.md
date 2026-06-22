@@ -544,6 +544,26 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
     bootstrap consumes the provider yet, so notifications don't fire in production
     until the worker runtime is wired. Not yet validated against live Brevo.
 
+### 2026-06-22 (Stripe live smoke — real PaymentIntent created, test mode)
+
+- Ran the Stripe test-mode smoke on the operator's machine (egress to
+  `api.stripe.com` is blocked in the session container, so this was done locally):
+  set `STRIPE_SECRET_KEY=sk_test_…` in `.env`, restarted the API in persistent
+  mode, provisioned a throwaway tenant + catalog + provider schedule, and hit
+  `POST /v1/public/checkout`.
+  - Result: checkout returned **`402 payment-declined`** (the real gateway — the
+    fake would have returned `201`), and Stripe held a **real PaymentIntent**
+    (`pi_…`, `amount: 3000`, `currency: eur`, `status: requires_payment_method`).
+  - This proves the **API → `api.stripe.com` round-trip** end to end: gateway
+    selection, HTTP transport, key auth, and charge creation with the correct
+    amount/currency.
+  - **Not yet proven:** a charge reaching `succeeded`. The public checkout does not
+    pass a payment method, so Stripe leaves the intent in `requires_payment_method`
+    and the gateway reports it as declined. Closing this needs the payment-method
+    passthrough + webhook capture (TECH_DEBT / ADR-0019 follow-up).
+  - Operator note: their terminal corrupts large multi-line pastes; use a file
+    (`bash script.sh`) or one-line commands.
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.

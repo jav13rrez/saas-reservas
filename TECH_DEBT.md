@@ -53,8 +53,14 @@ a real implementation + the provider account/credentials in
 `docs/operations/SETUP.md` §4 before launch.
 
 - **[HIGH] Payments:** `StripePaymentGateway` is wired (ADR-0019, selected by
-  `STRIPE_SECRET_KEY`; fake stays default) but **not yet validated against live
-  Stripe**, and three gaps remain before real money moves safely:
+  `STRIPE_SECRET_KEY`; fake stays default). **Validated live 2026-06-22** (operator
+  machine, Stripe test mode): the public checkout created a real PaymentIntent
+  (`pi_…`, `amount: 3000`, `currency: eur`, `status: requires_payment_method`),
+  and the gateway selection is confirmed (checkout returns `402` with the real
+  gateway vs. `201` with the fake). This proves the transport, key auth, and
+  charge creation against `api.stripe.com`. **Not yet proven: a charge reaching
+  `succeeded`** — that needs the payment-method passthrough below. Gaps remaining
+  before real money moves safely:
   - **[BLOCKER] Connected-account resolution is in-memory.** The boot vault
     (`resolvePaymentGateway`) only holds the platform secret key, so per-tenant
     `stripe_connect/account_id` ids do not resolve in production — destination

@@ -32,11 +32,13 @@ exercised both via the API (curl) and via the console (`apps/admin` in
    not notified); (b) there is **no worker bootstrap** consuming
    `resolveMessageProvider` + a queue. Then smoke against live Brevo with a real
    `BREVO_API_KEY` + a verified `MESSAGING_FROM_EMAIL`.
-2. **Stripe test-mode smoke is still pending** — blocked here by network egress
-   (`api.stripe.com` not in the session allowlist). Run it after allowlisting the
-   host, or on the operator's machine: `STRIPE_SECRET_KEY=sk_test_…` through the
-   public checkout (see the smoke guide in chat). Also fix the checkout
-   correctness finding (it reports `gateway-error` as `payment-declined`).
+2. **Stripe test-mode smoke — DONE 2026-06-22** (operator machine; egress blocked
+   in-session). The public checkout created a **real PaymentIntent** (`pi_…`,
+   `amount 3000`, `eur`, `requires_payment_method`); gateway selection confirmed
+   (`402` real vs `201` fake). Round-trip API→Stripe proven. **Next Stripe step:**
+   the payment-method passthrough + webhook capture so a charge reaches
+   `succeeded` (TECH_DEBT / ADR-0019). Also still open: the checkout correctness
+   fix (it reports `gateway-error` as `payment-declined`).
 3. **Remaining real adapters:** AWS KMS (real `KmsAdapter`), S3 (attachments),
    and SMS (paid Brevo SMS or Twilio). See `PLANNING.md` Immediate Route #4.
 4. **Stripe follow-ups (TECH_DEBT):** DB-backed `VaultStorage` for connected-account
