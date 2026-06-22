@@ -2,6 +2,45 @@
 
 Last updated: 2026-06-22
 
+## Session Close 2026-06-22 — READ FIRST: pivot to MVP / deployment
+
+**What this session delivered** (all on `main` now): live `api`-mode validation +
+the `X-Forwarded-Host` tenant-routing fix (ADR-0018); the Brevo email adapter
+(ADR-0020); the live Stripe smoke (real PaymentIntent created in test mode); and
+the Stripe payment-method passthrough + signed platform-level webhook capture
+(ADR-0019 follow-up). Suite green at 318 passing.
+
+**Strategic decision by the owner (important):** stop deepening payment plumbing.
+The owner has **no MVP deployed and no domain yet**, and is onboarding (treat as a
+**beginner — go slow, one step at a time, explain each command**, and never paste
+large multi-line blocks into their terminal — it corrupts them; use one-line
+commands or a file + `bash file.sh`). The Stripe succeeded-flow code is done and
+behind flags (fake stays default), so **live webhook validation is deferred until
+there is a real deployment**. Do not push further on payments unless asked.
+
+**The real next priority is the path to a launchable MVP, in this order:**
+
+1. **Deploy** the stack to a real domain/host (today everything runs only on the
+   owner's local WSL2). This is the biggest missing piece. Pre-VPS blockers live
+   in `TECH_DEBT.md` (esp. the `NOSUPERUSER NOBYPASSRLS` app role — validated this
+   session, RLS works with it — and no migration runner).
+2. **Public booking widget** (`apps/booking-widget`) — what the end customer sees.
+3. **Minimal email notifications** (booking confirmation): wire the worker
+   bootstrap to consume `resolveMessageProvider` (Brevo email is ready, ADR-0020),
+   and make the dispatcher send email (it still builds SMS when a phone is present
+   → `sms-not-supported`; product decision is email-only). See `TECH_DEBT.md`.
+
+**Open questions to settle with the owner before planning deployment:** MVP goal
+(pilot with one real business vs. public launch); hosting/domain choice (VPS vs.
+Railway/Render for the API, Vercel for the Next apps; Supabase = hosted Postgres
+only, Upstash = Redis); timeline.
+
+**Operator-side state (owner's machine, not in the repo):** Stripe CLI installed
+(1.42.14) and logged in (account "Narganes", `acct_1CvoJ4…`); a webhook signing
+secret (`whsec_…`) is saved in their local `.env` as `STRIPE_WEBHOOK_SECRET` —
+prepared but unused until deployment. A stale `apt.supabase.com` apt source on
+their machine errors harmlessly on `apt update` (optional cleanup later).
+
 ## Post-Spec Work (2026-06-22): Live `api`-mode validation + X-Forwarded-Host fix
 
 The prioritized **live end-to-end validation of `api` mode** is **done**. A real

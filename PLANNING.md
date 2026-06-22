@@ -121,6 +121,12 @@ A full sweep of the Amelia Premium admin console is permanently recorded in `doc
 
 ## Immediate Route (post-spec)
 
+> **Focus shift (2026-06-22):** the next priority is the **path to a launchable
+> MVP**, not more integration depth — (1) deploy to a real domain/host, (2) the
+> public booking widget, (3) minimal email notifications (worker bootstrap +
+> email-only dispatcher; Brevo is wired). Payment depth (Stripe succeeded-flow) is
+> done behind flags and paused until deployment. See `HANDOFF.md` "Session Close".
+
 Prioritized follow-up work — see `HANDOFF.md` for detail:
 
 1. **Canonical domain/persistence hub migration** — _COMPLETE (2026-06-17)_. Additive hub layer + read-model cutover (`AvailabilityService`/checkout/reschedule/Fastify read the hub pool via `hub-resources.ts`) + **provider locations** (`provider_locations`, `005-*.sql`, real hub location compatibility) + **destructive drop** of the legacy model-B tables `provider_resources` and `service_resources` (`006-*.sql`) and all their plumbing. The availability engine is untouched. `resources.location_id` was also dropped (`007-*.sql`); the hub is now the complete and sole resource model with no legacy remnants.

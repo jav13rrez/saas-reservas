@@ -595,6 +595,23 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
     live validation of an actual Stripe webhook delivery (`stripe listen`); the
     checkout still reports `gateway-error` as `payment-declined`.
 
+### 2026-06-22 (session close — pivot to MVP/deployment)
+
+- Owner-led re-prioritization: **pause deepening payment plumbing** and focus the
+  next work on the **path to a launchable MVP** — deploy on a real domain/host,
+  the public booking widget, and minimal email notifications (worker bootstrap +
+  email-only dispatcher). Rationale: no MVP deployed and no domain yet; the
+  Stripe succeeded-flow code is done behind flags and live webhook validation is
+  deferred until there is a deployment. Details + open questions in `HANDOFF.md`
+  ("Session Close — READ FIRST").
+- Operator setup (owner's machine, not in the repo): installed the **Stripe CLI**
+  (1.42.14), `stripe login` (account "Narganes"), and saved a `whsec_…` webhook
+  signing secret into the local `.env` as `STRIPE_WEBHOOK_SECRET` — prepared but
+  unused until deployment.
+- Repo hygiene: all session work merged to `main`; the working branch was deleted
+  (no dangling branches). Onboarding note recorded: the owner is a beginner — go
+  step by step and avoid large multi-line terminal pastes (they corrupt).
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.
