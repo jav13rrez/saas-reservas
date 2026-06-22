@@ -32,13 +32,16 @@ exercised both via the API (curl) and via the console (`apps/admin` in
    not notified); (b) there is **no worker bootstrap** consuming
    `resolveMessageProvider` + a queue. Then smoke against live Brevo with a real
    `BREVO_API_KEY` + a verified `MESSAGING_FROM_EMAIL`.
-2. **Stripe test-mode smoke — DONE 2026-06-22** (operator machine; egress blocked
-   in-session). The public checkout created a **real PaymentIntent** (`pi_…`,
-   `amount 3000`, `eur`, `requires_payment_method`); gateway selection confirmed
-   (`402` real vs `201` fake). Round-trip API→Stripe proven. **Next Stripe step:**
-   the payment-method passthrough + webhook capture so a charge reaches
-   `succeeded` (TECH_DEBT / ADR-0019). Also still open: the checkout correctness
-   fix (it reports `gateway-error` as `payment-declined`).
+2. **Stripe charge `succeeded` flow — IMPLEMENTED 2026-06-22.** The public
+   checkout now accepts a `paymentMethod` (e.g. `pm_card_visa`) → synchronous
+   confirmation; the charge carries `metadata.cartId`; and a signed
+   `POST /v1/public/payments/stripe-webhook` settles the booking on
+   `payment_intent.succeeded`. The earlier live smoke (real PaymentIntent created,
+   `402` real vs `201` fake) confirmed the round-trip. **Next: live-validate the
+   succeeded flow** with `stripe listen --forward-to
+localhost:3001/v1/public/payments/stripe-webhook` + a `pm_card_visa` checkout.
+   Still open: DB-backed `VaultStorage` for connected-account ids, and the
+   checkout reporting `gateway-error` as `payment-declined`.
 3. **Remaining real adapters:** AWS KMS (real `KmsAdapter`), S3 (attachments),
    and SMS (paid Brevo SMS or Twilio). See `PLANNING.md` Immediate Route #4.
 4. **Stripe follow-ups (TECH_DEBT):** DB-backed `VaultStorage` for connected-account

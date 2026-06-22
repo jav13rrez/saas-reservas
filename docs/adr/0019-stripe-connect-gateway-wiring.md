@@ -57,14 +57,18 @@ stripe-http.ts`) implements a `StripeHttpAdapter` moved into the integrations
 ## Consequences
 
 - The gateway is real and unit/contract tested (recording fake HTTP + injected
-  `fetch`), but **not yet exercised against live Stripe** — that belongs to the
-  next session's live `api`-mode validation.
-- **Known gaps (TECH_DEBT):** (a) the connected-account id is read from an
-  in-memory vault at boot, so multi-tenant destination charges need a
-  DB-backed `VaultStorage` to resolve per-tenant accounts in production;
-  (b) the synchronous charge path needs a payment method — the full public
-  checkout still requires the client-confirm + webhook-capture flow to pass one;
-  (c) Stripe webhook signature verification (`STRIPE_WEBHOOK_SECRET`) is wired in
-  config but not yet enforced in the webhook processor.
+  `fetch`). **Live-validated 2026-06-22** (operator machine, test mode): the public
+  checkout created a real PaymentIntent (`pi_…`, `amount 3000`, `eur`,
+  `requires_payment_method`); gateway selection confirmed (`402` real vs `201`
+  fake).
+- **Update 2026-06-22 — gaps (b) and (c) resolved:** the public checkout now
+  accepts a `paymentMethod` and threads it (+ `metadata.cartId`) through
+  `chargeCart` → `createCharge` for synchronous confirmation, and
+  `POST /v1/public/payments/stripe-webhook` captures `payment_intent.succeeded`
+  (signature-verified via `verifyStripeSignature` when `STRIPE_WEBHOOK_SECRET` is
+  set) to approve the booking. Remaining gap **(a)**: the connected-account id is
+  read from an in-memory vault at boot, so multi-tenant destination charges still
+  need a DB-backed `VaultStorage`. The succeeded flow is also **not yet validated
+  against a live Stripe webhook delivery** (`stripe listen`).
 - The fake gateway remains the default and the test backbone; nothing in the dev
   loop changed.

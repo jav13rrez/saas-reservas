@@ -96,6 +96,8 @@ export class CartReconciliationService {
     tenantId: string;
     cartId: string;
     actor: Actor;
+    /** Tokenized funding source (e.g. Stripe PaymentMethod id) for synchronous confirmation. */
+    paymentMethod?: string;
   }): Promise<CartTransaction> {
     const cart = await this.requireCart(input.tenantId, input.cartId);
     if (cart.status !== "pending") {
@@ -106,6 +108,11 @@ export class CartReconciliationService {
       amount: cart.totalAmount,
       currency: cart.currency,
       idempotencyKey: `cart:${cart.id}`,
+      description: `Cart ${cart.id}`,
+      // cartId rides on the gateway charge so an async payment webhook can map
+      // back to this cart and settle the booking (checkout-routes stripe-webhook).
+      metadata: { cartId: cart.id, tenantId: cart.tenantId },
+      ...(input.paymentMethod !== undefined ? { paymentMethod: input.paymentMethod } : {}),
     });
     if (!result.ok) {
       const failed: CartTransaction = { ...cart, status: "failed" };

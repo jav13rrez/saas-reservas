@@ -66,11 +66,19 @@ a real implementation + the provider account/credentials in
     `stripe_connect/account_id` ids do not resolve in production — destination
     charges silently fall back to plain platform charges. Needs a DB-backed
     `VaultStorage` before multi-tenant Connect payouts.
-  - **[BLOCKER] No payment method in the public checkout.** `createCharge`
-    confirms synchronously only when a `paymentMethod` is supplied; the real
-    checkout still needs the client-confirm + webhook-capture flow to pass one.
-  - **[HIGH] Stripe webhook signatures are not verified.** `STRIPE_WEBHOOK_SECRET`
-    is in the env contract but the webhook processor does not yet enforce it.
+  - **[RESOLVED 2026-06-22] Payment method passthrough + webhook capture.** The
+    public checkout now accepts an optional `paymentMethod` (e.g. `pm_card_visa`)
+    and threads it through `chargeCart` → `createCharge`, which confirms the
+    PaymentIntent synchronously. The charge carries `metadata.cartId`, and a new
+    `POST /v1/public/payments/stripe-webhook` settles the booking on
+    `payment_intent.succeeded` (reject on `payment_failed`/`canceled`), idempotent
+    per Stripe event id. NOTE: still not validated against a live Stripe webhook
+    delivery (needs `stripe listen` / a public endpoint).
+  - **[RESOLVED 2026-06-22] Stripe webhook signature verification.**
+    `verifyStripeSignature` (HMAC-SHA256 over the raw body, constant-time compare,
+    timestamp tolerance) gates the Stripe webhook route when
+    `STRIPE_WEBHOOK_SECRET` is set. A raw-body content-type parser preserves the
+    exact bytes for hashing.
   - **[MEDIUM] Checkout reports infrastructure errors as card declines.** The
     public checkout (`checkout-routes.ts`) collapses any cart charge failure into
     `402 payment-declined`, including the gateway's `gateway-error` outcome

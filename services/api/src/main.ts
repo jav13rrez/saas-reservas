@@ -202,6 +202,9 @@ async function persistentBootstrap(): Promise<Bootstrap> {
       webhooks: new WebhookProcessor(new DrizzleProcessedWebhookStore(db), events),
       occupancy: catalogRepo,
       holds: new DrizzleHoldStore(db),
+      ...(env.STRIPE_WEBHOOK_SECRET !== undefined
+        ? { stripeWebhookSecret: env.STRIPE_WEBHOOK_SECRET }
+        : {}),
     },
   };
 
@@ -259,6 +262,9 @@ async function inMemoryBootstrap(): Promise<Bootstrap> {
       carts: new CartReconciliationService(paymentStore, gateway, events),
       webhooks: new WebhookProcessor(new InMemoryProcessedWebhookStore(), events),
       occupancy: store,
+      ...(process.env.STRIPE_WEBHOOK_SECRET !== undefined
+        ? { stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET }
+        : {}),
     },
   };
 

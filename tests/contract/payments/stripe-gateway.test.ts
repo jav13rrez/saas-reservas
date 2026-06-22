@@ -81,6 +81,7 @@ describe("StripePaymentGateway", () => {
         currency: "EUR",
         idempotencyKey: "cart:abc",
         paymentMethod: "pm_card_visa",
+        metadata: { cartId: "abc", tenantId: "t1" },
       });
 
       expect(result).toEqual({ ok: true, chargeId: "pi_123" });
@@ -92,6 +93,9 @@ describe("StripePaymentGateway", () => {
       expect(call?.body.application_fee_amount).toBe("200");
       expect(call?.body.payment_method).toBe("pm_card_visa");
       expect(call?.body.confirm).toBe("true");
+      // Metadata rides on the PaymentIntent so the webhook can map back to the cart.
+      expect(call?.body["metadata[cartId]"]).toBe("abc");
+      expect(call?.body["metadata[tenantId]"]).toBe("t1");
       // The cart idempotency key reaches Stripe's Idempotency-Key header.
       expect(call?.opts?.idempotencyKey).toBe("cart:abc");
     });

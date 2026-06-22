@@ -73,6 +73,9 @@ export class StripePaymentGateway implements PaymentGateway {
       "payment_method_types[0]": "card",
     };
     if (request.description !== undefined) params.description = request.description;
+    for (const [key, value] of Object.entries(request.metadata ?? {})) {
+      params[`metadata[${key}]`] = value;
+    }
     if (request.paymentMethod !== undefined) {
       // Confirm immediately against the supplied funding source (works for
       // off-session/saved methods and Stripe test tokens like pm_card_visa).

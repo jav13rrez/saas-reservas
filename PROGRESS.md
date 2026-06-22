@@ -564,6 +564,35 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   - Operator note: their terminal corrupts large multi-line pastes; use a file
     (`bash script.sh`) or one-line commands.
 
+### 2026-06-22 (Stripe payment-method passthrough + webhook capture + signature verification)
+
+- Closed two Stripe gaps so a charge can reach `succeeded` end to end (ADR-0019
+  follow-up):
+  - **Payment method passthrough.** `ChargeRequest` gained `metadata`; the Stripe
+    gateway now emits `metadata[…]` on the PaymentIntent. `chargeCart` threads an
+    optional `paymentMethod` + `description` + `metadata.cartId`, and the public
+    checkout (`CheckoutBody.paymentMethod`) forwards it — so a `pm_card_visa`
+    confirms the intent synchronously.
+  - **Stripe webhook capture.** New `POST /v1/public/payments/stripe-webhook`:
+    verifies the signature (`verifyStripeSignature`, HMAC-SHA256 over the raw body,
+    constant-time compare, timestamp tolerance) when `STRIPE_WEBHOOK_SECRET` is
+    set, maps `payment_intent.succeeded` → approve (+ occupancy) and
+    `payment_failed`/`canceled` → reject, keyed by `metadata.cartId`, idempotent
+    per Stripe event id via the existing `WebhookProcessor`. The settle logic is
+    now shared with the generic (fake) webhook.
+  - **Raw body.** `buildApp` adds a JSON content-type parser that stashes the raw
+    body (needed because signature verification must hash the exact bytes);
+    handlers still receive parsed JSON.
+  - Wiring: `stripeWebhookSecret` flows into both `main.ts` bootstraps from
+    `STRIPE_WEBHOOK_SECRET`.
+  - Tests: 7 signature unit + 3 stripe-webhook e2e (approve/idempotent, bad
+    signature → 400, payment-failure → reject + free slot) + gateway metadata
+    assertion. Suite: **318 passing / 6 skipped, 0 failures**; typecheck, lint,
+    Prettier clean.
+  - Still open (TECH_DEBT): DB-backed `VaultStorage` for connected-account ids;
+    live validation of an actual Stripe webhook delivery (`stripe listen`); the
+    checkout still reports `gateway-error` as `payment-declined`.
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.

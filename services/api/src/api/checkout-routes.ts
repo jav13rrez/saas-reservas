@@ -27,10 +27,23 @@ import type {
   CheckoutLockService,
   SlotRef,
 } from "../application/scheduling/checkout-lock-service.js";
+import { verifyStripeSignature } from "@saas-reservas/integrations/payments/stripe-webhook";
 import type {
   WebhookEvent,
   WebhookProcessor,
 } from "../infrastructure/payments/payment-webhooks.js";
+
+/** Fastify request augmented with the raw body captured for signature checks. */
+interface RawBodyRequest {
+  rawBody?: string;
+}
+
+/** Minimal shape of a Stripe webhook event we act on (PaymentIntent lifecycle). */
+interface StripeWebhookEvent {
+  id?: string;
+  type?: string;
+  data?: { object?: { metadata?: Record<string, string> } };
+}
 
 export interface OccupancyRecorder {
   /** Persists confirmed occupancy so the availability engine sees it. */
@@ -96,6 +109,12 @@ export interface CheckoutDeps {
   occupancy: OccupancyRecorder;
   /** Defaults to the in-memory store when omitted. */
   holds?: HoldStore;
+  /**
+   * Stripe endpoint signing secret (`whsec_…`). When set, the Stripe webhook
+   * route enforces signature verification; when omitted, signatures are not
+   * checked (dev/test) but the route still settles by cart metadata.
+   */
+  stripeWebhookSecret?: string;
   tenantTimezone(tenantId: string): Promise<string>;
 }
 
@@ -108,6 +127,8 @@ interface CheckoutBody {
   attendees?: number;
   extraIds?: string[];
   customer: { email: string; firstName: string; lastName: string };
+  /** Tokenized funding source (e.g. Stripe `pm_card_visa`) for synchronous confirmation. */
+  paymentMethod?: string;
 }
 
 export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps): void {
@@ -117,6 +138,33 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
     for (const { slot, token } of hold.slots) {
       await deps.locks.release(slot, token);
     }
+  }
+
+  /**
+   * Settle a checkout once its payment outcome is known: approve + record
+   * occupancy on success, reject on failure, then release the slot locks and the
+   * hold. Shared by the generic (fake) and the Stripe webhook routes. Idempotency
+   * is enforced upstream by the WebhookProcessor (one settle per event id).
+   */
+  async function settle(tenantId: string, cartId: string, succeeded: boolean): Promise<void> {
+    const hold = await holds.find(tenantId, cartId);
+    if (hold === null) {
+      return;
+    }
+    if (succeeded) {
+      await deps.bookings.approve(tenantId, hold.bookingId, SYSTEM_ACTOR);
+      await deps.occupancy.recordBookingOccupancy(
+        tenantId,
+        hold.providerId,
+        hold.occupied,
+        hold.resources,
+        hold.bookingId,
+      );
+    } else {
+      await deps.bookings.reject(tenantId, hold.bookingId, SYSTEM_ACTOR);
+    }
+    await releaseHold(hold);
+    await holds.remove(tenantId, cartId);
   }
 
   app.post("/v1/public/checkout", async (request, reply) => {
@@ -273,6 +321,7 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
         tenantId: tenant.tenantId,
         cartId: cart.id,
         actor: { type: "customer" },
+        ...(body.paymentMethod !== undefined ? { paymentMethod: body.paymentMethod } : {}),
       });
       if (charged.status === "failed") {
         await deps.bookings.reject(tenant.tenantId, booking.id, SYSTEM_ACTOR);
@@ -295,6 +344,7 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
     }
   });
 
+  // Generic (fake/dev) webhook: our own event shape keyed directly by cartId.
   app.post("/v1/public/payments/webhook", async (request, reply) => {
     const tenant = request.tenant;
     if (tenant === undefined) {
@@ -302,25 +352,57 @@ export function registerCheckoutRoutes(app: FastifyInstance, deps: CheckoutDeps)
     }
     const event = request.body as WebhookEvent & { payload: { cartId: string } };
     const outcome = await deps.webhooks.process(tenant.tenantId, "fake", event, async () => {
-      const hold = await holds.find(tenant.tenantId, event.payload.cartId);
-      if (hold === null) {
-        return;
-      }
-      if (event.type === "charge.succeeded") {
-        await deps.bookings.approve(tenant.tenantId, hold.bookingId, SYSTEM_ACTOR);
-        await deps.occupancy.recordBookingOccupancy(
-          tenant.tenantId,
-          hold.providerId,
-          hold.occupied,
-          hold.resources,
-          hold.bookingId,
-        );
-      } else {
-        await deps.bookings.reject(tenant.tenantId, hold.bookingId, SYSTEM_ACTOR);
-      }
-      await releaseHold(hold);
-      await holds.remove(tenant.tenantId, event.payload.cartId);
+      await settle(tenant.tenantId, event.payload.cartId, event.type === "charge.succeeded");
     });
+    return reply.send({ outcome });
+  });
+
+  // Real Stripe webhook: verifies the signature over the raw body, then settles
+  // the cart named in the PaymentIntent metadata. PaymentIntent succeeded ->
+  // approve; payment_failed/canceled -> reject. Idempotent per Stripe event id.
+  app.post("/v1/public/payments/stripe-webhook", async (request, reply) => {
+    const tenant = request.tenant;
+    if (tenant === undefined) {
+      return reply.code(404).send({ error: "unknown-host" });
+    }
+    if (deps.stripeWebhookSecret !== undefined) {
+      const rawBody = (request as unknown as RawBodyRequest).rawBody ?? "";
+      const header = request.headers["stripe-signature"];
+      const ok = verifyStripeSignature(
+        rawBody,
+        typeof header === "string" ? header : undefined,
+        deps.stripeWebhookSecret,
+      );
+      if (!ok) {
+        return reply.code(400).send({ error: "invalid-signature" });
+      }
+    }
+
+    const event = request.body as StripeWebhookEvent;
+    if (event.id === undefined || event.type === undefined) {
+      return reply.code(400).send({ error: "invalid-event" });
+    }
+    const cartId = event.data?.object?.metadata?.cartId;
+    if (cartId === undefined) {
+      // Not a checkout-originated PaymentIntent (no cart to settle); ack so Stripe stops retrying.
+      return reply.send({ outcome: "ignored" });
+    }
+
+    const succeeded = event.type === "payment_intent.succeeded";
+    const settleable =
+      succeeded ||
+      event.type === "payment_intent.payment_failed" ||
+      event.type === "payment_intent.canceled";
+    const outcome = await deps.webhooks.process(
+      tenant.tenantId,
+      "stripe",
+      { id: event.id, type: event.type, payload: event },
+      async () => {
+        if (settleable) {
+          await settle(tenant.tenantId, cartId, succeeded);
+        }
+      },
+    );
     return reply.send({ outcome });
   });
 }

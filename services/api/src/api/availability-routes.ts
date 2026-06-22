@@ -150,6 +150,30 @@ function tenantOf(request: FastifyRequest): RequestTenant {
 export function buildApp(deps: AppDeps): FastifyInstance {
   const app = Fastify({ logger: false });
 
+  // JSON parser that keeps the raw body on the request. Webhook signature
+  // verification (Stripe) must hash the exact bytes received; re-serialized JSON
+  // would not match. Handlers still receive parsed JSON, so behavior is otherwise
+  // unchanged. An empty body parses to undefined (no payload), matching routes
+  // that POST without one.
+  app.addContentTypeParser(
+    "application/json",
+    { parseAs: "string" },
+    (request, body: string, done) => {
+      (request as unknown as { rawBody?: string }).rawBody = body;
+      if (body.length === 0) {
+        done(null, undefined);
+        return;
+      }
+      try {
+        done(null, JSON.parse(body));
+      } catch (error) {
+        const err = error as Error & { statusCode?: number };
+        err.statusCode = 400;
+        done(err, undefined);
+      }
+    },
+  );
+
   app.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
     // Platform-level routes carry no tenant.
     if (request.url.startsWith("/v1/platform/") || request.url.startsWith("/v1/ops/")) {

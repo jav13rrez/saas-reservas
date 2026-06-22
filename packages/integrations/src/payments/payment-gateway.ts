@@ -22,6 +22,12 @@ export interface ChargeRequest {
    * gateway ignores it.
    */
   paymentMethod?: string;
+  /**
+   * Opaque key/value pairs attached to the gateway charge (e.g. Stripe
+   * PaymentIntent metadata). Used to correlate asynchronous webhooks back to the
+   * originating cart. The fake gateway ignores it.
+   */
+  metadata?: Record<string, string>;
 }
 
 export type ChargeResult =
