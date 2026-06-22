@@ -78,7 +78,19 @@ a real implementation + the provider account/credentials in
     `api.stripe.com` is blocked by the environment network policy. Allowlist the
     host (or run the smoke on the operator's machine) to validate the real gateway
     round-trip; the key/account themselves were not exercised.
-- **[HIGH] Email / SMS:** `FakeMessageProvider` → SendGrid/SES + Twilio.
+- **[DONE — email] Brevo transactional email** is wired behind `MessageProvider`
+  (ADR-0020, selected by `BREVO_API_KEY`; fake stays default). Two gaps remain:
+  - **[HIGH] SMS is unimplemented.** `dispatchBookingNotification` builds an SMS
+    message when the customer has a phone; the Brevo adapter returns
+    `sms-not-supported`, so those customers are not notified. Fix: make the
+    dispatcher fall back to email on `sms-not-supported` (or gate SMS on a
+    configured SMS provider — paid Brevo SMS or Twilio).
+  - **[HIGH] No worker bootstrap consumes the provider.** `resolveMessageProvider`
+    is tested but no production composition root wires the worker runtime (queue
+    consumers) to actually send. Notifications do not fire in production until the
+    worker is booted.
+  - Not yet validated against live Brevo (needs a real `BREVO_API_KEY` + a
+    verified sender); the transport is `fetch`-based and smoke-able like Stripe.
 - **[HIGH] Credential vault KMS:** `InMemoryKmsAdapter` → AWS/GCP KMS CMK.
   `CREDENTIALS_MASTER_KEY` is currently optional and only validated when present.
 - **[MEDIUM] WhatsApp:** fake → Meta Cloud API (per-tenant credentials).

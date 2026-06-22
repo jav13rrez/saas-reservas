@@ -56,6 +56,17 @@ export const environmentSchema = z.object({
   /** Override Stripe's API base URL (e.g. a local mock for smoke tests). */
   STRIPE_API_BASE_URL: z.url().optional(),
 
+  // Messaging (Brevo transactional email). Optional until messaging is wired;
+  // when BREVO_API_KEY is present, the messaging factory selects the Brevo
+  // adapter (email only for now), otherwise the deterministic fake is used.
+  BREVO_API_KEY: z.string().min(1).optional(),
+  /** Default From: address for transactional email (a Brevo-verified sender). */
+  MESSAGING_FROM_EMAIL: z.email().optional(),
+  /** Display name paired with MESSAGING_FROM_EMAIL. */
+  MESSAGING_FROM_NAME: z.string().min(1).optional(),
+  /** Override Brevo's API base URL (e.g. a local mock for smoke tests). */
+  BREVO_API_BASE_URL: z.url().optional(),
+
   // Observability
   LOG_LEVEL: z.enum(["trace", "debug", "info", "warn", "error", "fatal"]).default("info"),
 });

@@ -51,6 +51,7 @@ These adapters exist behind ports but currently use fake implementations. When
 the "real adapters" work lands, provision:
 
 ### Payments — Stripe
+
 - [ ] Stripe account; enable **Stripe Connect** (charge on behalf of tenants with
       an application fee).
 - [ ] Platform **Secret Key** (`sk_live_…`) and **Webhook signing secret** (`whsec_…`).
@@ -59,6 +60,7 @@ the "real adapters" work lands, provision:
   not paste their own secret key.
 
 ### Calendars — Google Calendar + Microsoft 365
+
 - [ ] **Google Cloud**: project, OAuth consent screen, OAuth Client ID/Secret with
       Calendar scope, domain verification for push notifications (webhooks).
 - [ ] **Microsoft Entra/Graph**: app registration (Client ID/Secret/Tenant) with
@@ -67,21 +69,30 @@ the "real adapters" work lands, provision:
   their own). Both supported.
 
 ### WhatsApp — Meta Cloud API
+
 - [ ] Meta Business account + WhatsApp Business Account (WABA).
 - [ ] Per tenant: **Phone Number ID**, **Permanent Access Token**, **WABA ID**,
       approved message templates.
 - Scope: **per-tenant** — entered in the admin and encrypted by the credential vault.
 
 ### Email / SMS
-- [ ] **Email**: SendGrid (or SES) API key + verified sending domain (SPF/DKIM).
-- [ ] **SMS**: Twilio Account SID + Auth Token + sender number.
+
+- [x] **Email — WIRED (Brevo, ADR-0020)**: set `BREVO_API_KEY` to switch from the
+      fake provider to Brevo transactional email (free tier: 300 emails/day). Also set
+      `MESSAGING_FROM_EMAIL` (a **Brevo-verified sender**, with SPF/DKIM on the domain)
+      and optionally `MESSAGING_FROM_NAME`. NOTE: the worker bootstrap that actually
+      consumes the provider and sends is still pending (TECH_DEBT).
+- [ ] **SMS**: not wired (Brevo SMS is paid). Options later: paid Brevo SMS or
+      Twilio (Account SID + Auth Token + sender number).
 - Scope: typically **global** (platform sends on behalf of tenants); optionally per-tenant.
 
 ### Video meetings
+
 - [ ] Google Meet (via the Google OAuth above) / Zoom (OAuth app) / Teams (Graph).
 - Scope: global or per-tenant depending on provider.
 
 ### KMS (production credential encryption)
+
 - [ ] **AWS KMS** (or GCP KMS) CMK for the vault's envelope encryption (today an
       in-memory KMS adapter is used). Scope: **global**.
 

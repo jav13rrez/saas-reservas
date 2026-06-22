@@ -507,7 +507,7 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   `X-Forwarded-Host`). Added regression test "resolves the tenant from
   X-Forwarded-Host". With the fix, the **console seam works end to end**: all six
   internal route handlers read real data, and a console write (`POST
-  /api/locations`) persisted to Postgres.
+/api/locations`) persisted to Postgres.
 - **Stripe smoke (Fase B) blocked by network egress:** `api.stripe.com` is not in
   this environment's egress allowlist, so the live round-trip could not run here
   (the checkout's `payment-declined` was the egress block surfacing as a
@@ -517,6 +517,32 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   `402 payment-declined`, so a Stripe outage looks like a card decline.
 - Green: typecheck, lint, Prettier; full suite **298 passing / 6 skipped, 0
   failures** (Redis up un-skipped the lock tests; +1 new regression test).
+
+### 2026-06-22 (Real adapter: Brevo transactional email, ADR-0020)
+
+- Second real adapter (after Stripe) behind the existing `MessageProvider` port;
+  fake stays default so the dev loop and tests are untouched. Email only (owner's
+  choice for Brevo's free 300/day tier); Brevo SMS is paid and deferred.
+  - **Transport** `notifications/brevo-http.ts` (`FetchBrevoHttp`): `fetch`-backed
+    Brevo JSON client (`api-key` header), injectable base URL + fetch, network
+    failures mapped to a status-0 response (no throw through the port).
+  - **Provider** `notifications/brevo-message-provider.ts`: email maps to
+    `POST /v3/smtp/email` (sender/to/subject/htmlContent/optional textContent),
+    per-message `from` overrides the default sender; success → `providerId`,
+    non-2xx → mapped error; **SMS returns `sms-not-supported` without calling
+    Brevo**.
+  - **Selection** `notifications/message-provider-factory.ts`
+    (`resolveMessageProvider`): Brevo when `BREVO_API_KEY` is set (fail-fast on a
+    missing sender), else fake. Framework-agnostic for the future worker bootstrap.
+  - **Env contract** + `.env.example`: `BREVO_API_KEY`, `MESSAGING_FROM_EMAIL`,
+    `MESSAGING_FROM_NAME`, `BREVO_API_BASE_URL`. Docs: ADR-0020, SETUP, PLANNING,
+    TECH_DEBT.
+  - Tests: 10 contract tests (`tests/contract/notifications/brevo-message-provider.test.ts`).
+    Suite: **308 passing / 6 skipped, 0 failures**; typecheck, lint, Prettier clean.
+  - Known gaps (TECH_DEBT): the dispatcher still builds SMS for customers with a
+    phone (would fail `sms-not-supported` — needs an email fallback), and no worker
+    bootstrap consumes the provider yet, so notifications don't fire in production
+    until the worker runtime is wired. Not yet validated against live Brevo.
 
 ## Current Backlog
 

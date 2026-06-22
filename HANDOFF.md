@@ -25,14 +25,21 @@ exercised both via the API (curl) and via the console (`apps/admin` in
 
 **Next actions (priority order):**
 
-1. **Stripe test-mode smoke is still pending** — blocked here by network egress
+1. **Brevo email — wire the worker + validate live.** The adapter is done
+   (ADR-0020, selected by `BREVO_API_KEY`), but two gaps remain before email
+   actually sends: (a) the booking notification **dispatcher must fall back to
+   email** when SMS returns `sms-not-supported` (today a customer with a phone is
+   not notified); (b) there is **no worker bootstrap** consuming
+   `resolveMessageProvider` + a queue. Then smoke against live Brevo with a real
+   `BREVO_API_KEY` + a verified `MESSAGING_FROM_EMAIL`.
+2. **Stripe test-mode smoke is still pending** — blocked here by network egress
    (`api.stripe.com` not in the session allowlist). Run it after allowlisting the
    host, or on the operator's machine: `STRIPE_SECRET_KEY=sk_test_…` through the
-   public checkout. Also fix the checkout correctness finding (it reports
-   `gateway-error` as `payment-declined`) — see `TECH_DEBT.md`.
-2. **Remaining real adapters:** SendGrid/Twilio (messaging), AWS KMS (real
-   `KmsAdapter`), S3 (attachments). See `PLANNING.md` Immediate Route #4.
-3. **Stripe follow-ups (TECH_DEBT):** DB-backed `VaultStorage` for connected-account
+   public checkout (see the smoke guide in chat). Also fix the checkout
+   correctness finding (it reports `gateway-error` as `payment-declined`).
+3. **Remaining real adapters:** AWS KMS (real `KmsAdapter`), S3 (attachments),
+   and SMS (paid Brevo SMS or Twilio). See `PLANNING.md` Immediate Route #4.
+4. **Stripe follow-ups (TECH_DEBT):** DB-backed `VaultStorage` for connected-account
    ids; payment-method + webhook-capture in the public checkout; webhook signature
    verification.
 
@@ -46,8 +53,6 @@ is on PATH. Run Postgres as a non-root user with a `NOSUPERUSER NOBYPASSRLS`
 `ADMIN_DATA_MODE=api API_ORIGIN=http://127.0.0.1:3001
 ADMIN_TENANT_HOST=<slug>.reservas.localhost` + staff creds. Note: `api.stripe.com`
 egress is blocked in-session.
-
-
 
 ## Post-Spec Work (2026-06-19): Real Stripe Connect gateway — WIRED (ADR-0019)
 
