@@ -29,7 +29,7 @@ Convención de estado por área del recorrido:
 | 5  | Catálogo       | Servicios         | `/services`   | ✅               |
 | 6  | Catálogo       | Recursos          | `/resources`  | ✅               |
 | 7  | Catálogo       | Ubicaciones       | `/locations`  | ✅               |
-| 8  | Catálogo       | Proveedores       | `/providers`  | ⏳               |
+| 8  | Catálogo       | Proveedores       | `/providers`  | ✅               |
 | 9  | Catálogo       | Clientes          | `/customers`  | ⏳               |
 | 10 | Administración | Facturación       | `/billing`    | ⏳               |
 | 11 | Administración | Operaciones       | `/operations` | ⏳               |
@@ -233,6 +233,35 @@ sede / por servicio). El motor de políticas ya existe (US3); falta decidir el p
 
 **Candidato(s) a spec**
 - `ubicaciones-edicion-detalle` — editar + Details ricos + tipo virtual. Prioridad media.
+
+---
+
+## 8. Proveedores — `/providers`  (madura)
+
+**Estado actual** (`apps/admin/src/features/providers/index.tsx`)
+**CRUD completo** (crear, **editar**, activar/desactivar). Datos: Nombre · Email · Zona horaria.
+Asignación de Ubicaciones + Servicios (checkboxes). **Enlace "Agenda"** por fila → editor de
+**Work hours / Days off / Special days** (objetivo 3, implementado E2E).
+
+**Referencia Amelia** (`amelia-employees-fine-grained.md`)
+Modal con tabs **Details / Work Hours / Days Off / Special Days / Services / Assigned Locations
+/ Finance**: foto, teléfono, rol/título, bio, welcome email; override de precio + buffer por
+empleado-servicio; **Finance** (comisión %/fija, método de pago, IBAN, salario, contrato).
+
+**Huecos**
+- ✅ Agenda (work hours/days off/special days) ya existe.
+- **Finance / comisiones**: ausente — área de dominio nueva y grande (nómina del profesional).
+- Details ricos (foto, teléfono, rol, bio), búsqueda/filtro, avatares.
+- Override de precio/buffer por proveedor-servicio.
+
+**Decisión transversal (relevante para Auth)**
+"Proveedor" es entidad de catálogo, separada de `staff_accounts` (login, ADR-0017). Decidir
+**si un proveedor es además usuario con login** (portal staff) y cómo se vinculan. Directamente
+relacionado con el objetivo de cuentas tenant/superadmin.
+
+**Candidato(s) a spec**
+- `proveedores-detalle-ux` — foto/teléfono/rol/bio + búsqueda. Prioridad media.
+- `proveedores-finanzas-comisiones` — dominio nuevo. Prioridad media/baja.
 
 ---
 
