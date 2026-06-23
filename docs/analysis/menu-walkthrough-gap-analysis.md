@@ -26,7 +26,7 @@ Convención de estado por área del recorrido:
 | 2  | Agenda         | Reservas          | `/bookings`   | ✅               |
 | 3  | Agenda         | Calendario        | `/calendar`   | ✅               |
 | 4  | Agenda         | Eventos           | `/events`     | ✅               |
-| 5  | Catálogo       | Servicios         | `/services`   | ⏳               |
+| 5  | Catálogo       | Servicios         | `/services`   | ✅               |
 | 6  | Catálogo       | Recursos          | `/resources`  | ⏳               |
 | 7  | Catálogo       | Ubicaciones       | `/locations`  | ⏳               |
 | 8  | Catálogo       | Proveedores       | `/providers`  | ⏳               |
@@ -153,6 +153,34 @@ gestión de asistentes (añadir, marcar pagado/no-show, **check-in**), **waitlis
 **Candidato(s) a spec**
 - `eventos-admin-ui` — superficie admin sobre el motor existente. **Alto ROI** (backend hecho).
 - Prioridad: alta dentro de su grupo (rentable).
+
+---
+
+## 5. Servicios — `/services`
+
+**Estado actual** (`apps/admin/src/features/services/index.tsx`)
+Lista + **crear** (Nombre · Categoría[texto libre] · Duración · Buffer-after · Precio) +
+**activar/desactivar**. Tabla: Servicio · Categoría · Duración · Precio · Estado. Sin editar,
+sin borrar, sin búsqueda/filtro/orden. Recursos se asocian desde la pantalla Recursos (hub).
+
+**Referencia Amelia** (`amelia-catalog-fine-grained.md`)
+Lista con búsqueda/filtro por categoría/orden + columnas Employees/Bookings/Status. Modal con
+tabs **Details / Employees / Gallery / Settings**: descripción corta/larga, **depósito**,
+color, icono; Settings con **min/max advance booking**, buffer antes/después, **min/max
+capacity + group booking**, **online/virtual**, "require customer confirmation". **Categorías
+como entidad** (nombre, color, icono, orden, conteo).
+
+**Huecos (dominio + UI)**
+- 🔴 **Categoría como entidad** (hoy texto libre) — Decisión pendiente #2; transversal
+  (servicios, filtros, modal de reserva, widget).
+- **Group booking** (min/max capacity) — Decisión pendiente #1/#4 (diferida ADR-0016).
+- **Servicio online/virtual** — Decisión pendiente #5.
+- Ventanas de reserva (min/max advance), **depósito**, **buffer-before**, require confirmation.
+- UI: **editar** (modal con tabs), galería, descripción/color/icono, búsqueda/filtros/orden.
+
+**Candidato(s) a spec**
+- `servicios-edicion-ux` — editar + modal con tabs + settings de agenda + búsqueda/filtros.
+- `categorias-entidad` — categoría como entidad de primera clase (transversal). Prioridad alta.
 
 ---
 
