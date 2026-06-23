@@ -33,7 +33,7 @@ Convención de estado por área del recorrido:
 | 9  | Catálogo       | Clientes          | `/customers`  | ✅               |
 | 10 | Administración | Facturación       | `/billing`    | ✅               |
 | 11 | Administración | Operaciones       | `/operations` | ✅               |
-| 12 | Administración | Auditoría         | `/audit`      | ⏳               |
+| 12 | Administración | Auditoría         | `/audit`      | ✅               |
 | 13 | Administración | Configuración     | `/settings`   | ⏳               |
 
 ---
@@ -352,6 +352,24 @@ concepto propio del SaaS.
 **Candidato(s) a spec**
 - `plataforma-superadmin` — auth de plataforma + mover Operaciones + provisión de tenants +
   alinear DS. **Prioridad alta** (ligado al objetivo de Auth y a seguridad).
+
+---
+
+## 12. Auditoría — `/audit`
+
+**Estado actual** (`apps/admin/app/audit/page.tsx`) — **placeholder**
+Backend completo: `audit-routes.ts` (búsqueda paginada + filtros), `GET /audit/events` aislado
+por `x-tenant-id`, eventos de auditoría en dominio. Operaciones ya muestra eventos recientes.
+
+**Referencia**: **sin doc Amelia** — concepto propio del SaaS (Constitución, Principio V:
+toda transición relevante emite evento + registro auditable).
+
+**Huecos**
+- Solo **UI**: pantalla con filtros (tipo/actor/rango fechas), paginación, export. Backend hecho.
+
+**Candidato(s) a spec**
+- `auditoria-busqueda-ui` — superficie sobre backend existente. Prioridad media-baja
+  (parcialmente cubierto por Operaciones).
 
 ---
 
