@@ -1,6 +1,30 @@
 # Handoff
 
-Last updated: 2026-06-22
+Last updated: 2026-06-23
+
+## Session Close 2026-06-23 — Amelia Settings fine-grained + prompt de scrape completo
+
+**What this session delivered:**
+- `docs/analysis/amelia-settings-fine-grained.md` — documentación campo a campo de
+  todas las sub-secciones de Settings (General, Activation, Company, Payments,
+  Bookings, Notifications, Roles & permissions). Incluye tipo de control, opciones,
+  valor por defecto, estado en nuestro SaaS (✅/🔶/❌) y prioridad (🔴/🟡/🟢).
+  La sección «Resumen de brechas críticas» identifica las 3 acciones 🔴 que
+  desbloquean el MVP.
+- `docs/analysis/AMELIA-FINE-GRAINED-SCRAPE-PROMPT.md` — prompt reutilizable para
+  continuar el scrape fino del resto del sidebar (13 secciones pendientes), con
+  lecciones aprendidas sobre los problemas de Vue Router, formularios required,
+  dropdowns compartidos y expiración de sesión WP.
+
+**Next action para la próxima sesión de análisis:**
+Ejecutar `AMELIA-FINE-GRAINED-SCRAPE-PROMPT.md` — genera un archivo por sección:
+`amelia-dashboard-fine-grained.md`, `amelia-bookings-fine-grained.md`, etc.
+Ver la tabla de archivos en el propio prompt.
+
+**El MVP path (deploy → widget → email) sigue siendo la prioridad de implementación.**
+Esta sesión fue de análisis/documentación, no de código. No hay cambios en el stack.
+
+---
 
 ## Session Close 2026-06-22 — READ FIRST: pivot to MVP / deployment
 
