@@ -20,7 +20,8 @@ Read these in order when a session starts:
 4. `.specify/memory/constitution.md`: non-negotiable principles.
 5. `specs/001-saas-multitenant-booking/plan.md`: technical plan and target structure.
 6. `specs/001-saas-multitenant-booking/tasks.md`: implementation backlog.
-7. `GRAPH_VARIANTS.md`: how to use local Amelia/Graphify reference material when needed.
+7. `docs/analysis/menu-walkthrough-gap-analysis.md`: índice de features de crecimiento (post-spec).
+8. `GRAPH_VARIANTS.md`: how to use local Amelia/Graphify reference material when needed.
 
 ## Current Feature
 
@@ -59,6 +60,40 @@ This project should remain agent-agnostic:
 - Both must follow `PLANNING.md`, `PROGRESS.md`, and `HANDOFF.md`.
 - Spec Kit remains the main product/implementation planning system.
 - Graphify/Amelia references are local research inputs, not source code.
+
+## Modelo de documentos (4 capas)
+
+Para evitar que los documentos se canibalicen, cada uno tiene un rol único:
+
+1. **Investigación / input** — `docs/analysis/*` (barrido Amelia
+   `amelia-*-fine-grained.md` + `amelia-ux-reference.md`; el puente
+   `menu-walkthrough-gap-analysis.md`), `reference/`, Graphify. Material crudo que
+   **alimenta** a Spec-Kit. No es plan.
+2. **Spec-Kit (qué construir, por feature)** — `.specify/memory/constitution.md`
+   (principios) + `specs/00X-*/` (una carpeta por feature). `001` es la fundación
+   (completa). El crecimiento abre features nuevas (`002`, `003`…).
+3. **Decisiones (el porqué)** — `docs/adr/*`.
+4. **Continuidad (estado entre sesiones)** — `HANDOFF.md` (punto de reanudación,
+   corto), `PROGRESS.md` (diario único cronológico), `PLANNING.md` (este mapa).
+
+## Flujo de crecimiento (post-spec)
+
+El backlog de crecimiento vive como **índice de features** en
+`docs/analysis/menu-walkthrough-gap-analysis.md` (una entrada por área del sidebar,
+con candidatos a feature). Cada área que se decida ampliar se convierte en su propia
+feature de Spec-Kit:
+
+```
+sección Amelia + entrada del gap-analysis
+  → /speckit-specify   (specs/00X-<area>/spec.md)
+  → /speckit-clarify   (resuelve decisiones pendientes)
+  → /speckit-plan      (TSD/plan, respeta constitution + ADRs)
+  → /speckit-tasks     (backlog ordenado)
+  → /speckit-implement
+```
+
+`PLANNING.md` indexa el roadmap; el backlog detallado por área vive en el gap-analysis,
+no aquí ni en `HANDOFF.md`.
 
 ## Session Start Routine
 
@@ -125,7 +160,13 @@ A full sweep of the Amelia Premium admin console is permanently recorded in `doc
 > MVP**, not more integration depth — (1) deploy to a real domain/host, (2) the
 > public booking widget, (3) minimal email notifications (worker bootstrap +
 > email-only dispatcher; Brevo is wired). Payment depth (Stripe succeeded-flow) is
-> done behind flags and paused until deployment. See `HANDOFF.md` "Session Close".
+> done behind flags and paused until deployment. See `HANDOFF.md`.
+>
+> **Walkthrough (2026-06-23):** el backlog de crecimiento por área del sidebar y el
+> clúster crítico de MVP (tenant-settings, ciclo de estados de reserva,
+> plataforma-superadmin, worker de email) viven en
+> `docs/analysis/menu-walkthrough-gap-analysis.md`. La lista numerada de abajo es el
+> registro histórico de la ruta post-spec ya completada.
 
 Prioritized follow-up work — see `HANDOFF.md` for detail:
 

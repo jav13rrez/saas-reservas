@@ -14,6 +14,10 @@ Read these files in order before making changes:
 4. `.specify/memory/constitution.md`
 5. `specs/001-saas-multitenant-booking/plan.md`
 6. `specs/001-saas-multitenant-booking/tasks.md`
+7. `docs/analysis/menu-walkthrough-gap-analysis.md` (índice de features de crecimiento post-spec)
+
+Before designing UI or a new feature, also read the relevant
+`docs/analysis/amelia-*-fine-grained.md` (full Amelia reference, 13 areas).
 
 ## Core Rule
 
