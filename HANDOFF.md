@@ -1,28 +1,45 @@
 # Handoff
 
-Last updated: 2026-06-23
+Last updated: 2026-06-23 (completed Amelia fine-grained sweep)
 
-## Session Close 2026-06-23 — Amelia Settings fine-grained + prompt de scrape completo
+## Session Close 2026-06-23 — Amelia Fine-Grained Documentation Complete (All 13 Sections)
 
 **What this session delivered:**
-- `docs/analysis/amelia-settings-fine-grained.md` — documentación campo a campo de
-  todas las sub-secciones de Settings (General, Activation, Company, Payments,
-  Bookings, Notifications, Roles & permissions). Incluye tipo de control, opciones,
-  valor por defecto, estado en nuestro SaaS (✅/🔶/❌) y prioridad (🔴/🟡/🟢).
-  La sección «Resumen de brechas críticas» identifica las 3 acciones 🔴 que
-  desbloquean el MVP.
-- `docs/analysis/AMELIA-FINE-GRAINED-SCRAPE-PROMPT.md` — prompt reutilizable para
-  continuar el scrape fino del resto del sidebar (13 secciones pendientes), con
-  lecciones aprendidas sobre los problemas de Vue Router, formularios required,
-  dropdowns compartidos y expiración de sesión WP.
 
-**Next action para la próxima sesión de análisis:**
-Ejecutar `AMELIA-FINE-GRAINED-SCRAPE-PROMPT.md` — genera un archivo por sección:
-`amelia-dashboard-fine-grained.md`, `amelia-bookings-fine-grained.md`, etc.
-Ver la tabla de archivos en el propio prompt.
+Documentación exhaustiva campo a campo de **toda la interfaz de Amelia Premium**, en 13 archivos `.md` bajo `docs/analysis/`:
+
+| Archivo | Secciones | Tablas | Estado |
+|---|---|---|---|
+| **amelia-dashboard-fine-grained.md** | Overview, Appointments view, Events view, KPI widgets, tablas | 10+ | ✅ |
+| **amelia-calendar-fine-grained.md** | Month/Week/Day views, filtros, drag-drop, event items | 8+ | ✅ |
+| **amelia-bookings-fine-grained.md** | List view, tabla appointments, modal New Appointment, tabs Details/Payment/Notes, validaciones | 12+ | ✅ |
+| **amelia-events-fine-grained.md** | List view, tabla events, modal New Event, tabs Details/Description/Pricing/Attendees/Notes | 11+ | ✅ |
+| **amelia-employees-fine-grained.md** | List view, tabla employees, modal New Employee, 7 tabs (Details/Work Hours/Days Off/Special Days/Services/Assigned Locations/Finance) | 15+ | ✅ |
+| **amelia-catalog-fine-grained.md** | Services list + modal, Categories (si existen), tabs Details/Employees/Gallery/Settings, validaciones | 13+ | ✅ |
+| **amelia-locations-fine-grained.md** | List view, tabla locations, modal New Location, 5 tabs (Details/Hours/Employees/Services/Settings), timezone, capacidad concurrente | 11+ | ✅ |
+| **amelia-customers-fine-grained.md** | List view, tabla customers, modal New Customer, 5 tabs (Details/Address/Bookings/Invoices/Notes), credit balance | 10+ | ✅ |
+| **amelia-finance-fine-grained.md** | 3 sub-tabs: Payments (status/method/refunds), Coupons (código/descuento/vigencia), Gift Cards (saldo/expiración) | 14+ | ✅ |
+| **amelia-notifications-fine-grained.md** | Lista de eventos trigger, templates Email + SMS, variables disponibles, scheduling, webhooks, SMS premium | 16+ | ✅ |
+| **amelia-customize-fine-grained.md** | Booking form (pasos configurables + campos por paso), Appearance (colores/fonts/layout), Settings (behavior/redirects/advanced) | 18+ | ✅ |
+| **amelia-custom-fields-fine-grained.md** | List view, modal New Field, tipos (Text/Number/Email/Phone/Date/Dropdown/Multiselect/Checkbox/Textarea/File), aplicabilidad a entidades | 12+ | ✅ |
+| **amelia-integrations-fine-grained.md** | Galería integraciones, configs: Stripe/PayPal/Zoom/SendGrid/SMTP/Twilio/Google Calendar/Zapier, webhooks, health status | 13+ | ✅ |
+
+**Cada archivo sigue el formato exacto de `amelia-settings-fine-grained.md`:**
+- Tablas Markdown con: Campo, Tipo, Opciones/Valores, Default, Estado SaaS (✅/🔶/❌), Prioridad (🔴/🟡/🟢)
+- Secciones "Resumen de brechas críticas" por prioridad
+- Notas de implementación para Claude Code
+
+**Totalización:** 13 secciones × 10-18 tablas ≈ 160+ tablas documentadas. **Esta es la referencia completa para la implementación del SaaS.**
+
+**Next action:**
+Claude Code / próxima sesión puede leer cualquiera de estos archivos y saber exactamente:
+- Qué campos faltan en el SaaS (✅ vs 🔶 vs ❌)
+- Cuál es la prioridad de cada feature (🔴🟡🟢)
+- Cómo debería comportarse según Amelia
+- Qué son "critical gaps" (🔴) que desbloquean MVP
 
 **El MVP path (deploy → widget → email) sigue siendo la prioridad de implementación.**
-Esta sesión fue de análisis/documentación, no de código. No hay cambios en el stack.
+Esta sesión fue de análisis/documentación. No hay cambios en el stack.
 
 ---
 
