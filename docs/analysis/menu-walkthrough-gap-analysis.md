@@ -25,7 +25,7 @@ Convención de estado por área del recorrido:
 | 1  | General        | Inicio            | `/`           | ✅               |
 | 2  | Agenda         | Reservas          | `/bookings`   | ✅               |
 | 3  | Agenda         | Calendario        | `/calendar`   | ✅               |
-| 4  | Agenda         | Eventos           | `/events`     | ⏳               |
+| 4  | Agenda         | Eventos           | `/events`     | ✅               |
 | 5  | Catálogo       | Servicios         | `/services`   | ⏳               |
 | 6  | Catálogo       | Recursos          | `/resources`  | ⏳               |
 | 7  | Catálogo       | Ubicaciones       | `/locations`  | ⏳               |
@@ -126,6 +126,33 @@ appointments **y** events.
 - `calendario-vistas-interaccion` — Month/Week/Day con eje temporal, click/editar/crear,
   drag reschedule, filtros. **Depende** de Reservas (slot picker + reprogramar + estados).
 - Prioridad: media-alta (muy visible, pero dependiente).
+
+---
+
+## 4. Eventos — `/events`
+
+**Estado actual** (`apps/admin/app/events/page.tsx`)
+Pantalla **placeholder** ("en construcción"). **Caso inverso al Dashboard**: el **backend está
+completo y probado** (User Story 4, T051–T061): dominio de eventos
+(`packages/domain/src/events`), precios + **lista de espera** + **recurrencia**
+(`application/events`), **resolución de conflictos** (`application/scheduling`), rutas
+(`services/api/src/api/event-routes.ts`). Hay motor, no hay pantalla.
+
+**Referencia Amelia** (`amelia-events-fine-grained.md`)
+Lista con búsqueda/filtros/estado (Upcoming/Open/Closed/Cancelled); tabla (Fecha · Nombre ·
+Organizador · Ubicación · **Booked X/Y** · Status · Attendees). Modal con tabs **Details /
+Description / Pricing / Attendees / Notes**: capacidad, recurrencia, color, precio/depósito,
+gestión de asistentes (añadir, marcar pagado/no-show, **check-in**), **waitlist** con
+"promote to attendee".
+
+**Huecos**
+- **Pantalla completa** (lista + tabla + modal con tabs) — es casi todo UI, no dominio.
+- Verificar contra `event-routes.ts` qué falta de dominio: **check-in**, estados
+  Open/Closed/Cancelled diferenciados, depósito, color, export de asistentes.
+
+**Candidato(s) a spec**
+- `eventos-admin-ui` — superficie admin sobre el motor existente. **Alto ROI** (backend hecho).
+- Prioridad: alta dentro de su grupo (rentable).
 
 ---
 
