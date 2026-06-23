@@ -34,7 +34,7 @@ Convención de estado por área del recorrido:
 | 10 | Administración | Facturación       | `/billing`    | ✅               |
 | 11 | Administración | Operaciones       | `/operations` | ✅               |
 | 12 | Administración | Auditoría         | `/audit`      | ✅               |
-| 13 | Administración | Configuración     | `/settings`   | ⏳               |
+| 13 | Administración | Configuración     | `/settings`   | ✅               |
 
 ---
 
@@ -370,6 +370,47 @@ toda transición relevante emite evento + registro auditable).
 **Candidato(s) a spec**
 - `auditoria-busqueda-ui` — superficie sobre backend existente. Prioridad media-baja
   (parcialmente cubierto por Operaciones).
+
+---
+
+## 13. Configuración — `/settings`  ⭐ fundacional para MVP
+
+**Estado actual** (`apps/admin/app/settings/page.tsx` → `features/tenant-setup`)
+**No es un área de ajustes**: renderiza el **asistente de alta US1** (`TenantSetup`: crea
+servicio→proveedor→asigna→horario + preview de disponibilidad). El código se declara "minimal".
+
+**Referencia Amelia** (`amelia-settings-fine-grained.md`)
+General · Activation · **Company** (perfil + horario global + días libres) · **Payments** ·
+**Bookings** · **Notifications** (General/Email/SMS) · **Roles & permissions**.
+
+**Huecos (varios 🔴 que bloquean el MVP)**
+- 🔴 **Políticas de tiempo** (lead time reserva/cancelación/reprogramación): backend US3 listo,
+  falta UI + persistencia en `tenant_settings`.
+- 🔴 **Sender name/email por tenant** (Notifications > Email): hoy dispatcher usa global `.env`.
+- 🔴 **Activar pasarela de pago** desde admin (Payments): Stripe wired, sin UI de activación.
+- 🟡 **Default appointment status (Pending vs Approved)** → conecta con ciclo de estados (área 2).
+- 🟡 **Autoasignación de proveedor** (Random/Round-robin…) → desbloquea widget sin elegir.
+- 🟡 **Perfil del tenant** (logo/nombre/dirección/VAT) → facturas + branding del widget.
+- 🟡 **Horario global de empresa**, **Roles & permissions** (UI).
+
+**Candidato(s) a spec**
+- `tenant-settings` — tabla `tenant_settings` + UI de políticas/sender/activación pagos/perfil.
+  **Prioridad alta** (fundacional MVP).
+
+---
+
+## Áreas de Amelia SIN entrada en nuestro sidebar (decisión de IA)
+
+Cuatro docs fine-grained no mapean a ninguna pantalla actual:
+- **Notifications** (`amelia-notifications-fine-grained.md`) — plantillas email/SMS + triggers.
+  Backend de mensajería existe (Brevo, ADR-0020). En Amelia parte vive en Settings.
+- **Customize** (`amelia-customize-fine-grained.md`) — branding/apariencia del **widget público**.
+- **Custom Fields** (`amelia-custom-fields-fine-grained.md`) — campos personalizados.
+- **Features & Integrations** (`amelia-integrations-fine-grained.md`) — Zoom/Meet, Google/Outlook
+  Calendar, WhatsApp, etc.
+
+**Decisión de IA pendiente**: ¿áreas de primer nivel o plegadas (Notifications→Settings,
+Customize→widget)? Resolver antes de planificar sus specs.
 
 ---
 
