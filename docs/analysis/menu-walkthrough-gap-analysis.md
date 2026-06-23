@@ -31,7 +31,7 @@ Convención de estado por área del recorrido:
 | 7  | Catálogo       | Ubicaciones       | `/locations`  | ✅               |
 | 8  | Catálogo       | Proveedores       | `/providers`  | ✅               |
 | 9  | Catálogo       | Clientes          | `/customers`  | ✅               |
-| 10 | Administración | Facturación       | `/billing`    | ⏳               |
+| 10 | Administración | Facturación       | `/billing`    | ✅               |
 | 11 | Administración | Operaciones       | `/operations` | ⏳               |
 | 12 | Administración | Auditoría         | `/audit`      | ⏳               |
 | 13 | Administración | Configuración     | `/settings`   | ⏳               |
@@ -292,6 +292,40 @@ de reservas; **facturas + store credit**; notas + timeline.
 **Candidato(s) a spec**
 - `clientes-perfil-360` — editar + tabs + historial/métricas + blacklist. Depende de reporting
   (Dashboard) y Finance (store credit/facturas). Prioridad media.
+
+---
+
+## 10. Facturación — `/billing`  ⚠️ cruce conceptual (IA)
+
+**Estado actual** (`apps/admin/app/billing/page.tsx`) — **placeholder**
+Apunta a la **facturación del SaaS**: planes (Starter/Professional/Enterprise), feature flags,
+**cuotas de uso del tenant**. Backend hecho: dominio billing (`packages/domain/src/billing`:
+hasFeature/isWithinQuota/bookingQuotaRemaining), conciliación Stripe (worker), gating premium.
+
+**Referencia Amelia** (`amelia-finance-fine-grained.md`) — **otro concepto**
+"Finance" de Amelia = dinero del negocio frente a SUS clientes: **Payments** (historial, refund,
+recibo), **Coupons**, **Gift Cards** (store credit), **KPIs de ingresos** + export.
+
+**Hallazgo de IA (arquitectura de información)**
+Nuestro menú mezcla dos conceptos bajo "Facturación":
+1. **Facturación SaaS** (plan/cuota del tenant) — tu negocio cobra al tenant. Backend hecho,
+   falta UI.
+2. **Finanzas del negocio** (pagos de SUS clientes, cupones, gift cards) — sin sitio en el
+   sidebar hoy.
+
+**Huecos**
+- (1) `saas-billing-plan-ui` — UI sobre backend existente.
+- (2) Payments: dominio existe (checkout/Stripe/conciliación); falta pantalla + reporting +
+  refund/recibo desde admin.
+- 🆕 **Cupones** — no modelados (dominio nuevo), aplican en checkout.
+- 🆕 **Gift cards / store credit** — no modelados (dominio nuevo); enlaza con Clientes.
+
+**Decisión transversal pendiente**
+Separar en el menú **"Facturación (SaaS)"** de **"Finanzas (negocio)"** antes de hacer specs.
+
+**Candidato(s) a spec**
+- `saas-billing-plan-ui` (UI; backend hecho) · `finanzas-pagos` (pantalla pagos + refund + KPIs;
+  depende de reporting) · `cupones` (dominio nuevo) · `gift-cards-store-credit` (dominio nuevo).
 
 ---
 
