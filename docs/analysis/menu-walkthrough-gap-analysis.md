@@ -32,7 +32,7 @@ Convención de estado por área del recorrido:
 | 8  | Catálogo       | Proveedores       | `/providers`  | ✅               |
 | 9  | Catálogo       | Clientes          | `/customers`  | ✅               |
 | 10 | Administración | Facturación       | `/billing`    | ✅               |
-| 11 | Administración | Operaciones       | `/operations` | ⏳               |
+| 11 | Administración | Operaciones       | `/operations` | ✅               |
 | 12 | Administración | Auditoría         | `/audit`      | ⏳               |
 | 13 | Administración | Configuración     | `/settings`   | ⏳               |
 
@@ -326,6 +326,32 @@ Separar en el menú **"Facturación (SaaS)"** de **"Finanzas (negocio)"** antes 
 **Candidato(s) a spec**
 - `saas-billing-plan-ui` (UI; backend hecho) · `finanzas-pagos` (pantalla pagos + refund + KPIs;
   depende de reporting) · `cupones` (dominio nuevo) · `gift-cards-store-credit` (dominio nuevo).
+
+---
+
+## 11. Operaciones — `/operations`  🔐 embrión de superadmin
+
+**Estado actual** (`apps/admin/src/features/operations/index.tsx`) — **pantalla real** (T077)
+Dashboard **de plataforma** (cross-tenant): lista **todos los tenants** con estado de facturación,
+barras de cuota (bookings/storage/notifications) y **log de auditoría** por tenant (API de
+auditoría T078). Solo lectura. Datos reales (billing + audit). **Sin referencia Amelia** — es
+concepto propio del SaaS.
+
+**Hallazgos**
+1. 🔐 Es el **embrión de la consola superadmin/plataforma** (objetivo Auth (b)). Pero vive
+   **dentro de `apps/admin`** y **sin protección** → cualquiera en `/operations` ve **todos los
+   tenants**. Mayor agujero de seguridad del recorrido.
+2. 🎨 **Rompe el design system (ADR-0008)**: clases **Tailwind** + inglés, frente a tokens
+   `var(--ui-*)` inline + español del resto.
+
+**Huecos**
+- Separar a una **superficie de plataforma** con **auth de superadmin**; mover aquí la provisión
+  de tenants (`POST /v1/platform/tenants`, hoy abierta).
+- Alinear al design system (tokens + español).
+
+**Candidato(s) a spec**
+- `plataforma-superadmin` — auth de plataforma + mover Operaciones + provisión de tenants +
+  alinear DS. **Prioridad alta** (ligado al objetivo de Auth y a seguridad).
 
 ---
 
