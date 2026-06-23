@@ -25,6 +25,12 @@ Last updated: 2026-06-23
 
 Detalle en el gap-analysis (índice de features) y su sección "Síntesis".
 
+> **→ Empieza por aquí (recomendación):** primero **cerrar las 8 decisiones
+> transversales** (bloquean specs limpias); en cuanto estén, la **primera feature**
+> a abrir con `/speckit-specify` es **`plataforma-superadmin`** — es el objetivo de
+> Auth del dueño y cierra el agujero de seguridad de `/operations` (vista
+> cross-tenant sin auth). Le siguen `tenant-settings` y `reservas-ciclo-estados-pagos`.
+
 1. **Cerrar las 8 decisiones transversales** del recorrido antes de abrir specs
    (categoría-entidad, online/virtual, group booking, dónde viven políticas+moneda,
    IA Facturación-vs-Finanzas, IA de las 4 áreas Amelia sin menú, **Auth/superadmin**,
@@ -61,6 +67,15 @@ Detalle en el gap-analysis (índice de features) y su sección "Síntesis".
 - **Investigación Amelia:** `docs/analysis/amelia-*-fine-grained.md` + `amelia-ux-reference.md`.
 - **Decisiones:** `docs/adr/0001…0020`. **Constitución:** `.specify/memory/constitution.md`.
 - **Arranque de sesión:** `docs/START_PROMPT.md`.
+
+## Suggested skills (próximo agente)
+
+- `/speckit-clarify` — para resolver las 8 decisiones transversales una a una.
+- `/speckit-specify` — abrir la primera feature (`plataforma-superadmin`), luego
+  `tenant-settings`, `reservas-ciclo-estados-pagos`. Sembrar desde el gap-analysis +
+  `docs/analysis/amelia-*-fine-grained.md`.
+- `/speckit-plan` y `/speckit-tasks` — tras cada spec.
+- `/handoff` — al cerrar la sesión, para refrescar este archivo.
 
 ## Reglas de cierre de sesión
 
