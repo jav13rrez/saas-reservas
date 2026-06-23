@@ -27,7 +27,7 @@ Convención de estado por área del recorrido:
 | 3  | Agenda         | Calendario        | `/calendar`   | ✅               |
 | 4  | Agenda         | Eventos           | `/events`     | ✅               |
 | 5  | Catálogo       | Servicios         | `/services`   | ✅               |
-| 6  | Catálogo       | Recursos          | `/resources`  | ⏳               |
+| 6  | Catálogo       | Recursos          | `/resources`  | ✅               |
 | 7  | Catálogo       | Ubicaciones       | `/locations`  | ⏳               |
 | 8  | Catálogo       | Proveedores       | `/providers`  | ⏳               |
 | 9  | Catálogo       | Clientes          | `/customers`  | ⏳               |
@@ -181,6 +181,30 @@ como entidad** (nombre, color, icono, orden, conteo).
 **Candidato(s) a spec**
 - `servicios-edicion-ux` — editar + modal con tabs + settings de agenda + búsqueda/filtros.
 - `categorias-entidad` — categoría como entidad de primera clase (transversal). Prioridad alta.
+
+---
+
+## 6. Recursos — `/resources`  ⭐ pantalla más madura
+
+**Estado actual** (`apps/admin/src/features/resources/index.tsx`)
+Implementación de referencia del modelo **hub** (ADR-0016). **CRUD completo** (crear, **editar**,
+activar/desactivar) + **cantidad** (unidades) + tres grupos de checkboxes: Ubicaciones (vacío =
+todas), Servicios que consumen el recurso (vacío = ninguno), Proveedores elegibles (vacío =
+cualquiera). Tabla con chips. **Backend completo y probado** (resources-model-review.md): motor
+de disponibilidad + checkout + persistencia RLS; caso "4 terapeutas / 2 salas" funciona E2E.
+
+**Referencia**
+Amelia mete Resources en Catalog (no top-level); "New resource" añade image + color +
+descripción. Decisiones pendientes (`amelia-ux-reference.md`): **#1 partición de cantidad**
+(shared/per-service/per-location, diferida en ADR-0016) y **#4 group booking**.
+
+**Huecos**
+- Diferido (solo bajo demanda): **partición de cantidad** + **group booking**.
+- Cosméticos: imagen/color/descripción del recurso, búsqueda, borrar.
+
+**Candidato(s) a spec**
+- `recursos-cantidad-avanzada` — partición de cantidad + group booking. Prioridad baja
+  (condicionada a demanda). **Sin acción para MVP** — área madura.
 
 ---
 
