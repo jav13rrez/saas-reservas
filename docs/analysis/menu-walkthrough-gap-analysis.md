@@ -30,7 +30,7 @@ Convención de estado por área del recorrido:
 | 6  | Catálogo       | Recursos          | `/resources`  | ✅               |
 | 7  | Catálogo       | Ubicaciones       | `/locations`  | ✅               |
 | 8  | Catálogo       | Proveedores       | `/providers`  | ✅               |
-| 9  | Catálogo       | Clientes          | `/customers`  | ⏳               |
+| 9  | Catálogo       | Clientes          | `/customers`  | ✅               |
 | 10 | Administración | Facturación       | `/billing`    | ⏳               |
 | 11 | Administración | Operaciones       | `/operations` | ⏳               |
 | 12 | Administración | Auditoría         | `/audit`      | ⏳               |
@@ -262,6 +262,36 @@ relacionado con el objetivo de cuentas tenant/superadmin.
 **Candidato(s) a spec**
 - `proveedores-detalle-ux` — foto/teléfono/rol/bio + búsqueda. Prioridad media.
 - `proveedores-finanzas-comisiones` — dominio nuevo. Prioridad media/baja.
+
+---
+
+## 9. Clientes — `/customers`
+
+**Estado actual** (`apps/admin/src/features/customers/index.tsx`)
+Lista + **crear** (Nombre · Email · Teléfono) + **activar/desactivar**. Cliente es entidad de
+primera clase. **Sin editar**, sin búsqueda, sin perfil.
+
+**Referencia Amelia** (`amelia-customers-fine-grained.md`)
+Lista con búsqueda/filtros + columnas Bookings · Total Spent · Last Booking · Status. Modal con
+tabs **Details / Address / Bookings / Invoices / Notes**: fecha nac., género, foto, **password**
+(cuenta cliente), newsletter, **status incl. Blacklisted**; dirección + facturación; historial
+de reservas; **facturas + store credit**; notas + timeline.
+
+**Huecos**
+- **Editar** + perfil con tabs.
+- **Búsqueda/filtros** (doc marca ✅ pero la pantalla no tiene búsqueda → discrepancia).
+- **Métricas** (nº reservas, total gastado, última) → depende de la **capa de reporting** del
+  Dashboard; **historial de reservas** (join ya disponible en datos).
+- **Blacklist** (bloquea nuevas reservas), **store credit** (ligado a Finance/reembolsos).
+- **GDPR**: anonimización existe en backend (US3) pero no expuesta aquí.
+- Bulk/export, avatares, newsletter.
+
+**Nota de Auth**
+"Cuenta de cliente / password" conecta con el **portal passwordless de cliente** (US3, backend).
+
+**Candidato(s) a spec**
+- `clientes-perfil-360` — editar + tabs + historial/métricas + blacklist. Depende de reporting
+  (Dashboard) y Finance (store credit/facturas). Prioridad media.
 
 ---
 
