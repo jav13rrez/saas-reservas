@@ -18,6 +18,47 @@ Convención de estado por área del recorrido:
 
 - ⏳ Pendiente · 🔍 En análisis · ✅ Analizada (huecos registrados)
 
+## Síntesis del recorrido (2026-06-23) — completado
+
+### Madurez por área
+
+| Madurez | Áreas |
+|---|---|
+| **Madura** (CRUD + editar) | Recursos (6), Proveedores (8) |
+| **Funcional básica** (crear+toggle, sin editar) | Reservas (2), Servicios (5), Ubicaciones (7), Clientes (9) |
+| **Real solo-lectura** | Calendario (3, matriz), Operaciones (11) |
+| **Placeholder, backend existe** | Eventos (4), Facturación (10), Auditoría (12) |
+| **Placeholder / wizard** | Inicio (1), Configuración (13) |
+
+### Decisiones transversales surgidas (resolver antes de planificar specs)
+
+1. **Categoría como entidad** (no texto libre) — Decisión pendiente #2. Toca Servicios/Reservas/widget.
+2. **Online/virtual** (servicio + ubicación) — Decisión pendiente #5.
+3. **Group booking / partición de cantidad** — Decisiones pendientes #1/#4 (diferidas).
+4. **Dónde viven políticas (cancelación/reprogramación) + moneda**: global / sede / servicio.
+5. **IA Facturación**: separar **Facturación (SaaS)** de **Finanzas (negocio)**.
+6. **IA sidebar**: ¿añadir Notifications / Customize / Custom Fields / Integrations como áreas o plegarlas?
+7. **Auth/plataforma**: superficie superadmin (mover Operaciones + provisión de tenants), proveedor-como-login, vínculo con portal de cliente.
+8. **Ciclo de estados de reserva** (binario → 6 estados) + default status (Pending/Approved).
+
+### Clúster crítico para el MVP (🔴)
+
+- `tenant-settings` (políticas de tiempo, sender email por tenant, activar pasarela, perfil del tenant) — área 13.
+- Ciclo de estados de reserva + pagos manuales — área 2.
+- `plataforma-superadmin` (auth de plataforma; hoy `/operations` expone todos los tenants sin protección) — área 11.
+- Worker de notificaciones email (pendiente pre-existente; ver TECH_DEBT/HANDOFF).
+
+### Catálogo de candidatos a feature (Spec-Kit)
+
+`dashboard-operacion` · `reservas-ciclo-estados-pagos` · `reservas-gestion-ux` ·
+`calendario-vistas-interaccion` · `eventos-admin-ui` · `servicios-edicion-ux` ·
+`categorias-entidad` · `ubicaciones-edicion-detalle` · `proveedores-detalle-ux` ·
+`proveedores-finanzas-comisiones` · `clientes-perfil-360` · `saas-billing-plan-ui` ·
+`finanzas-pagos` · `cupones` · `gift-cards-store-credit` · `plataforma-superadmin` ·
+`tenant-settings` · `auditoria-busqueda-ui` · `recursos-cantidad-avanzada`.
+
+---
+
 ## Índice de áreas (sidebar)
 
 | #  | Sección        | Área              | Ruta          | Estado recorrido |
