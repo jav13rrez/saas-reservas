@@ -612,6 +612,38 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   (no dangling branches). Onboarding note recorded: the owner is a beginner — go
   step by step and avoid large multi-line terminal pastes (they corrupt).
 
+### 2026-06-23 (Amelia fine-grained sweep — 13 docs)
+
+- Documentación exhaustiva campo a campo de **toda la interfaz de Amelia Premium**
+  en 13 archivos `docs/analysis/amelia-*-fine-grained.md` (Dashboard, Calendar,
+  Bookings, Events, Employees, Catalog, Locations, Customers, Finance, Notifications,
+  Customize, Custom Fields, Integrations) ≈ **160+ tablas**. Cada tabla lleva columnas
+  Campo/Tipo/Opciones/Default + **Estado SaaS** (✅/🔶/❌) y **Prioridad** (🔴/🟡/🟢),
+  más "Resumen de brechas críticas" por archivo. Es la referencia completa de UX/feature
+  para el crecimiento del SaaS. Sesión de análisis; sin cambios de stack.
+
+### 2026-06-23 (recorrido del menú admin + gap-analysis + reorg de docs)
+
+- **Recorrido del panel admin área por área (13/13)** desde el sidebar, validando el
+  código real contra los `amelia-*-fine-grained.md`. Resultado volcado a
+  `docs/analysis/menu-walkthrough-gap-analysis.md` (nuevo): por área, estado actual ↔
+  referencia ↔ huecos ↔ candidatos a feature, + matriz de madurez, 8 decisiones
+  transversales y el clúster crítico de MVP. Es el **índice de features** que alimenta
+  `/speckit-specify`.
+- Hallazgos clave: `/operations` es una vista **cross-tenant sin auth** dentro de
+  `apps/admin` (seguridad + objetivo superadmin); rompe además el design system
+  (Tailwind/inglés). Settings es un wizard de alta, no ajustes (faltan políticas de
+  tiempo, sender email por tenant, activar pasarela, perfil del tenant). "Facturación"
+  mezcla SaaS-billing con finanzas-del-negocio (cupones/gift cards no modelados).
+  Categoría es texto libre (debería ser entidad). Eventos/Auditoría/Facturación son
+  placeholders con backend ya hecho.
+- **Reorganización de los docs de continuidad** (sin tocar `specs/001`, ADRs ni
+  constitución): `HANDOFF.md` adelgazado (564→~75 líneas) a punto-de-reanudación puro;
+  historial migrado/consolidado aquí en `PROGRESS.md` (diario único); `PLANNING.md`
+  ampliado con el modelo de documentos en 4 capas y el flujo de crecimiento por feature.
+  Decisión operativa: **una feature de Spec-Kit por área de crecimiento** (002, 003…),
+  sembrada desde el gap-analysis + la referencia Amelia.
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.

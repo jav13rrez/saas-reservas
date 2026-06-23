@@ -12,6 +12,10 @@ Read these files in order at the start of a new session:
 4. `.specify/memory/constitution.md` — non-negotiable architecture principles.
 5. `specs/001-saas-multitenant-booking/plan.md` — current technical plan.
 6. `specs/001-saas-multitenant-booking/tasks.md` — implementation backlog.
+7. `docs/analysis/menu-walkthrough-gap-analysis.md` — post-spec growth feature index.
+
+Before designing UI or a new feature, also read the relevant
+`docs/analysis/amelia-*-fine-grained.md` (full Amelia reference, 13 areas).
 
 Before ending a meaningful session, update `PROGRESS.md` and `HANDOFF.md`. If tasks were completed, update `tasks.md`. If a major architecture decision was made, record it under `docs/adr/`.
 
