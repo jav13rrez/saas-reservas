@@ -28,7 +28,7 @@ Convención de estado por área del recorrido:
 | 4  | Agenda         | Eventos           | `/events`     | ✅               |
 | 5  | Catálogo       | Servicios         | `/services`   | ✅               |
 | 6  | Catálogo       | Recursos          | `/resources`  | ✅               |
-| 7  | Catálogo       | Ubicaciones       | `/locations`  | ⏳               |
+| 7  | Catálogo       | Ubicaciones       | `/locations`  | ✅               |
 | 8  | Catálogo       | Proveedores       | `/providers`  | ⏳               |
 | 9  | Catálogo       | Clientes          | `/customers`  | ⏳               |
 | 10 | Administración | Facturación       | `/billing`    | ⏳               |
@@ -205,6 +205,34 @@ descripción. Decisiones pendientes (`amelia-ux-reference.md`): **#1 partición 
 **Candidato(s) a spec**
 - `recursos-cantidad-avanzada` — partición de cantidad + group booking. Prioridad baja
   (condicionada a demanda). **Sin acción para MVP** — área madura.
+
+---
+
+## 7. Ubicaciones — `/locations`
+
+**Estado actual** (`apps/admin/src/features/locations/index.tsx`)
+Lista + **crear** (Nombre · Zona horaria · Dirección) + **activar/desactivar**. Multi-sede
+(model C) soportado en backend. **Sin editar** (solo crear/toggle).
+
+**Referencia Amelia** (`amelia-locations-fine-grained.md`)
+Modal con tabs **Details / Hours / Employees / Services / Settings**: ciudad/provincia/CP/país/
+teléfono/email/web/descripción/foto + **Type Physical/Virtual/Hybrid** (enlace Zoom); horario de
+apertura por sede; empleados/servicios de la sede; **Settings**: zona horaria, **ventana de
+cancelación/reprogramación**, **moneda**, separador decimal, máx. reservas concurrentes.
+
+**Huecos**
+- **Editar** ubicación + modal con tabs.
+- **Ubicación virtual/híbrida** con enlace de reunión → Decisión pendiente #5 (conecta con
+  servicios online + integración de meetings).
+- **Horario de apertura por sede** (distinto del horario por proveedor, que ya existe).
+- Tabs Employees/Services = vistas inversas del hub (atajo/solo lectura).
+
+**Decisión transversal pendiente**
+¿Dónde viven las **políticas de cancelación/reprogramación** y la **moneda**? (global / por
+sede / por servicio). El motor de políticas ya existe (US3); falta decidir el punto de config.
+
+**Candidato(s) a spec**
+- `ubicaciones-edicion-detalle` — editar + Details ricos + tipo virtual. Prioridad media.
 
 ---
 
