@@ -39,10 +39,10 @@ Detalle en el gap-analysis (índice de features) y su sección "Síntesis".
    `specs/002-plataforma-superadmin/` con `spec.md` (+ Clarifications, FR-020/FR-021),
    `plan.md`, `research.md`, `data-model.md`, `contracts/platform-api.md`, `quickstart.md`.
    Constitución PASS. `.specify/feature.json` → 002; `AGENTS.md` apunta al plan de 002.
-   **Decisión pendiente de tu visto bueno:** superficie de plataforma como **app separada
-   `apps/platform`** (recomendada en el plan) vs área protegida dentro de `apps/admin` — al
-   confirmar, registrar ADR. **Siguiente paso inmediato:** `/speckit-tasks`, luego
-   `/speckit-implement`.
+   **Decisión confirmada (dueño):** **app separada `apps/platform`** → **ADR-0022**.
+   `/speckit-tasks` HECHO: `tasks.md` con 34 tareas en 7 fases (Setup, Foundational, US1–US4,
+   Polish), tests primero, MVP = US1 (lockdown + login). **Siguiente paso inmediato:**
+   `/speckit-implement` (empezar por Setup + Foundational + US1). US4 es paralelizable.
 3. **Clúster crítico MVP** → convertir en features Spec-Kit (`/speckit-specify`):
    - `tenant-settings` — políticas de tiempo, sender email por tenant, activar
      pasarela, perfil del tenant. **Fundacional.**

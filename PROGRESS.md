@@ -688,8 +688,13 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   `PLATFORM_BOOTSTRAP_SECRET`; suspensión en el tenant-resolver; vínculo proveedor↔staff vía
   `staff_accounts.provider_id` (único por tenant); Operaciones migrado a `apps/platform` +
   alineado al DS. `AGENTS.md` (bloque SPECKIT) repuntado a 002.
-  **Pendiente de visto bueno del dueño:** la decisión de **app separada `apps/platform`** vs
-  área protegida dentro de `apps/admin` (registrar ADR al confirmar). Siguiente: `/speckit-tasks`.
+  **Decisión confirmada por el dueño:** **app separada `apps/platform`** (vs área dentro de
+  `apps/admin`). Registrada en **ADR-0022** (auth de plataforma + superficie separada + identidad
+  platform-global + gate + bootstrap autobloqueante + suspensión + vínculo proveedor↔staff).
+- **`/speckit-tasks` (2026-06-24):** generado `tasks.md` — 34 tareas en 7 fases (Setup,
+  Foundational, US1–US4, Polish), con tests primero (exigidos por la constitución). MVP = US1
+  (lockdown + login de operador). US4 (vínculo proveedor↔staff) es paralelizable. Siguiente:
+  `/speckit-implement` (o implementar fase a fase). Rama empujada a `origin`.
 
 ## Current Backlog
 

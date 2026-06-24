@@ -29,6 +29,7 @@ Use ADRs for decisions that affect framework choice, tenancy, database strategy,
 | [0019](0019-stripe-connect-gateway-wiring.md)        | Stripe Connect Gateway Wiring                               | accepted | 2026-06-19 |
 | [0020](0020-brevo-email-messaging-adapter.md)        | Brevo Transactional Email Adapter                           | accepted | 2026-06-22 |
 | [0021](0021-cross-cutting-product-decisions.md)      | Cross-Cutting Product Decisions From The Admin Walkthrough  | accepted | 2026-06-24 |
+| [0022](0022-platform-superadmin-surface.md)          | Platform Superadmin — Separate Surface And Platform Identity | accepted | 2026-06-24 |
 
 ## Template
 
