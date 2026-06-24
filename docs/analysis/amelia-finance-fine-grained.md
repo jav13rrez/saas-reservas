@@ -110,39 +110,6 @@ Cada tab tiene su propia lista con filtros y modalesdediferentes campos.
 | **Services** (si Specific) | Checkboxes | Listado de servicios | - | - | 🔶 | 🟡 |
 | **Status** | Radio | `Active`, `Inactive` | - | `Active` | 🔶 | 🟡 |
 
-### Controles Superiores (Coupons Tab)
-
-| Control | Tipo | Opciones/Valores | Default | Estado SaaS | Prioridad |
-|---|---|---|---|---|---|
-| **Search Box** | Input text | Buscar por: código cupón, nombre | - | 🔶 | 🟡 |
-| **+ Coupon** | Botón primario | Abre modal New Coupon | - | 🔶 | 🟡 |
-
-### Tabla Coupons
-
-| Columna | Tipo | Contenido | Acciones | Estado SaaS | Prioridad |
-|---|---|---|---|---|---|
-| **CODE** | Texto | Código cupón (ej: "SUMMER20") | Click abre modal Edit | 🔶 | 🟡 |
-| **DISCOUNT** | Texto | `20%` o `$10 off` | - | 🔶 | 🟡 |
-| **USAGE** | Número | `5 / 10` (usado / máximo) | - | 🔶 | 🟡 |
-| **VALID UNTIL** | Fecha | `MMM DD, YYYY` o `Never` | - | 🔶 | 🟡 |
-| **STATUS** | Badge | `Active` (verde), `Inactive` (gris), `Expired` (rojo) | Click menu cambiar | 🔶 | 🟡 |
-| **ACTIONS** | Menú | Edit, Delete, View Usage | ⋯ menu | 🔶 | 🟡 |
-
-### Modal: New / Edit Coupon
-
-| Campo | Tipo | Opciones/Valores | Validación | Default | Estado SaaS | Prioridad |
-|---|---|---|---|---|---|
-| **Coupon Code** | Input text | Código alfanumérico | Required, unique, max 20 | - | 🔶 | 🟡 |
-| **Description** | Input text | Descripción interna | Optional, max 100 | - | 🔶 | 🟡 |
-| **Discount Type** | Radio | `Percentage`, `Fixed Amount` | Required | `Percentage` | 🔶 | 🟡 |
-| **Discount Value** | Input number | % o $ | Required, >0 | 10 | 🔶 | 🟡 |
-| **Max Usage** | Input number | Máximo usos (vacío = unlimited) | Optional | Unlimited | 🔶 | 🟡 |
-| **Valid From** | Date picker | Fecha inicio | - | Today | 🔶 | 🟡 |
-| **Valid Until** | Date picker | Fecha fin (o Never) | ≥ Valid From | - | 🔶 | 🟡 |
-| **Applicable To** | Multi-select | `All Services`, `Specific Services` | All | `All Services` | 🔶 | 🟡 |
-| **Services** (si Specific) | Checkboxes | Listado de servicios | - | - | 🔶 | 🟡 |
-| **Status** | Radio | `Active`, `Inactive` | - | `Active` | 🔶 | 🟡 |
-
 ---
 
 ## Global Finance Controls

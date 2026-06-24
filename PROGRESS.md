@@ -730,6 +730,10 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   confirmado (Settings de servicio, categoría-entidad, tab Payment, filtros, 6 estados).
   **Verificado: la feature 002 NO se ve afectada** por estos docs (son superficies de tenant; 002
   es la capa de plataforma). 002 sigue lista para `/speckit-implement` sin cambios.
+- **Cierre (2026-06-24):** corregida la duplicación de la sección Coupons en
+  `amelia-finance-fine-grained.md` (se conservó la copia con columna TYPE y filtro Status).
+  `HANDOFF.md` y el hook de inicio actualizados para que **la próxima sesión arranque con
+  `/speckit-implement`** de la 002 (MVP US1 primero). Rama viva y empujada. Sin cambios de código.
 
 ## Current Backlog
 

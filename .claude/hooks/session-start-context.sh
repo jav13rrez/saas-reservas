@@ -9,8 +9,10 @@ cd "$ROOT" 2>/dev/null || exit 0
 
 echo "=== SaaS Reservas — arranque de sesion (continuidad) ==="
 echo "Lee en orden: HANDOFF.md (abajo) -> PLANNING.md -> PROGRESS.md ->"
-echo ".specify/memory/constitution.md -> specs/001-* (fundacional) + la feature activa (abajo) ->"
+echo ".specify/memory/constitution.md -> specs/001-* (fundacional) ->"
+echo "la feature activa (abajo): spec.md + plan.md + tasks.md ->"
 echo "docs/analysis/menu-walkthrough-gap-analysis.md (indice de features)."
+echo "Sigue 'Proximas acciones' del HANDOFF (siguiente paso planificado: /speckit-implement)."
 echo "Prompt de arranque completo: docs/START_PROMPT.md"
 
 branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"

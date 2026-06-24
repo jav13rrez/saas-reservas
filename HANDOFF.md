@@ -10,17 +10,16 @@ Last updated: 2026-06-24
 
 ## Punto de reanudación (2026-06-24 — sesión CERRADA)
 
-> **⏸️ PARADA DELIBERADA.** El dueño detectó que **varios `docs/analysis/amelia-*-fine-grained.md`
-> no quedaron lo bastante profundos**. Volverá con **todos** ellos documentados a fondo. Hasta
-> entonces, la **implementación de la feature 002 está EN PAUSA** (la planificación está completa,
-> pero podría necesitar revisión a la luz de la referencia Amelia más profunda).
+> **▶️ PRÓXIMA SESIÓN: empezar con `/speckit-implement` de la feature 002.** La planificación está
+> completa y validada; la referencia Amelia profundizada (Catalog/Finance/Bookings) ya se revisó y
+> **NO afecta a la 002** (son superficies de tenant; 002 es la capa de plataforma). No hay nada
+> pendiente que bloquee implementar.
 
 - **Rama de trabajo:** `claude/affectionate-wright-0vx6ka` — **VIVA y empujada a `origin`** (no
-  fusionada, no borrar). Todo el trabajo de la sesión está commiteado y firmado ahí. Continuar en
-  esta misma rama la próxima sesión.
+  fusionada, no borrar). Todo el trabajo está commiteado y firmado ahí. Continuar en esta rama.
 - **Spec 001 completa** (T001–T086) fusionada en `main`. Suite verde (~318 tests). Stack local
   validado E2E (Postgres+Redis+API; admin en `demo` y en `api`).
-- **Esta sesión (2026-06-24):**
+- **Sesiones recientes (2026-06-24):**
   1. **8 decisiones transversales resueltas** → **ADR-0021** (gap-analysis marcado).
   2. **Feature `002-plataforma-superadmin` planificada de punta a punta**:
      `/speckit-specify` + `/speckit-clarify` + `/speckit-plan` + `/speckit-tasks` →
@@ -28,22 +27,28 @@ Last updated: 2026-06-24
      `quickstart.md`, `tasks.md` (34 tareas, 7 fases, tests primero, MVP = US1). Arquitectura en
      **ADR-0022** (app separada `apps/platform`, identidad platform-global, gate, bootstrap
      autobloqueante, suspensión, vínculo proveedor↔staff). **Constitución PASS. Aún SIN implementar.**
+  3. **Deep-dive Amelia (Cowork) integrado y revisado:** Catalog/Finance/Bookings profundizados;
+     gap-analysis actualizado (🆕 candidata `paquetes`; Finanzas corregido a
+     Transactions/Invoices/Coupons, **gift-cards descartado**; áreas 5 y 2 enriquecidas). **002 sin
+     cambios.** (Otros 11 docs de Amelia siguen en su estado de 2026-06-23; quizá se profundicen tras
+     el MVP.)
 - **Dirección de producto:** pagos pausados; prioridad = **camino a un MVP desplegable**.
 
 ## Próximas acciones (priorizadas) — PRÓXIMA SESIÓN
 
-> **→ Empieza por aquí:** el dueño traerá los `amelia-*-fine-grained.md` profundizados.
+> **→ Empieza por aquí:** `/speckit-implement` la feature 002 (`specs/002-plataforma-superadmin/`).
 
-1. **Releer los `docs/analysis/amelia-*-fine-grained.md` profundizados** (los que el dueño rehaga).
-   Identificar qué áreas ganaron detalle frente a la versión usada hasta ahora.
-2. **Reevaluar la feature 002 a la luz de esa referencia más profunda** ANTES de implementar:
-   ¿cambian `spec.md`/`plan.md`/`tasks.md` de `plataforma-superadmin`? Si sí, actualizar con
-   `/speckit-clarify` o re-`/speckit-plan`/`/speckit-tasks`; si no, seguir.
-3. **Solo entonces** `/speckit-implement` la 002 (empezar por Setup + Foundational + US1; US4 es
-   paralelizable).
-4. **Siguientes features del clúster MVP** (tras 002): `tenant-settings`,
-   `reservas-ciclo-estados-pagos`, worker de notificaciones email (Brevo wired; falta bootstrap +
-   dispatcher email). Detalle en el gap-analysis.
+1. **`/speckit-implement` la 002**, por incrementos siguiendo `tasks.md`:
+   - **MVP primero**: Fase 1 (Setup) → Fase 2 (Foundational) → **Fase 3 (US1: lockdown + login de
+     operador)**, validar (quickstart escenarios 1–2), y parar a revisar.
+   - Luego US2 (provisión + ciclo de vida de tenant), US3 (Operaciones a `apps/platform` + DS),
+     US4 (vínculo proveedor↔staff, **paralelizable**), y Polish.
+   - Reflejar el patrón staff-auth (ADR-0017) para la identidad de plataforma; tests primero
+     (exigidos por la constitución). Marcar tareas en `tasks.md` al completarlas.
+2. **Tras 002** (clúster MVP): `tenant-settings`, `reservas-ciclo-estados-pagos`, worker de
+   notificaciones email (Brevo wired; falta bootstrap + dispatcher email). Detalle en el gap-analysis.
+3. **Backlog enriquecido por el deep-dive** (post-MVP): nueva feature `paquetes`; `finanzas-pagos`
+   ahora incluye Invoices; `cupones` con modal ya especificado.
 
 ## Blockers / notas de entorno
 
@@ -71,13 +76,10 @@ Last updated: 2026-06-24
 
 ## Suggested skills (próximo agente)
 
-- **Primero (esta vez):** leer los `docs/analysis/amelia-*-fine-grained.md` profundizados que traiga
-  el dueño y reevaluar la feature 002 antes de tocar código.
-- `/speckit-clarify` y/o re-`/speckit-plan`/`/speckit-tasks` — si la referencia Amelia más profunda
-  obliga a ajustar `specs/002-plataforma-superadmin/`.
-- `/speckit-implement` — para construir la 002 una vez validada (Setup + Foundational + US1 primero).
+- **Primero (esta vez): `/speckit-implement`** la feature 002 (`specs/002-plataforma-superadmin/`),
+  empezando por Setup + Foundational + US1 (MVP). Tests primero; marcar `tasks.md` al avanzar.
 - `/speckit-specify` — para las siguientes features del clúster (`tenant-settings`,
-  `reservas-ciclo-estados-pagos`).
+  `reservas-ciclo-estados-pagos`) tras la 002.
 - `/handoff` — al cerrar la sesión, para refrescar este archivo.
 
 ## Reglas de cierre de sesión
