@@ -723,6 +723,13 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   otros 11 docs de Amelia siguen en su estado de 2026-06-23. Decisión del dueño: por ahora solo
   estos 3; quizá más áreas tras el MVP.
 - Esta entrada se reubicó aquí (estaba insertada fuera de orden entre las de 2026-06-12).
+- **Gap-analysis actualizado** (Claude Code) con lo aprendido del deep-dive: 🆕 candidata
+  **`paquetes`** (modal Amelia de 5 tabs + config por servicio; + pestaña Packages en Reservas);
+  área 10 **corregida** (Finanzas de Amelia = **Transactions/Invoices/Coupons**, **sin Gift Cards**
+  → `gift-cards-store-credit` retirado del catálogo); áreas 5 y 2 enriquecidas con el detalle
+  confirmado (Settings de servicio, categoría-entidad, tab Payment, filtros, 6 estados).
+  **Verificado: la feature 002 NO se ve afectada** por estos docs (son superficies de tenant; 002
+  es la capa de plataforma). 002 sigue lista para `/speckit-implement` sin cambios.
 
 ## Current Backlog
 
