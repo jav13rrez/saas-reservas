@@ -23,10 +23,10 @@ independently. Paths follow the modular monolith layout in plan.md.
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [ ] T001 [P] Scaffold the `apps/platform` Next.js App Router app (importing `packages/ui` design
+- [x] T001 [P] Scaffold the `apps/platform` Next.js App Router app (importing `packages/ui` design
   tokens + `lucide-react`, Spanish strings, no emojis); register it in `pnpm-workspace.yaml` and
   TypeScript project references; confirm `next build` passes on an empty shell.
-- [ ] T002 [P] Add optional `PLATFORM_BOOTSTRAP_SECRET` (validated when present) to
+- [x] T002 [P] Add optional `PLATFORM_BOOTSTRAP_SECRET` (validated when present) to
   `packages/contracts/src/environment.ts`; document it in `.env.example` and
   `docs/operations/SETUP.md`.
 
@@ -36,19 +36,19 @@ independently. Paths follow the modular monolith layout in plan.md.
 
 **⚠️ CRITICAL**: Platform identity + the auth gate block all platform user stories (US1–US3).
 
-- [ ] T003 SQL migration `infra/postgres/009-platform-operators.sql`: platform-global
+- [x] T003 SQL migration `infra/postgres/009-platform-operators.sql`: platform-global
   `platform_operators` (id, unique email, scrypt `password_hash`, display_name, status, timestamps),
   **no** `apply_tenant_rls`; unique index on email. Also add/confirm `tenants.status`
   (`active`/`suspended`, default `active`), idempotent.
-- [ ] T004 Mirror `platform_operators` and `tenants.status` in `packages/persistence/src/schema.ts`.
-- [ ] T005 [P] Define the `PlatformOperatorStore` port + an in-memory adapter under
+- [x] T004 Mirror `platform_operators` and `tenants.status` in `packages/persistence/src/schema.ts`.
+- [x] T005 [P] Define the `PlatformOperatorStore` port + an in-memory adapter under
   `services/api/src/application/identity/` (create/find-by-email/count/list).
-- [ ] T006 [P] Implement `DrizzlePlatformOperatorRepository` in `packages/persistence` against the
+- [x] T006 [P] Implement `DrizzlePlatformOperatorRepository` in `packages/persistence` against the
   platform-global table (no tenant context).
-- [ ] T007 Add an optional `platformAuth` dep to `buildApp` and a platform-session gate over
+- [x] T007 Add an optional `platformAuth` dep to `buildApp` and a platform-session gate over
   `/v1/platform/*` (except the bootstrap route) and `/v1/ops/*` in
   `services/api/src/api/availability-routes.ts` (these groups are already tenant-resolution-exempt).
-- [ ] T008 Create `services/api/src/api/platform-routes.ts` (registered by `buildApp`) and wire
+- [x] T008 Create `services/api/src/api/platform-routes.ts` (registered by `buildApp`) and wire
   `platformAuth` + `PLATFORM_BOOTSTRAP_SECRET` into both bootstraps in `services/api/src/main.ts`
   (in-memory and persistent).
 
@@ -66,29 +66,29 @@ operator can bootstrap the first account, sign in, and sign out.
 
 ### Tests for User Story 1
 
-- [ ] T009 [P] [US1] Unit test the bootstrap self-lock + secret rule (pure) in
+- [x] T009 [P] [US1] Unit test the bootstrap self-lock + secret rule (pure) in
   `tests/unit/identity/platform-bootstrap.test.ts`.
-- [ ] T010 [P] [US1] Unit test platform password hash/verify + uniform-timing failure in
+- [x] T010 [P] [US1] Unit test platform password hash/verify + uniform-timing failure in
   `tests/unit/identity/platform-password.test.ts`.
-- [ ] T011 [P] [US1] e2e in `tests/e2e/platform-auth.test.ts`: bootstrap 201 → 409 (self-locked) →
+- [x] T011 [P] [US1] e2e in `tests/e2e/platform-auth.test.ts`: bootstrap 201 → 409 (self-locked) →
   403 (bad secret); login sets `platform_session`; `/v1/ops/tenants` 401 without session and 403 with
   a tenant `staff_session`; logout invalidates.
 
 ### Implementation for User Story 1
 
-- [ ] T012 [US1] Implement `PlatformAuthService` in
+- [x] T012 [US1] Implement `PlatformAuthService` in
   `services/api/src/application/identity/platform-auth-service.ts` (scrypt reuse per ADR-0017,
   `authenticate` → opaque `platform_session` cookie, `getSession`, `logout`, in-memory session map,
   placeholder-hash uniform timing, audited login/logout via the platform/global context).
-- [ ] T013 [US1] Implement `POST /v1/platform/operators/bootstrap` in `platform-routes.ts`
+- [x] T013 [US1] Implement `POST /v1/platform/operators/bootstrap` in `platform-routes.ts`
   (constant-time secret compare, succeeds only while zero operators exist, self-locks → 409); audit
   `platform.operator.bootstrapped`.
-- [ ] T014 [US1] Implement `POST /v1/platform/sessions` (login), `DELETE /v1/platform/sessions`
+- [x] T014 [US1] Implement `POST /v1/platform/sessions` (login), `DELETE /v1/platform/sessions`
   (logout), and `POST /v1/platform/operators` (gated create) in `platform-routes.ts`; audit
   `platform.operator.login`/`logout`/`created`.
-- [ ] T015 [US1] Enforce the gate behavior in `availability-routes.ts`: 401 without a platform
+- [x] T015 [US1] Enforce the gate behavior in `availability-routes.ts`: 401 without a platform
   session; 403 for a `staff_session`/customer session (sessions not interchangeable).
-- [ ] T016 [US1] Build the `apps/platform` login page + server-only API client (tenant-less platform
+- [x] T016 [US1] Build the `apps/platform` login page + server-only API client (tenant-less platform
   origin) and post-login redirect in `apps/platform/src/app/`.
 
 **Checkpoint**: Platform surface is locked and an operator can sign in — the security-critical MVP.

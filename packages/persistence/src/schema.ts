@@ -33,6 +33,16 @@ export const tenants = pgTable("tenants", {
   policies: jsonb("policies").$type<TenantPolicies>().notNull(),
 });
 
+export const platformOperators = pgTable("platform_operators", {
+  id: uuid("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  displayName: text("display_name").notNull(),
+  status: text("status").$type<"active" | "disabled">().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull(),
+});
+
 export const tenantDomains = pgTable("tenant_domains", {
   id: uuid("id").primaryKey(),
   tenantId: uuid("tenant_id").notNull(),

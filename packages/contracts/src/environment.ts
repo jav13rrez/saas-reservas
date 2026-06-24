@@ -32,6 +32,13 @@ export const environmentSchema = z.object({
   /** Signing secret for session cookies. */
   SESSION_COOKIE_SECRET: z.string().min(32),
 
+  // Platform superadmin (feature 002). Optional: present only where the platform
+  // surface is wired. When set it gates the self-locking first-operator bootstrap
+  // (POST /v1/platform/operators/bootstrap); validated for minimum strength when
+  // provided so a misconfigured deployment never exposes a weak bootstrap secret.
+  // The secret and the resulting operator credentials live outside source control.
+  PLATFORM_BOOTSTRAP_SECRET: z.string().min(32).optional(),
+
   // --- Optional until the corresponding feature is wired in the bootstrap ---
   // Validation still applies when a value IS provided, so a misconfigured
   // integration fails fast rather than silently using a weak/blank value.

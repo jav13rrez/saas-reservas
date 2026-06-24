@@ -1,6 +1,6 @@
 # Technical Debt — Pre-Production Ledger
 
-Last updated: 2026-06-19
+Last updated: 2026-06-24
 
 Cumulative register of known shortcuts, simplifications, and dev-only choices
 that MUST be reviewed (and most resolved) **before a real production launch on a
@@ -35,6 +35,17 @@ How to use this file:
   (Redis or Postgres) before horizontal scaling or zero-downtime deploys.
 - **[HIGH] No login rate limiting** for staff auth (`/v1/admin/sessions`)
   (ADR-0017). Add throttling / lockout before exposing the admin surface.
+- **[HIGH] Platform operator sessions also live in an in-memory map**
+  (feature 002 / ADR-0022, `PlatformAuthService`). Same limitation and fix as
+  staff sessions; the two share the follow-up. Login rate limiting for
+  `/v1/platform/sessions` is the same pending item as the staff surface.
+- **[MEDIUM] Platform-global audit is best-effort.** Platform-only actions
+  (operator bootstrap/login/logout/create — feature 002) are audited through the
+  tenant-scoped event sink with a `platform` pseudo-tenant; on the persistent
+  Drizzle path that write fails (no such tenant under RLS) and is currently logged
+  and swallowed so it never breaks auth. The in-memory sink captures it exactly.
+  Needs a durable platform-global audit store (relaxed tenant scope or a separate
+  `platform_audit` table) before relying on platform audit in production.
 - **[MEDIUM] Password hashing uses scrypt, not argon2id** (ADR-0017) — chosen
   because argon2 had no native build in the dev environment. Re-evaluate
   argon2id for production.

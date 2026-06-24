@@ -22,6 +22,7 @@ import {
 } from "../application/customers/customer-service.js";
 import type { AdminBookingService } from "../application/bookings/admin-booking-service.js";
 import type { StaffAuthService } from "../application/identity/staff-auth-service.js";
+import type { PlatformAuthService } from "../application/identity/platform-auth-service.js";
 import type { AvailabilityService } from "../application/scheduling/availability-service.js";
 import type { TenantAdminService } from "../application/tenancy/tenant-admin-service.js";
 import {
@@ -29,6 +30,8 @@ import {
   type TenantLookup,
   type TenantResolution,
 } from "../infrastructure/tenancy/tenant-resolver.js";
+import { cookieValue, serializeCookie } from "./http-cookies.js";
+import { registerPlatformRoutes } from "./platform-routes.js";
 import { registerCheckoutRoutes, type CheckoutDeps } from "./checkout-routes.js";
 import { registerEventRoutes, type EventDeps } from "./event-routes.js";
 import { registerPortalRoutes, type PortalDeps } from "./portal-routes.js";
@@ -56,6 +59,16 @@ export interface AppDeps {
    * When omitted, `/v1/admin/*` stays open (development/tests).
    */
   staffAuth?: StaffAuthService;
+  /**
+   * Platform-operator authentication (ADR-0022). When provided, the
+   * `/v1/platform/*` (except the self-locking bootstrap and login) and `/v1/ops/*`
+   * route groups require a valid `platform_session`, and the operator
+   * bootstrap/login/logout/create routes are exposed. When omitted, those groups
+   * stay open (development/tests), preserving prior behavior.
+   */
+  platformAuth?: PlatformAuthService;
+  /** Deploy secret gating the first-operator bootstrap (env PLATFORM_BOOTSTRAP_SECRET). */
+  platformBootstrapSecret?: string;
   availability: AvailabilityService;
   /** Tenant default timezone lookup for availability queries. */
   tenantTimezone(tenantId: string): Promise<string>;
@@ -84,31 +97,6 @@ declare module "fastify" {
     tenant?: RequestTenant;
     staff?: RequestStaff;
   }
-}
-
-/** Reads a cookie value from the request's Cookie header, or null. */
-function cookieValue(request: FastifyRequest, name: string): string | null {
-  const header = request.headers.cookie;
-  if (header === undefined) {
-    return null;
-  }
-  for (const part of header.split(";")) {
-    const [key, ...rest] = part.trim().split("=");
-    if (key === name) {
-      return rest.join("=");
-    }
-  }
-  return null;
-}
-
-function serializeCookie(cookie: {
-  name: string;
-  value: string;
-  maxAgeSeconds: number;
-  path: string;
-  sameSite: string;
-}): string {
-  return `${cookie.name}=${cookie.value}; Max-Age=${String(cookie.maxAgeSeconds)}; Path=${cookie.path}; HttpOnly; Secure; SameSite=${cookie.sameSite}`;
 }
 
 function failureStatus(resolution: Exclude<TenantResolution, { ok: true }>): number {
@@ -232,6 +220,46 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       }
       request.staff = { id: session.staffId, role: session.role };
       return;
+    });
+  }
+
+  // Platform-auth gate (ADR-0022): when configured, the platform/ops route groups
+  // require a valid platform_session. The self-locking bootstrap and login stay
+  // public. A tenant `staff_session` is NOT interchangeable: it yields 403, not a
+  // pass. Missing/invalid platform session with no staff session yields 401.
+  const platformAuth = deps.platformAuth;
+  if (platformAuth !== undefined) {
+    const publicPlatformRoutes = new Set([
+      "POST /v1/platform/operators/bootstrap",
+      "POST /v1/platform/sessions",
+    ]);
+    app.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
+      const path = request.url.split("?")[0] ?? request.url;
+      const gated = path.startsWith("/v1/platform/") || path.startsWith("/v1/ops/");
+      if (!gated) {
+        return;
+      }
+      if (publicPlatformRoutes.has(`${request.method} ${path}`)) {
+        return;
+      }
+      const sessionId = cookieValue(request, "platform_session");
+      const session = sessionId === null ? null : platformAuth.getSession(sessionId);
+      if (session !== null) {
+        return;
+      }
+      // A tenant/customer session presented here is the wrong kind, not absent.
+      if (cookieValue(request, "staff_session") !== null) {
+        await reply.code(403).send({ error: "forbidden" });
+        return reply;
+      }
+      await reply.code(401).send({ error: "unauthenticated" });
+      return reply;
+    });
+    registerPlatformRoutes(app, {
+      platformAuth,
+      ...(deps.platformBootstrapSecret !== undefined
+        ? { platformBootstrapSecret: deps.platformBootstrapSecret }
+        : {}),
     });
   }
 

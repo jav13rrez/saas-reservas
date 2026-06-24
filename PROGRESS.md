@@ -735,6 +735,44 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   `HANDOFF.md` y el hook de inicio actualizados para que **la próxima sesión arranque con
   `/speckit-implement`** de la 002 (MVP US1 primero). Rama viva y empujada. Sin cambios de código.
 
+### 2026-06-24 (feature 002 — MVP US1 implementado: auth de plataforma)
+
+- **Implementadas las Fases 1–3 de la feature 002 (plataforma-superadmin), US1**, en la rama
+  `claude/affectionate-wright-0vx6ka`. Cierra el agujero de seguridad: `/v1/platform/*` y `/v1/ops/*`
+  pasan a requerir sesión de plataforma. **Detenido en US1** (US2/US3/US4 pendientes), según objetivo.
+- **Fase 1 (Setup):**
+  - `apps/platform` — nueva superficie Next.js (App Router, puerto 3003) con login + dashboard,
+    tokens de `packages/ui` + iconos `lucide-react` + textos en español + sin emojis (ADR-0008).
+    `next build` verde.
+  - `PLATFORM_BOOTSTRAP_SECRET` (opcional, min 32) añadido a `packages/contracts/environment.ts`,
+    `.env.example` y `docs/operations/SETUP.md`.
+- **Fase 2 (Foundational):**
+  - Migración `infra/postgres/009-platform-operators.sql` — tabla **platform-global** `platform_operators`
+    (sin RLS, como `tenants`), email único; `tenants.status` confirmado idempotente.
+  - `platform_operators` reflejado en `packages/persistence/schema.ts`.
+  - Puerto `PlatformOperatorStore` + adaptador in-memory + `DrizzlePlatformOperatorRepository`
+    (vía `db.global`, sin contexto de tenant).
+  - Dep opcional `platformAuth` en `buildApp` + gate de sesión sobre `/v1/platform/*` (excepto
+    bootstrap y login) y `/v1/ops/*`. `platform-routes.ts` registrado por `buildApp`; cableado en
+    ambos bootstraps de `main.ts`.
+- **Fase 3 (US1):**
+  - `PlatformAuthService` (scrypt reutilizado ADR-0017; cookie opaca `platform_session`; mapa de
+    sesiones in-memory; timing uniforme con placeholder hash). Regla de bootstrap **pura**
+    (`packages/domain/identity/platform.ts`: self-lock con precedencia sobre el secreto).
+  - Rutas: `POST /v1/platform/operators/bootstrap` (gated por secreto, self-locking → 409),
+    `POST/DELETE /v1/platform/sessions` (login/logout), `POST /v1/platform/operators` (gated).
+  - Gate: 401 sin sesión de plataforma; 403 con `staff_session` (sesiones no intercambiables).
+  - Página de login `apps/platform` + cliente de API server-only (origen sin tenant) + redirección.
+- **Tests:** `tests/unit/identity/platform-bootstrap.test.ts` (4), `…/platform-password.test.ts` (6),
+  `tests/e2e/platform-auth.test.ts` (2, escenarios 1 y 2). Suite total: unit 112, e2e 40, contract 58,
+  todo verde; typecheck y lint limpios. Integración Drizzle/RLS se auto-salta sin Postgres (convención).
+- **Quickstart escenarios 1 y 2 validados en terminal** contra la API in-memory real (curl):
+  S1 `403 → 201 → 409 → 409`; S2 `401/401 → login 200 → ops 200 → staff_session 403 → logout 204 → 401`.
+  Tabla de aceptación de `quickstart.md` actualizada; T001–T016 marcados en `tasks.md`.
+- **Deuda registrada (`TECH_DEBT.md`):** sesiones de plataforma in-memory (= staff), sin rate limiting
+  en `/v1/platform/sessions`, y **audit platform-global best-effort** (se escribe vía sink tenant-scoped
+  con pseudo-tenant `platform`; en persistente falla y se traga con log — falta store de audit global).
+
 ## Current Backlog
 
 All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.
