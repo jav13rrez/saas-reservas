@@ -30,16 +30,25 @@ Convención de estado por área del recorrido:
 | **Placeholder, backend existe** | Eventos (4), Facturación (10), Auditoría (12) |
 | **Placeholder / wizard** | Inicio (1), Configuración (13) |
 
-### Decisiones transversales surgidas (resolver antes de planificar specs)
+### Decisiones transversales surgidas — RESUELTAS (2026-06-24, ADR-0021)
 
-1. **Categoría como entidad** (no texto libre) — Decisión pendiente #2. Toca Servicios/Reservas/widget.
-2. **Online/virtual** (servicio + ubicación) — Decisión pendiente #5.
-3. **Group booking / partición de cantidad** — Decisiones pendientes #1/#4 (diferidas).
-4. **Dónde viven políticas (cancelación/reprogramación) + moneda**: global / sede / servicio.
-5. **IA Facturación**: separar **Facturación (SaaS)** de **Finanzas (negocio)**.
-6. **IA sidebar**: ¿añadir Notifications / Customize / Custom Fields / Integrations como áreas o plegarlas?
-7. **Auth/plataforma**: superficie superadmin (mover Operaciones + provisión de tenants), proveedor-como-login, vínculo con portal de cliente.
-8. **Ciclo de estados de reserva** (binario → 6 estados) + default status (Pending/Approved).
+Las ocho quedaron resueltas con el dueño y registradas en
+`docs/adr/0021-cross-cutting-product-decisions.md`. Resumen:
+
+1. **Categoría como entidad** → **Sí**, entidad de primera clase (no texto libre).
+   Toca Servicios/Reservas/widget. → feature `categorias-entidad`.
+2. **Online/virtual** (servicio + ubicación) → **Diferido a post-MVP**.
+3. **Group booking / partición de cantidad** → **Sigue diferido** (ADR-0016).
+4. **Políticas (cancelación/reprogramación) + moneda** → **Global por tenant**
+   (`tenant_settings`); override por sede como extensión futura. → `tenant-settings`.
+5. **IA Facturación** → **Separar** Facturación (SaaS) de Finanzas (negocio) en el menú.
+6. **IA sidebar** (Notifications/Customize/Custom Fields/Integrations) → **Plegadas en
+   Configuración**; Customize ligado al widget público.
+7. **Auth/plataforma** → **Superficie de plataforma separada con auth superadmin**
+   (mueve Operaciones + provisión de tenants); proveedor separado de `staff_accounts`
+   pero **vinculable** (`staff.providerId` opcional). → `plataforma-superadmin`.
+8. **Ciclo de estados de reserva** → **6 estados**, default **Approved**, configurable
+   por tenant. → `reservas-ciclo-estados-pagos`.
 
 ### Clúster crítico para el MVP (🔴)
 

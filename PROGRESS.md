@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-06-23
+Last updated: 2026-06-24
 
 ## Current State
 
@@ -643,6 +643,31 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   ampliado con el modelo de documentos en 4 capas y el flujo de crecimiento por feature.
   Decisión operativa: **una feature de Spec-Kit por área de crecimiento** (002, 003…),
   sembrada desde el gap-analysis + la referencia Amelia.
+
+### 2026-06-24 (8 decisiones transversales resueltas — ADR-0021)
+
+- Resueltas con el dueño las **8 decisiones transversales** surgidas del recorrido del
+  menú (gap-analysis), que bloqueaban abrir specs limpias. Registradas en
+  `docs/adr/0021-cross-cutting-product-decisions.md` (nuevo) y marcadas en
+  `docs/analysis/menu-walkthrough-gap-analysis.md`:
+  1. **Categoría** → entidad de primera clase (no texto libre) → `categorias-entidad`.
+  2. **Online/virtual** → diferido a post-MVP (Decisión pendiente #5).
+  3. **Group booking / partición de cantidad** → sigue diferido (ADR-0016).
+  4. **Políticas (cancelación/reprogramación) + moneda** → global por tenant
+     (`tenant_settings`); override por sede como extensión futura → `tenant-settings`.
+  5. **IA Facturación** → separar Facturación (SaaS) de Finanzas (negocio) en el menú.
+  6. **IA sidebar** → Notifications/Custom Fields/Integrations plegadas en Configuración;
+     Customize ligado al widget público.
+  7. **Auth/plataforma** → superficie de plataforma separada con auth superadmin (mueve
+     Operaciones + provisión de tenants); proveedor separado de `staff_accounts` pero
+     vinculable (`staff.providerId` opcional) → `plataforma-superadmin`.
+  8. **Ciclo de estados de reserva** → 6 estados (Pending/Approved/Rejected/Cancelled/
+     Completed/No-show), default **Approved**, configurable por tenant →
+     `reservas-ciclo-estados-pagos`.
+- También: completado el índice de `docs/adr/README.md` (faltaban 0009–0014, 0018–0020;
+  añadido 0021). Actualizados `HANDOFF.md` (punto de reanudación + próximas acciones) y
+  este diario. Sin cambios de código ni de stack. Próximo paso recomendado:
+  `/speckit-specify plataforma-superadmin`.
 
 ## Current Backlog
 
