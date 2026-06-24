@@ -57,9 +57,7 @@ Rules:
 - After new SaaS source code exists, build fresh Graphify outputs for that codebase rather than updating the Amelia reference graphs.
 
 <!-- SPECKIT START -->
-
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/001-saas-multitenant-booking/plan.md
-
+at specs/002-plataforma-superadmin/plan.md
 <!-- SPECKIT END -->

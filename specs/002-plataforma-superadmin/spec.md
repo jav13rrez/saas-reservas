@@ -18,6 +18,19 @@ can create tenants. This is the largest security gap found in the admin walkthro
 operator (the SaaS owner) is a distinct actor from any tenant's staff and must have its own
 authenticated surface, separate from the per-tenant admin console.
 
+## Clarifications
+
+### Session 2026-06-24
+
+- Q: How is the FIRST platform operator created (chicken-and-egg, when no platform identity yet
+  exists to authenticate the action)? → A: A one-off bootstrap step gated by a deployment-time
+  secret (environment configuration) that self-locks once the first operator exists; credentials
+  are kept durably outside source control.
+- Q: When a tenant is suspended, what does it block going forward? → A: It blocks new tenant staff
+  sign-ins and new public bookings; tenant data is preserved and the tenant can be reactivated.
+- Q: On suspension, what happens to already-confirmed future bookings? → A: They are preserved
+  as-is (no auto-cancellation); suspension only halts new activity.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Platform operator signs in to a protected platform surface (Priority: P1)
@@ -141,14 +154,15 @@ one staff account.
 
 ### Edge Cases
 
-- **First platform operator bootstrap (chicken-and-egg)**: how is the very first platform operator
-  created when no platform identity yet exists to authenticate the action? (See Assumptions; a
-  candidate for `/speckit-clarify`.)
+- **First platform operator bootstrap (chicken-and-egg)**: the very first operator is created via a
+  deployment-secret-gated bootstrap step that self-locks once an operator exists (resolved — see
+  Clarifications, FR-020).
 - **Forged identity**: a request presents a fabricated platform session token or a spoofed
   host/forwarded header — it must be rejected; a platform session must not be derivable from any
   tenant-scoped credential, and vice versa.
-- **Suspended tenant**: behavior of in-flight bookings, staff logins, and the public widget for a
-  tenant that is suspended (see Assumptions).
+- **Suspended tenant**: staff sign-ins and new public bookings are blocked; existing future
+  bookings are preserved unchanged; data is retained and the tenant is reactivable (resolved — see
+  Clarifications, FR-021).
 - **Audit isolation**: the per-tenant audit view on the platform surface must read each tenant's
   records without letting any tenant context read another tenant's data.
 - **Session expiry**: an expired platform session is treated as unauthenticated.
@@ -176,6 +190,10 @@ one staff account.
   session.
 - **FR-007**: Platform credentials MUST be stored securely (hashed, never reversible) and MUST NOT
   be committed to source control.
+- **FR-020**: The system MUST provide a bootstrap path to create the first platform operator that
+  is gated by a deployment-time secret (environment configuration), and that path MUST self-lock
+  (refuse to create another first operator) once at least one platform operator exists. The
+  bootstrap secret and resulting credentials MUST be kept outside source control.
 
 **Protected platform actions (provisioning & lifecycle)**
 
@@ -185,6 +203,10 @@ one staff account.
   operator.
 - **FR-010**: The system MUST allow a platform operator to change a tenant's lifecycle state (at
   least active and suspended) and MUST reflect that state where tenant access is evaluated.
+- **FR-021**: A suspended tenant MUST block new tenant staff sign-ins and new public bookings,
+  MUST preserve all existing tenant data, and MUST be reactivable to a fully operational state.
+  Already-confirmed future bookings MUST be preserved as-is on suspension (no automatic
+  cancellation); suspension only halts new activity.
 - **FR-011**: Every platform action (sign-in, sign-out, provisioning, first-admin bootstrap,
   lifecycle change) MUST emit an audit record identifying the platform operator as actor.
 
@@ -250,13 +272,12 @@ one staff account.
   opaque server-side sessions in HttpOnly cookies, constant-time verification — applied to a new
   platform-global identity rather than a tenant-scoped one. The concrete mechanism is decided at
   planning time.
-- **First-operator bootstrap (default, candidate for `/speckit-clarify`)**: the very first platform
-  operator is seeded out-of-band at deployment (e.g. a one-off bootstrap step driven by deployment
-  configuration), with credentials kept durably outside source control. The bootstrap path is
-  single-use/locked down once an operator exists.
-- **Tenant suspension semantics (default)**: a suspended tenant blocks new tenant-scoped sign-ins
-  and new public bookings; existing data is preserved and the tenant can be reactivated. Exact
-  treatment of in-flight bookings is refined at planning/clarify time.
+- **First-operator bootstrap (resolved — see Clarifications)**: the first platform operator is
+  created via a one-off bootstrap step gated by a deployment-time secret, which self-locks once an
+  operator exists; credentials are kept durably outside source control. (FR-020)
+- **Tenant suspension semantics (resolved — see Clarifications)**: a suspended tenant blocks new
+  tenant staff sign-ins and new public bookings; existing data — including already-confirmed future
+  bookings — is preserved unchanged, and the tenant can be reactivated. (FR-021)
 - **MFA is out of scope for v1**: platform auth uses password + recorded attempts (and rate limiting
   consistent with the existing follow-ups); stronger factors are a documented follow-up.
 - **Platform surface delivery**: whether the platform surface is a separate application or a

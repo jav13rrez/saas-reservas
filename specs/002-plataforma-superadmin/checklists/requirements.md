@@ -38,8 +38,9 @@
   ADR-0005/0008/0017), which the constitution's Delivery Workflow requires specs to identify. They
   are not incidental technology choices and intentionally do not prescribe a specific
   implementation.
-- Open item left for `/speckit-clarify` (documented as an Assumption, not a blocking marker): the
-  first-platform-operator bootstrap mechanism (chicken-and-egg). A reasonable default is stated so
-  the spec is complete; clarify can refine it before `/speckit-plan`.
+- `/speckit-clarify` session 2026-06-24 resolved the previously-open items: first-platform-operator
+  bootstrap (deployment-secret-gated, self-locking → FR-020) and tenant suspension semantics
+  (blocks new staff sign-ins + new public bookings; existing/future bookings preserved; reactivable
+  → FR-021). No checklist items changed state (16/16 passing before and after).
 - US4 (provider ↔ staff linkage) is tenant-scoped and could be split into a separate feature; it is
   kept here because it is the second half of ADR-0021 decision #7.

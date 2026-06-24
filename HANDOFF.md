@@ -35,10 +35,14 @@ Detalle en el gap-analysis (índice de features) y su sección "Síntesis".
 
 1. **Decisiones transversales — HECHO (2026-06-24, ADR-0021).** Las ocho resueltas; ya
    no bloquean specs.
-2. **`plataforma-superadmin` — spec ABIERTA (2026-06-24):** `specs/002-plataforma-superadmin/`
-   (spec.md + checklist en verde; `.specify/feature.json` → 002). **Siguiente paso inmediato:**
-   `/speckit-clarify` (único item abierto: bootstrap del primer operador de plataforma) y luego
-   `/speckit-plan` → `/speckit-tasks`.
+2. **`plataforma-superadmin` — spec + clarify + PLAN HECHOS (2026-06-24):**
+   `specs/002-plataforma-superadmin/` con `spec.md` (+ Clarifications, FR-020/FR-021),
+   `plan.md`, `research.md`, `data-model.md`, `contracts/platform-api.md`, `quickstart.md`.
+   Constitución PASS. `.specify/feature.json` → 002; `AGENTS.md` apunta al plan de 002.
+   **Decisión pendiente de tu visto bueno:** superficie de plataforma como **app separada
+   `apps/platform`** (recomendada en el plan) vs área protegida dentro de `apps/admin` — al
+   confirmar, registrar ADR. **Siguiente paso inmediato:** `/speckit-tasks`, luego
+   `/speckit-implement`.
 3. **Clúster crítico MVP** → convertir en features Spec-Kit (`/speckit-specify`):
    - `tenant-settings` — políticas de tiempo, sender email por tenant, activar
      pasarela, perfil del tenant. **Fundacional.**

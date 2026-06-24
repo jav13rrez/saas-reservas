@@ -673,8 +673,23 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   `/operations` y de la provisión de tenants abierta), P2 provisión/ciclo de vida de tenants
   bajo auth, P3 panel de Operaciones cross-tenant migrado a la plataforma + alineado al DS, P3
   vínculo proveedor↔cuenta staff (ADR-0021 #7). Checklist de calidad: todos los ítems en verde.
-  `.specify/feature.json` apunta ya a 002. Único item abierto para `/speckit-clarify`: bootstrap
-  del primer operador de plataforma. Siguiente paso: `/speckit-clarify` o `/speckit-plan`.
+  `.specify/feature.json` apunta ya a 002.
+- **`/speckit-clarify` (sesión 2026-06-24):** 3 preguntas resueltas e integradas en la spec
+  (sección `## Clarifications` + FR-020/FR-021): (a) bootstrap del primer operador =
+  gatillado por secreto de deploy y autobloqueante; (b) suspensión de tenant bloquea logins
+  de staff + reservas nuevas, conserva datos; (c) reservas futuras se conservan sin tocar.
+  Checklist 16/16 sin cambios de estado.
+- **`/speckit-plan` (2026-06-24):** generados `plan.md`, `research.md`, `data-model.md`,
+  `contracts/platform-api.md`, `quickstart.md`. Constitución: PASS (sin violaciones; la
+  complejidad notable —app `apps/platform` separada— justificada en Complexity Tracking).
+  Decisiones clave: identidad `platform_operators` platform-global (sin RLS, espejo de
+  `StaffAuthService`/ADR-0017, cookie `platform_session`); gate de plataforma sobre
+  `/v1/platform/*` y `/v1/ops/*` (hoy abiertos); bootstrap autobloqueante con
+  `PLATFORM_BOOTSTRAP_SECRET`; suspensión en el tenant-resolver; vínculo proveedor↔staff vía
+  `staff_accounts.provider_id` (único por tenant); Operaciones migrado a `apps/platform` +
+  alineado al DS. `AGENTS.md` (bloque SPECKIT) repuntado a 002.
+  **Pendiente de visto bueno del dueño:** la decisión de **app separada `apps/platform`** vs
+  área protegida dentro de `apps/admin` (registrar ADR al confirmar). Siguiente: `/speckit-tasks`.
 
 ## Current Backlog
 
