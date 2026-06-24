@@ -24,7 +24,10 @@ import type { AdminBookingService } from "../application/bookings/admin-booking-
 import type { StaffAuthService } from "../application/identity/staff-auth-service.js";
 import type { PlatformAuthService } from "../application/identity/platform-auth-service.js";
 import type { AvailabilityService } from "../application/scheduling/availability-service.js";
-import type { TenantAdminService } from "../application/tenancy/tenant-admin-service.js";
+import {
+  TenantAdminError,
+  type TenantAdminService,
+} from "../application/tenancy/tenant-admin-service.js";
 import {
   resolveRequestTenant,
   type TenantLookup,
@@ -102,8 +105,8 @@ declare module "fastify" {
 function failureStatus(resolution: Exclude<TenantResolution, { ok: true }>): number {
   switch (resolution.reason) {
     case "tenant-mismatch":
-      return 403;
     case "tenant-inactive":
+    case "tenant-suspended":
       return 403;
     case "invalid-session":
       return 401;
@@ -267,6 +270,15 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   const adminActor = (request: FastifyRequest): Actor =>
     request.staff === undefined ? SYSTEM_ACTOR : { type: "staff", id: request.staff.id };
 
+  /** Platform actor: resolved from the platform_session cookie when available. */
+  const platformActor = (request: FastifyRequest): Actor => {
+    const sessionId = cookieValue(request, "platform_session");
+    const session = sessionId !== null && deps.platformAuth !== undefined
+      ? deps.platformAuth.getSession(sessionId)
+      : null;
+    return session !== null ? { type: "platform", id: session.operatorId } : { type: "platform" };
+  };
+
   app.post("/v1/platform/tenants", async (request, reply) => {
     const body = request.body as {
       slug: string;
@@ -274,14 +286,43 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       defaultTimezone: string;
       defaultLocale?: string;
     };
-    const tenant = await deps.tenantAdmin.createTenant({ ...body, actor: adminActor(request) });
+    const actor = platformActor(request);
+    const tenant = await deps.tenantAdmin.createTenant({ ...body, actor });
     await deps.tenantAdmin.addDomain({
       tenantId: tenant.id,
       hostname: `${tenant.slug}.${deps.platformBaseDomain}`,
       kind: "subdomain",
-      actor: adminActor(request),
+      actor,
     });
     return reply.code(201).send(tenant);
+  });
+
+  // List all tenants (platform-gated; used by the platform UI for the tenant table).
+  app.get("/v1/platform/tenants", async (_request, reply) => {
+    const items = await deps.tenantAdmin.listTenants();
+    return reply.send({ items: items.map((t) => ({ id: t.id, slug: t.slug, displayName: t.displayName, status: t.status })) });
+  });
+
+  // Tenant lifecycle: suspend or reactivate a tenant (FR-021).
+  app.patch("/v1/platform/tenants/:tenantId", async (request, reply) => {
+    const { tenantId } = request.params as { tenantId: string };
+    const body = request.body as { status?: unknown };
+    if (body.status !== "active" && body.status !== "suspended") {
+      return reply.code(400).send({ error: "status must be active or suspended" });
+    }
+    try {
+      const updated = await deps.tenantAdmin.updateStatus({
+        tenantId,
+        status: body.status,
+        actor: platformActor(request),
+      });
+      return reply.code(200).send({ id: updated.id, status: updated.status });
+    } catch (error) {
+      if (error instanceof TenantAdminError && error.code === "tenant-not-found") {
+        return reply.code(404).send({ error: "tenant-not-found" });
+      }
+      throw error;
+    }
   });
 
   if (staffAuth !== undefined) {

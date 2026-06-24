@@ -73,7 +73,7 @@ tenant session is rejected.
 |----------|--------------|--------|
 | 1 Bootstrap gated/self-locking | US1 / FR-020 | Validated 2026-06-24 (in-memory API, curl: 403 -> 201 -> 409 -> 409) |
 | 2 Platform surface locked | US1 / FR-003, FR-004 | Validated 2026-06-24 (in-memory API, curl: 401/401 -> login 200 -> ops 200 -> staff_session 403 -> logout 204 -> 401) |
-| 3 Authenticated provisioning | US2 / FR-008, FR-009 | Pending implementation |
-| 4 Suspension semantics | US2 / FR-010, FR-021 | Pending implementation |
+| 3 Authenticated provisioning | US2 / FR-008, FR-009 | Validated 2026-06-24 (in-memory API, curl: provision 201 → staff bootstrap 201 → staff login 201) |
+| 4 Suspension semantics | US2 / FR-010, FR-021 | Validated 2026-06-24 (in-memory API, curl: suspend 200 → staff login 403 → availability 403 → reactivate 200 → staff login 201) |
 | 5 Operations overview | US3 / FR-012–FR-015 | Pending implementation |
 | 6 Provider↔staff link | US4 / FR-016–FR-019 | Pending implementation |

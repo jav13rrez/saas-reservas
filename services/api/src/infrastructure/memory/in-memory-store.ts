@@ -100,6 +100,10 @@ export class InMemoryStore
     return Promise.resolve(null);
   }
 
+  listTenants(): Promise<Tenant[]> {
+    return Promise.resolve([...this.tenants.values()]);
+  }
+
   insertDomain(domain: TenantDomain): Promise<void> {
     this.domains.set(domain.hostname, domain);
     return Promise.resolve();

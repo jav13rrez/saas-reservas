@@ -106,23 +106,23 @@ confirmed future bookings; reactivation restores operation.
 
 ### Tests for User Story 2
 
-- [ ] T017 [P] [US2] e2e in `tests/e2e/platform-tenant-lifecycle.test.ts`: provision → bootstrap
+- [x] T017 [P] [US2] e2e in `tests/e2e/platform-tenant-lifecycle.test.ts`: provision → bootstrap
   admin (both gated) → suspend → reactivate; audit actor is the operator.
-- [ ] T018 [P] [US2] Integration in `tests/integration/tenancy/tenant-suspension.test.ts`: suspended
+- [x] T018 [P] [US2] Integration in `tests/integration/tenancy/tenant-suspension.test.ts`: suspended
   tenant blocks staff login + public checkout, preserves existing/future bookings; reactivation
   restores.
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Add a tenant lifecycle update method to the tenant repository/service (both
+- [x] T019 [US2] Add a tenant lifecycle update method to the tenant repository/service (both
   adapters) for `status` transitions, audited.
-- [ ] T020 [US2] Implement `PATCH /v1/platform/tenants/:tenantId` (status active/suspended) in
+- [x] T020 [US2] Implement `PATCH /v1/platform/tenants/:tenantId` (status active/suspended) in
   `platform-routes.ts`; audit `tenant.suspended`/`tenant.reactivated`. (Existing
   `POST /v1/platform/tenants` and `.../staff` are now gated by the Phase 2 gate.)
-- [ ] T021 [US2] Enforce suspension in `services/api/src/infrastructure/tenancy/tenant-resolver.ts`
+- [x] T021 [US2] Enforce suspension in `services/api/src/infrastructure/tenancy/tenant-resolver.ts`
   via a pure application-layer decision: reject suspended tenants for staff sign-in and public
   booking/checkout; never touch confirmed bookings.
-- [ ] T022 [US2] Build the `apps/platform` tenant provisioning + lifecycle UI (list tenants, create
+- [x] T022 [US2] Build the `apps/platform` tenant provisioning + lifecycle UI (list tenants, create
   tenant, bootstrap first admin, suspend/reactivate) in `apps/platform/src/`.
 
 **Checkpoint**: Tenant onboarding/offboarding is a controlled, audited platform action.

@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-06-24
+Last updated: 2026-06-24 (US2)
 
 ## Current State
 
@@ -772,6 +772,34 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
 - **Deuda registrada (`TECH_DEBT.md`):** sesiones de plataforma in-memory (= staff), sin rate limiting
   en `/v1/platform/sessions`, y **audit platform-global best-effort** (se escribe vía sink tenant-scoped
   con pseudo-tenant `platform`; en persistente falla y se traga con log — falta store de audit global).
+
+### 2026-06-24 — feature 002 US2 (ciclo de vida de tenants)
+
+- **T017:** `tests/e2e/platform-tenant-lifecycle.test.ts` — 3 tests E2E que cubren escenarios 3
+  (aprovisionamiento autenticado) y 4 (suspensión/reactivación): creación de tenant gateada por sesión
+  de plataforma, bootstrap de admin, login del admin, PATCH suspend/active, bloqueo/restauración.
+- **T018:** `tests/integration/tenancy/tenant-suspension.test.ts` — 5 tests de integración in-memory:
+  active resuelve OK, suspended devuelve `tenant-suspended`, reactivado resuelve OK, audit registrado,
+  datos preservados tras suspensión.
+- **T019:** `TenantAdminService.updateStatus()` — nuevo método en el service usando `findTenantById +
+  updateTenant` existentes; audita `tenant.suspended` / `tenant.reactivated`. `listTenants()` añadido
+  al port `TenantRepository`, `InMemoryStore`, y `DrizzleTenantRepository`.
+- **T020:** `PATCH /v1/platform/tenants/:tenantId` en `availability-routes.ts`; devuelve
+  `{ id, status }`; 404 si el tenant no existe; actor resuelto desde la `platform_session`. También se
+  añadió `GET /v1/platform/tenants` para la UI.
+- **T021:** `tenant-resolver.ts` — `checkActive` distingue ahora `"tenant-suspended"` (status ===
+  "suspended") de `"tenant-inactive"` (otros estados no-active). `failureStatus` mapea ambos a 403.
+  Bloqueo es puramente a nivel de resolver: ninguna ruta de tenant se ejecuta.
+- **T022:** `apps/platform` — nueva página `/dashboard/tenants` (server component) con tabla de
+  tenants, estado coloreado, botones de suspender/reactivar (`TenantLifecycleButton` client), y
+  formulario de creación (`TenantCreateForm` client). Dashboard actualizado con enlace a la nueva
+  página.
+- **Tests:** suite total 334 passing (7 skipped por falta de Postgres/Redis en entorno remoto);
+  54 archivos de test (4 skipped). Typecheck y lint limpios.
+- **Quickstart escenarios 3 y 4 validados en terminal** contra la API in-memory (curl):
+  S3: provision 201 → staff bootstrap 201 → staff login 201.
+  S4: suspend 200 → staff login 403 → public availability 403 → reactivate 200 → staff login 201.
+  Tabla de aceptación de `quickstart.md` actualizada; T017–T022 marcados en `tasks.md`.
 
 ## Current Backlog
 
