@@ -9,12 +9,17 @@ cd "$ROOT" 2>/dev/null || exit 0
 
 echo "=== SaaS Reservas — arranque de sesion (continuidad) ==="
 echo "Lee en orden: HANDOFF.md (abajo) -> PLANNING.md -> PROGRESS.md ->"
-echo ".specify/memory/constitution.md -> specs/001-*/plan.md + tasks.md ->"
+echo ".specify/memory/constitution.md -> specs/001-* (fundacional) + la feature activa (abajo) ->"
 echo "docs/analysis/menu-walkthrough-gap-analysis.md (indice de features)."
 echo "Prompt de arranque completo: docs/START_PROMPT.md"
 
 branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
 echo "Rama actual: ${branch}"
+
+if [ -f .specify/feature.json ]; then
+  feat="$(sed -n 's/.*"feature_directory":"\([^"]*\)".*/\1/p' .specify/feature.json 2>/dev/null)"
+  [ -n "${feat:-}" ] && echo "Feature Spec-Kit activa: ${feat}"
+fi
 echo
 
 if [ -f HANDOFF.md ]; then

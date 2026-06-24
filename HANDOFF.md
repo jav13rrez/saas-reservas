@@ -8,50 +8,42 @@ Last updated: 2026-06-24
 > el backlog de features (por área del sidebar) en
 > `docs/analysis/menu-walkthrough-gap-analysis.md`.
 
-## Punto de reanudación (2026-06-24)
+## Punto de reanudación (2026-06-24 — sesión CERRADA)
 
-- **Rama de trabajo:** `claude/affectionate-wright-0vx6ka` (sincronizada con `main`).
-- **Spec 001 completa** (T001–T086) y todo el trabajo post-spec fusionado en `main`.
-  Suite verde (~318 tests). Stack local validado E2E (Postgres+Redis+API; admin en
-  `demo` y en `api`).
-- **Esta sesión:** **resueltas las 8 decisiones transversales** del recorrido y
-  registradas en **ADR-0021** (gap-analysis marcado). Resumen: categoría = entidad;
-  online/virtual diferido; group booking diferido; políticas+moneda = global por tenant;
-  separar Facturación(SaaS) de Finanzas(negocio); 4 áreas Amelia plegadas en Configuración;
-  plataforma-superadmin como superficie separada + proveedor vinculable a `staff`; 6 estados
-  de reserva con default Approved configurable. (Sesión previa: recorrido admin 13/13.)
-- **Dirección de producto:** pagos pausados; prioridad = **camino a un MVP
-  desplegable** (deploy en host/dominio, widget público, notificaciones email mínimas).
+> **⏸️ PARADA DELIBERADA.** El dueño detectó que **varios `docs/analysis/amelia-*-fine-grained.md`
+> no quedaron lo bastante profundos**. Volverá con **todos** ellos documentados a fondo. Hasta
+> entonces, la **implementación de la feature 002 está EN PAUSA** (la planificación está completa,
+> pero podría necesitar revisión a la luz de la referencia Amelia más profunda).
 
-## Próximas acciones (priorizadas)
+- **Rama de trabajo:** `claude/affectionate-wright-0vx6ka` — **VIVA y empujada a `origin`** (no
+  fusionada, no borrar). Todo el trabajo de la sesión está commiteado y firmado ahí. Continuar en
+  esta misma rama la próxima sesión.
+- **Spec 001 completa** (T001–T086) fusionada en `main`. Suite verde (~318 tests). Stack local
+  validado E2E (Postgres+Redis+API; admin en `demo` y en `api`).
+- **Esta sesión (2026-06-24):**
+  1. **8 decisiones transversales resueltas** → **ADR-0021** (gap-analysis marcado).
+  2. **Feature `002-plataforma-superadmin` planificada de punta a punta**:
+     `/speckit-specify` + `/speckit-clarify` + `/speckit-plan` + `/speckit-tasks` →
+     `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/platform-api.md`,
+     `quickstart.md`, `tasks.md` (34 tareas, 7 fases, tests primero, MVP = US1). Arquitectura en
+     **ADR-0022** (app separada `apps/platform`, identidad platform-global, gate, bootstrap
+     autobloqueante, suspensión, vínculo proveedor↔staff). **Constitución PASS. Aún SIN implementar.**
+- **Dirección de producto:** pagos pausados; prioridad = **camino a un MVP desplegable**.
 
-Detalle en el gap-analysis (índice de features) y su sección "Síntesis".
+## Próximas acciones (priorizadas) — PRÓXIMA SESIÓN
 
-> **→ Empieza por aquí (recomendación):** las 8 decisiones transversales ya están
-> cerradas (ADR-0021), así que la **primera feature** a abrir con `/speckit-specify`
-> es **`plataforma-superadmin`** — es el objetivo de Auth del dueño y cierra el agujero
-> de seguridad de `/operations` (vista cross-tenant sin auth). Le siguen `tenant-settings`
-> y `reservas-ciclo-estados-pagos`.
+> **→ Empieza por aquí:** el dueño traerá los `amelia-*-fine-grained.md` profundizados.
 
-1. **Decisiones transversales — HECHO (2026-06-24, ADR-0021).** Las ocho resueltas; ya
-   no bloquean specs.
-2. **`plataforma-superadmin` — spec + clarify + PLAN HECHOS (2026-06-24):**
-   `specs/002-plataforma-superadmin/` con `spec.md` (+ Clarifications, FR-020/FR-021),
-   `plan.md`, `research.md`, `data-model.md`, `contracts/platform-api.md`, `quickstart.md`.
-   Constitución PASS. `.specify/feature.json` → 002; `AGENTS.md` apunta al plan de 002.
-   **Decisión confirmada (dueño):** **app separada `apps/platform`** → **ADR-0022**.
-   `/speckit-tasks` HECHO: `tasks.md` con 34 tareas en 7 fases (Setup, Foundational, US1–US4,
-   Polish), tests primero, MVP = US1 (lockdown + login). **Siguiente paso inmediato:**
-   `/speckit-implement` (empezar por Setup + Foundational + US1). US4 es paralelizable.
-3. **Clúster crítico MVP** → convertir en features Spec-Kit (`/speckit-specify`):
-   - `tenant-settings` — políticas de tiempo, sender email por tenant, activar
-     pasarela, perfil del tenant. **Fundacional.**
-   - `reservas-ciclo-estados-pagos` — de estado binario a 6 estados + pagos manuales.
-   - `plataforma-superadmin` — auth de plataforma; hoy `/operations` expone **todos los
-     tenants sin protección** (seguridad + objetivo del dueño).
-   - Worker de notificaciones email (Brevo wired; falta bootstrap + dispatcher email).
-3. **Objetivo del dueño (Auth):** login de operador + cuenta tenant/admin + cuenta
-   superadmin de plataforma; credenciales durables fuera de git; registrar en un ADR.
+1. **Releer los `docs/analysis/amelia-*-fine-grained.md` profundizados** (los que el dueño rehaga).
+   Identificar qué áreas ganaron detalle frente a la versión usada hasta ahora.
+2. **Reevaluar la feature 002 a la luz de esa referencia más profunda** ANTES de implementar:
+   ¿cambian `spec.md`/`plan.md`/`tasks.md` de `plataforma-superadmin`? Si sí, actualizar con
+   `/speckit-clarify` o re-`/speckit-plan`/`/speckit-tasks`; si no, seguir.
+3. **Solo entonces** `/speckit-implement` la 002 (empezar por Setup + Foundational + US1; US4 es
+   paralelizable).
+4. **Siguientes features del clúster MVP** (tras 002): `tenant-settings`,
+   `reservas-ciclo-estados-pagos`, worker de notificaciones email (Brevo wired; falta bootstrap +
+   dispatcher email). Detalle en el gap-analysis.
 
 ## Blockers / notas de entorno
 
@@ -73,16 +65,19 @@ Detalle en el gap-analysis (índice de features) y su sección "Síntesis".
 - **Producto (feature fundacional):** `specs/001-saas-multitenant-booking/` (Spec-Kit).
 - **Backlog de crecimiento:** `docs/analysis/menu-walkthrough-gap-analysis.md` (índice de features).
 - **Investigación Amelia:** `docs/analysis/amelia-*-fine-grained.md` + `amelia-ux-reference.md`.
-- **Decisiones:** `docs/adr/0001…0021`. **Constitución:** `.specify/memory/constitution.md`.
+- **Decisiones:** `docs/adr/0001…0022`. **Constitución:** `.specify/memory/constitution.md`.
+- **Feature en curso (planificada, sin implementar):** `specs/002-plataforma-superadmin/`.
 - **Arranque de sesión:** `docs/START_PROMPT.md`.
 
 ## Suggested skills (próximo agente)
 
-- `/speckit-specify` — abrir la primera feature (`plataforma-superadmin`), luego
-  `tenant-settings`, `reservas-ciclo-estados-pagos`. Sembrar desde el gap-analysis +
-  `docs/analysis/amelia-*-fine-grained.md` + las decisiones de ADR-0021.
-- `/speckit-clarify` — por feature, para afinar lo que quede abierto dentro de cada spec.
-- `/speckit-plan` y `/speckit-tasks` — tras cada spec.
+- **Primero (esta vez):** leer los `docs/analysis/amelia-*-fine-grained.md` profundizados que traiga
+  el dueño y reevaluar la feature 002 antes de tocar código.
+- `/speckit-clarify` y/o re-`/speckit-plan`/`/speckit-tasks` — si la referencia Amelia más profunda
+  obliga a ajustar `specs/002-plataforma-superadmin/`.
+- `/speckit-implement` — para construir la 002 una vez validada (Setup + Foundational + US1 primero).
+- `/speckit-specify` — para las siguientes features del clúster (`tenant-settings`,
+  `reservas-ciclo-estados-pagos`).
 - `/handoff` — al cerrar la sesión, para refrescar este archivo.
 
 ## Reglas de cierre de sesión

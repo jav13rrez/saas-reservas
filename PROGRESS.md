@@ -695,6 +695,13 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   Foundational, US1–US4, Polish), con tests primero (exigidos por la constitución). MVP = US1
   (lockdown + login de operador). US4 (vínculo proveedor↔staff) es paralelizable. Siguiente:
   `/speckit-implement` (o implementar fase a fase). Rama empujada a `origin`.
+- **Cierre de sesión (2026-06-24):** parada deliberada **antes de implementar**. El dueño detectó
+  que varios `docs/analysis/amelia-*-fine-grained.md` no quedaron lo bastante profundos y volverá
+  con todos documentados a fondo. La feature 002 queda **planificada pero sin implementar**; la
+  próxima sesión debe (1) releer los Amelia profundizados, (2) reevaluar si 002 necesita ajustes y
+  (3) solo entonces `/speckit-implement`. **Rama `claude/affectionate-wright-0vx6ka` se deja VIVA**
+  (empujada, no fusionada, no borrar). Hook de inicio ajustado para mostrar la feature Spec-Kit
+  activa desde `.specify/feature.json`.
 
 ## Current Backlog
 
