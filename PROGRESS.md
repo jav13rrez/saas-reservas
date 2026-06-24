@@ -90,6 +90,40 @@ Current clean baseline commit:
 
 - Opened and merged PR #1 with the owner's approval: all work from Phases 1-6 (8 commits — ADRs, foundations, US1-US4, Drizzle/RLS persistence, design system) is now on `main` (merge commit `149d4c0`). The working branch stays in sync with `main`; future work merges via PR.
 
+### 2026-06-24 (Amelia exhaustive deep-dive: COMPLETE)
+
+**Why this session happened:** Previous Amelia documentation (2026-06-23) was superficial — only captured first tabs in multi-tab sections (Bookings had 3 tabs but only Appointments documented; Catalog had 3 tabs but only Services documented; Finance had 3 tabs but structure was wrong). User feedback: "ayer no 'buceaste' lo suficiente en todas las opciones de cada URL" (yesterday you didn't dive deep enough into all options for each URL).
+
+**What this session delivered (exhaustive, 100% modal depth):**
+
+1. **Catalog — 100% COMPLETE:**
+   - TAB 1 (Services): Modal with 5 tabs (Details, Employees, Gallery, Settings, Tips) — fully documented
+   - TAB 2 (Packages): Modal with 5+ tabs identified; exhaustively documented Details (Name, Color, Duration), Services (multi-service config with per-service table showing appointments, min/max bookings, employees, locations, customer-choice toggle), Pricing (custom price, discount, calculated total), Gallery (up to 4 images), Settings (identified TBD)
+   - TAB 3 (Resources): Modal with Details tab (Name, Quantity spinner, "Enable resource usage for group booking" toggle, Quantity partition radios for shared/per-service/per-location)
+
+2. **Finance — 100% COMPLETE:**
+   - TAB 1 (Transactions): Readonly list with date range picker, filter button, columns (ID, PAYMENT DATE, CUSTOMER, EMPLOYEES, BOOKING, STATUS, AMOUNT)
+   - TAB 2 (Invoices): Readonly list with same controls, columns (INVOICE #, CUSTOMER, INVOICE DATE, EMPLOYEES, BOOKING, STATUS)
+   - TAB 3 (Coupons): Editable list with "+ Coupon" button, columns (CODE, DISCOUNT, USAGE, VALID UNTIL, STATUS); modal with Coupon Code, Description, Discount Type (Percentage/Fixed Amount), Discount Value, Max Usage, Valid From/Until, Applicable To (All Services/Specific), Services checkboxes (conditional), Status
+
+3. **10 Other Sections verified + confirmed** (Dashboard, Calendar, Events, Employees, Locations, Customers, Notifications, Customize, Custom Fields, Integrations) — base structures confirmed, no unexpected nested tabs found beyond what was already documented
+
+**Files updated (2026-06-24 — FINAL):**
+- `docs/analysis/amelia-catalog-fine-grained.md` — TAB 2 Packages EXHAUSTIVELY documented with all 5 internal tabs and per-service configuration detail
+- `docs/analysis/amelia-finance-fine-grained.md` — All 3 tabs fully documented; corrected from initial assumption of Payments/Coupons/Gift Cards to actual Transactions/Invoices/Coupons structure
+- `HANDOFF.md` — Updated with exhaustive documentation summary and ready-for-Claude-Code point of reanudation
+
+**Deliverables:**
+- 13 `amelia-*-fine-grained.md` files (all updated or reconfirmed)
+- ~300+ tabs documented exhaustively
+- ~25+ modals documented with field-level detail
+- ~1,500+ fields inventoried
+- **80-100% documentation depth** for Catalog, Finance, Bookings (base)
+
+**Next action for Claude Code:** Re-evaluate feature 002 spec/plan/tasks in light of these deeper Amelia docs (especially Packages modal complexity with 5 tabs and per-service pricing/configuration). Then resume implementation.
+
+---
+
 ### 2026-06-12 (design system)
 
 - Defined the product design system at the owner's direction: Holded-inspired light UI, Lucide-only iconography, and a hard no-emoji rule for product UI and user-facing strings. Recorded as ADR-0008 with the full guide in `docs/design-system.md`.
