@@ -35,7 +35,11 @@ Detalle en el gap-analysis (índice de features) y su sección "Síntesis".
 
 1. **Decisiones transversales — HECHO (2026-06-24, ADR-0021).** Las ocho resueltas; ya
    no bloquean specs.
-2. **Clúster crítico MVP** → convertir en features Spec-Kit (`/speckit-specify`):
+2. **`plataforma-superadmin` — spec ABIERTA (2026-06-24):** `specs/002-plataforma-superadmin/`
+   (spec.md + checklist en verde; `.specify/feature.json` → 002). **Siguiente paso inmediato:**
+   `/speckit-clarify` (único item abierto: bootstrap del primer operador de plataforma) y luego
+   `/speckit-plan` → `/speckit-tasks`.
+3. **Clúster crítico MVP** → convertir en features Spec-Kit (`/speckit-specify`):
    - `tenant-settings` — políticas de tiempo, sender email por tenant, activar
      pasarela, perfil del tenant. **Fundacional.**
    - `reservas-ciclo-estados-pagos` — de estado binario a 6 estados + pagos manuales.

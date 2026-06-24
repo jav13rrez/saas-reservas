@@ -666,8 +666,15 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
      `reservas-ciclo-estados-pagos`.
 - También: completado el índice de `docs/adr/README.md` (faltaban 0009–0014, 0018–0020;
   añadido 0021). Actualizados `HANDOFF.md` (punto de reanudación + próximas acciones) y
-  este diario. Sin cambios de código ni de stack. Próximo paso recomendado:
-  `/speckit-specify plataforma-superadmin`.
+  este diario. Sin cambios de código ni de stack.
+- **Abierta la primera feature de crecimiento con `/speckit-specify`:**
+  `specs/002-plataforma-superadmin/` (spec.md + checklists/requirements.md). 4 historias de
+  usuario priorizadas: P1 auth de plataforma + superficie protegida (cierra el agujero de
+  `/operations` y de la provisión de tenants abierta), P2 provisión/ciclo de vida de tenants
+  bajo auth, P3 panel de Operaciones cross-tenant migrado a la plataforma + alineado al DS, P3
+  vínculo proveedor↔cuenta staff (ADR-0021 #7). Checklist de calidad: todos los ítems en verde.
+  `.specify/feature.json` apunta ya a 002. Único item abierto para `/speckit-clarify`: bootstrap
+  del primer operador de plataforma. Siguiente paso: `/speckit-clarify` o `/speckit-plan`.
 
 ## Current Backlog
 
