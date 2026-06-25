@@ -18,12 +18,20 @@ export interface StaffAccount {
   passwordHash: string;
   role: StaffRole;
   status: StaffStatus;
+  providerId?: string | null;
 }
 
 export class InvalidStaffAccountError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "InvalidStaffAccountError";
+  }
+}
+
+export class StaffLinkError extends Error {
+  constructor(public readonly reason: "staff-not-found" | "provider-conflict") {
+    super(reason);
+    this.name = "StaffLinkError";
   }
 }
 

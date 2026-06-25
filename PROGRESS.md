@@ -823,9 +823,36 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
 - **Tests:** suite total 338 passing (7 skipped); 55 archivos de test. Typecheck limpio.
 - Quickstart Scenario 5 marcado como implementado en `quickstart.md`; T023–T026 marcados en `tasks.md`.
 
+### 2026-06-25 (feature 002 US4 + Polish — vínculo proveedor↔staff, cierre feature 002)
+
+- **T027:** `tests/integration/identity/staff-provider-link.test.ts` — 6 tests de integración:
+  link 200, duplicado-proveedor 409, opcionalidad en ambos lados, unlink 200, staff 404, proveedor
+  404. 344 passing (7 skipped), 60 archivos. Todos verdes.
+- **T028:** Migración SQL `infra/postgres/010-staff-provider-link.sql` — columna nullable
+  `provider_id uuid REFERENCES providers(id)` en `staff_accounts` + índice único parcial
+  `(tenant_id, provider_id) WHERE provider_id IS NOT NULL`. Schema Drizzle actualizado
+  (`packages/persistence/src/schema.ts`).
+- **T029:** Puerto `StaffAccountStore` extendido con `findByProviderId`, `setProviderLink`,
+  `clearProviderLink`, `list`. Adaptadores: in-memory (`InMemoryStaffAccountStore`) y Drizzle
+  (`DrizzleStaffAccountRepository`), ambos con manejo de conflicto 23505/manual. `StaffLinkError`
+  definida en `packages/domain` para evitar dependencia circular. `StaffAuthService` expone
+  `findById`, `listAccounts`, `setProviderLink`, `clearProviderLink` como métodos públicos.
+- **T030:** `GET /v1/admin/staff` (lista con `providerId`) y `PATCH /v1/admin/staff/:staffId`
+  `{ providerId }` — 200/409/404 — implementados en `availability-routes.ts`. Audita
+  `staff.provider.linked`/`unlinked`. `CatalogService.findProviderById` añadido como método público.
+- **T031:** UI de vínculo en `apps/admin/src/features/providers/index.tsx`: tabla staff con
+  selector de proveedor + botón Vincular/Desvincular; estado `linkPending`/`linkError`; Next.js
+  route handlers `app/api/staff/route.ts` (GET) y `app/api/staff/[id]/route.ts` (PATCH).
+- **T032:** `TECH_DEBT.md` actualizado con deuda de US4 (migración 010, portal `x-provider-id`).
+- **T033:** Quickstart Scenarios 1–6 validados contra API in-memory (curl):
+  S6: GET staff 200 → link 200 → verify 200 → conflict 409 → unlink 200 → verify null 200.
+  Tabla de aceptación en `specs/002-plataforma-superadmin/quickstart.md` completada.
+- **T034:** `tasks.md` (T027–T034 marcados ✅), `PROGRESS.md` (esta entrada), `HANDOFF.md` actualizados.
+- **Feature 002 — COMPLETA.** T001–T034 todos marcados. Suite: 344 passing, 7 skipped, 60 archivos.
+
 ## Current Backlog
 
-All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.
+Features 001 y 002 completas (T001–T086 + T001–T034). La implementación cubre el núcleo multitenant y la plataforma superadmin.
 
 Primary implementation backlog:
 

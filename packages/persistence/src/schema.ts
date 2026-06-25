@@ -287,6 +287,7 @@ export const staffAccounts = pgTable("staff_accounts", {
   passwordHash: text("password_hash").notNull(),
   role: text("role").$type<"admin" | "staff">().notNull(),
   status: text("status").$type<"active" | "inactive">().notNull(),
+  providerId: uuid("provider_id"),
 });
 
 export const customers = pgTable("customers", {

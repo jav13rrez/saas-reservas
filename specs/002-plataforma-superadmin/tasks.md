@@ -166,19 +166,19 @@ sides, unlink leaves both records intact.
 
 ### Tests for User Story 4
 
-- [ ] T027 [P] [US4] Integration in `tests/integration/identity/staff-provider-link.test.ts`: link,
+- [x] T027 [P] [US4] Integration in `tests/integration/identity/staff-provider-link.test.ts`: link,
   duplicate-provider 409, optional both sides, unlink, no dangling reference on removal.
 
 ### Implementation for User Story 4
 
-- [ ] T028 [US4] SQL migration `infra/postgres/010-staff-provider-link.sql`: nullable
+- [x] T028 [US4] SQL migration `infra/postgres/010-staff-provider-link.sql`: nullable
   `staff_accounts.provider_id` (FK → `providers.id`), partial unique index on
   `(tenant_id, provider_id)` where not null; mirror in `packages/persistence/src/schema.ts`.
-- [ ] T029 [US4] Add set/clear/find provider-link methods to the `StaffAccountStore` port and both
+- [x] T029 [US4] Add set/clear/find provider-link methods to the `StaffAccountStore` port and both
   adapters (in-memory + Drizzle), tenant-scoped under RLS.
-- [ ] T030 [US4] Implement `PATCH /v1/admin/staff/:staffId` `{ providerId }` under the staff-auth
+- [x] T030 [US4] Implement `PATCH /v1/admin/staff/:staffId` `{ providerId }` under the staff-auth
   gate (409 on one-to-one conflict, 404 on missing); audit `staff.provider.linked`/`unlinked`.
-- [ ] T031 [US4] Add link/unlink UI to the `apps/admin` staff/provider management screen.
+- [x] T031 [US4] Add link/unlink UI to the `apps/admin` staff/provider management screen.
 
 **Checkpoint**: Providers can be bound to a login without merging the entities.
 
@@ -186,11 +186,11 @@ sides, unlink leaves both records intact.
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T032 [P] Update `docs/operations/SETUP.md`, `.env.example`, and `TECH_DEBT.md` (platform session
+- [x] T032 [P] Update `docs/operations/SETUP.md`, `.env.example`, and `TECH_DEBT.md` (platform session
   store, login rate limiting, MFA/SSO, finer platform roles — shared follow-ups with staff auth).
-- [ ] T033 Run `quickstart.md` Scenarios 1–6 against the local stack (Postgres+Redis+API persistent
+- [x] T033 Run `quickstart.md` Scenarios 1–6 against the local stack (Postgres+Redis+API persistent
   mode) and fill the acceptance status table.
-- [ ] T034 [P] Update `PROGRESS.md`, `HANDOFF.md`, and check off completed tasks here in `tasks.md`.
+- [x] T034 [P] Update `PROGRESS.md`, `HANDOFF.md`, and check off completed tasks here in `tasks.md`.
 
 ---
 

@@ -6,11 +6,14 @@
  * configured from the resource side (hub model), not here. Talks to
  * /api/providers, /api/locations and /api/services.
  *
+ * Also manages the optional provider↔staff link (US4): each staff account can
+ * be linked to exactly one provider within the tenant (one-to-one).
+ *
  * Styling reads design tokens; icons from lucide-react only. No emojis.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { UserCog, Plus, RefreshCw, Save, X } from "lucide-react";
+import { UserCog, Plus, RefreshCw, Save, X, Link, LinkOff } from "lucide-react";
 
 interface AdminLocation {
   id: string;
@@ -30,6 +33,14 @@ interface AdminProvider {
   locationIds: string[];
   serviceIds: string[];
   active: boolean;
+}
+
+interface AdminStaff {
+  id: string;
+  email: string;
+  role: "admin" | "staff";
+  status: "active" | "inactive";
+  providerId: string | null;
 }
 
 const CELL: React.CSSProperties = {
@@ -64,6 +75,11 @@ export function Providers() {
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
 
+  // Staff-provider link state
+  const [staffAccounts, setStaffAccounts] = useState<AdminStaff[]>([]);
+  const [linkPending, setLinkPending] = useState<Record<string, string | null>>({});
+  const [linkError, setLinkError] = useState<string | null>(null);
+
   const activeLocations = useMemo(() => locations.filter((l) => l.active), [locations]);
   const activeServices = useMemo(() => services.filter((s) => s.active), [services]);
 
@@ -77,10 +93,11 @@ export function Providers() {
     setLoading(true);
     setError(null);
     try {
-      const [pRes, lRes, sRes] = await Promise.all([
+      const [pRes, lRes, sRes, stRes] = await Promise.all([
         fetch("/api/providers"),
         fetch("/api/locations"),
         fetch("/api/services"),
+        fetch("/api/staff"),
       ]);
       if (!pRes.ok || !lRes.ok || !sRes.ok) {
         throw new Error("No se pudo cargar la información de proveedores.");
@@ -88,6 +105,15 @@ export function Providers() {
       setProviders(((await pRes.json()) as { items: AdminProvider[] }).items);
       setLocations(((await lRes.json()) as { items: AdminLocation[] }).items);
       setServices(((await sRes.json()) as { items: AdminService[] }).items);
+      if (stRes.ok) {
+        const staffData = (await stRes.json()) as { items: AdminStaff[] };
+        setStaffAccounts(staffData.items);
+        const initial: Record<string, string | null> = {};
+        for (const s of staffData.items) {
+          initial[s.id] = s.providerId;
+        }
+        setLinkPending(initial);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error inesperado");
     } finally {
@@ -137,6 +163,27 @@ export function Providers() {
       setError(e instanceof Error ? e.message : "Error inesperado");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function saveLink(staffId: string, providerId: string | null) {
+    setLinkError(null);
+    try {
+      const res = await fetch(`/api/staff/${staffId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ providerId }),
+      });
+      if (!res.ok) {
+        const body = (await res.json()) as { error?: string };
+        if (res.status === 409) {
+          throw new Error("Este proveedor ya está vinculado a otra cuenta de staff.");
+        }
+        throw new Error(body.error ?? `Error HTTP ${String(res.status)}`);
+      }
+      await load();
+    } catch (e) {
+      setLinkError(e instanceof Error ? e.message : "Error inesperado");
     }
   }
 
@@ -380,6 +427,132 @@ export function Providers() {
             ))}
           </tbody>
         </table>
+      )}
+
+      {staffAccounts.length > 0 && (
+        <section style={{ marginTop: "var(--ui-space-6)" }}>
+          <h2 style={{ display: "flex", alignItems: "center", gap: "var(--ui-space-2)" }}>
+            <Link size={18} aria-hidden />
+            Vínculo staff ↔ proveedor
+          </h2>
+          <p style={{ color: "var(--ui-color-text-muted)", maxWidth: 680 }}>
+            Cada cuenta de staff puede estar vinculada a un proveedor (relación uno-a-uno). Un
+            proveedor solo puede estar vinculado a una cuenta de staff a la vez.
+          </p>
+
+          {linkError !== null && (
+            <p role="alert" style={{ color: "var(--ui-color-danger)" }}>
+              {linkError}
+            </p>
+          )}
+
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              background: "var(--ui-color-surface)",
+              borderRadius: "var(--ui-radius-lg)",
+              overflow: "hidden",
+              border: "1px solid var(--ui-color-border)",
+              marginTop: "var(--ui-space-3)",
+            }}
+          >
+            <thead>
+              <tr style={{ color: "var(--ui-color-text-muted)", fontSize: "var(--ui-text-sm)" }}>
+                <th style={CELL}>Cuenta staff</th>
+                <th style={CELL}>Proveedor vinculado</th>
+                <th style={CELL}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {staffAccounts.map((s) => {
+                const currentProviderId = linkPending[s.id] ?? null;
+                const linkedProvider = providers.find((p) => p.id === currentProviderId);
+                return (
+                  <tr key={s.id}>
+                    <td style={CELL}>
+                      <div>{s.email}</div>
+                      <div
+                        style={{
+                          color: "var(--ui-color-text-muted)",
+                          fontSize: "var(--ui-text-sm)",
+                        }}
+                      >
+                        {s.role === "admin" ? "Administrador" : "Staff"}
+                      </div>
+                    </td>
+                    <td style={CELL}>
+                      {linkedProvider !== undefined ? (
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "var(--ui-space-1)",
+                          }}
+                        >
+                          <Link size={12} aria-hidden />
+                          {linkedProvider.name}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--ui-color-text-muted)" }}>Sin vínculo</span>
+                      )}
+                    </td>
+                    <td style={{ ...CELL, textAlign: "right", whiteSpace: "nowrap" }}>
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "var(--ui-space-2)",
+                        }}
+                      >
+                        <select
+                          value={currentProviderId ?? ""}
+                          onChange={(e) => {
+                            const val = e.target.value === "" ? null : e.target.value;
+                            setLinkPending((prev) => ({ ...prev, [s.id]: val }));
+                          }}
+                          style={{ height: 30, padding: "0 var(--ui-space-2)" }}
+                          aria-label={`Proveedor para ${s.email}`}
+                        >
+                          <option value="">— Sin vínculo —</option>
+                          {providers
+                            .filter((p) => p.active)
+                            .map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                        </select>
+                        <button
+                          onClick={() => void saveLink(s.id, linkPending[s.id] ?? null)}
+                          style={{
+                            height: 30,
+                            padding: "0 var(--ui-space-3)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "var(--ui-space-1)",
+                          }}
+                        >
+                          {linkPending[s.id] !== null && linkPending[s.id] !== undefined ? (
+                            <>
+                              <Link size={13} aria-hidden />
+                              Vincular
+                            </>
+                          ) : (
+                            <>
+                              <LinkOff size={13} aria-hidden />
+                              Desvincular
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
       )}
     </section>
   );

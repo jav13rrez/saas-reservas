@@ -76,4 +76,4 @@ tenant session is rejected.
 | 3 Authenticated provisioning | US2 / FR-008, FR-009 | Validated 2026-06-24 (in-memory API, curl: provision 201 → staff bootstrap 201 → staff login 201) |
 | 4 Suspension semantics | US2 / FR-010, FR-021 | Validated 2026-06-24 (in-memory API, curl: suspend 200 → staff login 403 → availability 403 → reactivate 200 → staff login 201) |
 | 5 Operations overview | US3 / FR-012–FR-015 | Implemented 2026-06-25 (T023–T026: ops-access test green; feature moved to apps/platform with DS tokens; removed from apps/admin) |
-| 6 Provider↔staff link | US4 / FR-016–FR-019 | Pending implementation |
+| 6 Provider↔staff link | US4 / FR-016–FR-019 | Validated 2026-06-25 (in-memory API, curl: GET staff 200 → link 200 → verify 200 → conflict 409 → unlink 200 → verify null 200) |

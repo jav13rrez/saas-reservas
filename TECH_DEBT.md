@@ -158,6 +158,19 @@ a real implementation + the provider account/credentials in
   Longer-term consideration: stop echoing the full `actor` in responses, or
   return the entity under an unambiguous key so id extraction is robust.
 
+## Staff ↔ provider link (feature 002 US4)
+
+- **[HIGH] Migration `infra/postgres/010-staff-provider-link.sql` must be applied to production.**
+  Adds `provider_id uuid REFERENCES providers(id)` to `staff_accounts` and a partial unique index
+  `(tenant_id, provider_id) WHERE provider_id IS NOT NULL`. Without it, the in-memory store used
+  in dev/test mode handles the uniqueness constraint manually; the Drizzle path expects the DB
+  index and catches `23505` at the repository layer. Apply before enabling
+  `ADMIN_DATA_MODE=api` for the first time on a fresh DB.
+- **[MEDIUM] Staff portal `x-provider-id` header still present.** The public booking portal
+  identifies the provider via a dev header rather than through the staff session ↔ provider link.
+  Once `staff_accounts.provider_id` is populated in production, the portal should resolve the
+  provider from the session instead.
+
 ## Admin ↔ persistent API integration (ADR-0018)
 
 - **[MEDIUM] `api`-mode admin uses a shared staff service-account credential.**

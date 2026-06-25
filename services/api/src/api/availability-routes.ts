@@ -12,7 +12,7 @@
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { SYSTEM_ACTOR, type Actor } from "@saas-reservas/domain/audit/events";
 import type { ProviderScheduleEntry } from "@saas-reservas/domain/providers/provider";
-import type { StaffRole } from "@saas-reservas/domain/identity/staff";
+import { StaffLinkError, type StaffRole } from "@saas-reservas/domain/identity/staff";
 import type { CatalogService } from "../application/catalog/catalog-service.js";
 import type { LocationService } from "../application/catalog/location-service.js";
 import type { ResourceHubService } from "../application/catalog/resource-hub-service.js";
@@ -372,6 +372,20 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         .send();
     });
 
+    app.get("/v1/admin/staff", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const accounts = await staffAuth.listAccounts(tenant.tenantId);
+      return reply.send({
+        items: accounts.map((a) => ({
+          id: a.id,
+          email: a.email,
+          role: a.role,
+          status: a.status,
+          providerId: a.providerId ?? null,
+        })),
+      });
+    });
+
     // An authenticated admin provisions additional staff for the tenant.
     app.post("/v1/admin/staff", async (request, reply) => {
       const tenant = tenantOf(request);
@@ -384,6 +398,50 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         actor: adminActor(request),
       });
       return reply.code(201).send({ id: account.id, email: account.email, role: account.role });
+    });
+
+    // Set or clear the optional provider link for a staff account (US4 / FR-016–FR-019).
+    app.patch("/v1/admin/staff/:staffId", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const { staffId } = request.params as { staffId: string };
+      const body = request.body as { providerId?: string | null };
+      const actor = adminActor(request);
+
+      const staff = await staffAuth.findById(tenant.tenantId, staffId);
+      if (staff === null) {
+        return reply.code(404).send({ error: "staff-not-found" });
+      }
+
+      try {
+        if (body.providerId !== null && body.providerId !== undefined) {
+          const provider = await deps.catalogService.findProviderById(tenant.tenantId, body.providerId);
+          if (provider === null) {
+            return reply.code(404).send({ error: "provider-not-found" });
+          }
+          const updated = await staffAuth.setProviderLink({
+            tenantId: tenant.tenantId,
+            staffId,
+            providerId: body.providerId,
+            actor,
+          });
+          return reply.send({ id: updated.id, providerId: updated.providerId ?? null });
+        } else {
+          const updated = await staffAuth.clearProviderLink({
+            tenantId: tenant.tenantId,
+            staffId,
+            actor,
+          });
+          return reply.send({ id: updated.id, providerId: updated.providerId ?? null });
+        }
+      } catch (err) {
+        if (err instanceof StaffLinkError) {
+          if (err.reason === "provider-conflict") {
+            return reply.code(409).send({ error: "provider-already-linked" });
+          }
+          return reply.code(404).send({ error: err.reason });
+        }
+        throw err;
+      }
     });
   }
 
