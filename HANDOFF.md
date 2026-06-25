@@ -10,8 +10,8 @@ Last updated: 2026-06-25 (feature 002 COMPLETE)
 
 ## Punto de reanudación (2026-06-25 — feature 002 COMPLETA)
 
-- **Rama de trabajo:** `claude/affectionate-wright-0vx6ka` — **VIVA, pendiente de push** (no
-  fusionada, no borrar). Confirmar push con el dueño antes de continuar.
+- **Rama de trabajo:** `claude/affectionate-wright-0vx6ka` — **empujada a `origin`** (no
+  fusionada, no borrar). Continuar en esta rama o abrir PR cuando el dueño lo decida.
 - **Spec 001 completa** (T001–T086) fusionada en `main`. Suite verde.
 - **Feature 002 — COMPLETA (T001–T034, US1–US4 + Polish):**
   - **US1:** identidad platform-global + gate `/v1/platform/*` y `/v1/ops/*` + bootstrap operador
@@ -34,14 +34,12 @@ Last updated: 2026-06-25 (feature 002 COMPLETE)
 
 > **→ Empieza por aquí:** `/speckit-specify` para la siguiente feature del clúster MVP.
 
-1. **Push de rama** `claude/affectionate-wright-0vx6ka` → pedir confirmación al dueño antes de
-   hacer push (regla del proyecto).
-2. **Siguiente feature** (elegir una y especificarla con `/speckit-specify`):
+1. **Siguiente feature** (elegir una y especificarla con `/speckit-specify`):
    - **`tenant-settings`**: branding por tenant (colores, logo), políticas de reserva (horizonte,
      cancelación, aprobación), zona horaria/locale. Alta prioridad para onboarding real.
    - **`reservas-ciclo-estados-pagos`**: máquina de estados completa confirmed/cancelled/no-show +
      flujo de pago/reembolso integrado con Stripe. Cierra el MVP de negocio.
-3. **Email worker**: Brevo ADR-0020 listo; dispatcher arma SMS y no cae a email. Necesita
+2. **Email worker**: Brevo ADR-0020 listo; dispatcher arma SMS y no cae a email. Necesita
    bootstrap + handler de email en el worker. Ver `TECH_DEBT.md`.
 
 ## Blockers / notas de entorno
