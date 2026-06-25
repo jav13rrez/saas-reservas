@@ -139,17 +139,17 @@ tenant admin cannot reach it; cross-tenant reads use the platform/global path (n
 
 ### Tests for User Story 3
 
-- [ ] T023 [P] [US3] Integration in `tests/integration/operations/ops-access.test.ts`:
+- [x] T023 [P] [US3] Integration in `tests/integration/operations/ops-access.test.ts`:
   `/v1/ops/tenants` requires a platform session; tenant session → 403; RLS isolation holds (no tenant
   context reads another tenant).
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Confirm `/v1/ops/*` is gated (Phase 2) and that the ops feed reads cross-tenant data
+- [x] T024 [US3] Confirm `/v1/ops/*` is gated (Phase 2) and that the ops feed reads cross-tenant data
   via the platform/global persistence path (no widened `app.current_tenant_id`).
-- [ ] T025 [US3] Move the operations feature from `apps/admin/src/features/operations` into
+- [x] T025 [US3] Move the operations feature from `apps/admin/src/features/operations` into
   `apps/platform/src/features/operations`; remove it from the `apps/admin` navigation/routes.
-- [ ] T026 [US3] Realign the operations UI to the design system in `apps/platform` (design tokens +
+- [x] T026 [US3] Realign the operations UI to the design system in `apps/platform` (design tokens +
   `lucide-react` + Spanish strings + no emojis; remove Tailwind/English deviation).
 
 **Checkpoint**: Cross-tenant monitoring is platform-only and design-system-consistent.

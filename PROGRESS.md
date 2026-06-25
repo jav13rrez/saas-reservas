@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-06-24 (US2)
+Last updated: 2026-06-25 (US3)
 
 ## Current State
 
@@ -800,6 +800,28 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   S3: provision 201 → staff bootstrap 201 → staff login 201.
   S4: suspend 200 → staff login 403 → public availability 403 → reactivate 200 → staff login 201.
   Tabla de aceptación de `quickstart.md` actualizada; T017–T022 marcados en `tasks.md`.
+
+### 2026-06-25 (feature 002 US3 — Operaciones en plataforma)
+
+- **T023:** `tests/integration/operations/ops-access.test.ts` — test de acceso a `/v1/ops/tenants`:
+  sin sesión → 401; `staff_session` → 403 (no intercambiable); `platform_session` → 200. RLS
+  isolation documentada: la ruta está fuera de `resolveRequestTenant`, sin `app.current_tenant_id`.
+- **T024:** Verificado que `/v1/ops/*` está bajo el gate de plataforma (Phase 2/US1) y que el
+  handler en `main.ts` sirve datos via array directo (static TENANT_OVERVIEWS), sin contexto de
+  tenant. Ningún cambio de código necesario.
+- **T025:** Vista de Operaciones movida de `apps/admin` a `apps/platform`:
+  - Creados `apps/platform/src/features/operations/operations-dashboard.tsx` (server component, DS)
+    y `apps/platform/app/dashboard/operations/page.tsx` (server page con auth guard, usa
+    `platformFetch("/v1/ops/tenants")`).
+  - Eliminados `apps/admin/app/operations/page.tsx`, `apps/admin/src/features/operations/index.tsx`,
+    `apps/admin/app/api/ops/tenants/route.ts` y directorios vacios resultantes.
+  - Quitada entrada "Operaciones" + import `BarChart2` de `apps/admin/src/components/sidebar.tsx`.
+- **T026:** UI realineada al DS: CSS tokens (`var(--ui-color-*)`, `var(--ui-space-*)`), solo
+  lucide-react, strings en español, sin Tailwind, sin emojis. Barra de cuota calculada
+  server-side (componente server, sin estado).
+- Dashboard de plataforma (`/dashboard`) actualizado con enlace a Operaciones.
+- **Tests:** suite total 338 passing (7 skipped); 55 archivos de test. Typecheck limpio.
+- Quickstart Scenario 5 marcado como implementado en `quickstart.md`; T023–T026 marcados en `tasks.md`.
 
 ## Current Backlog
 

@@ -19,7 +19,6 @@ import {
   Contact,
   Ticket,
   CreditCard,
-  BarChart2,
   ScrollText,
   Settings,
   Boxes,
@@ -66,7 +65,6 @@ const SECTIONS: NavSection[] = [
     title: "Administración",
     items: [
       { href: "/billing", label: "Facturación", icon: CreditCard },
-      { href: "/operations", label: "Operaciones", icon: BarChart2 },
       { href: "/audit", label: "Auditoría", icon: ScrollText },
       { href: "/settings", label: "Configuración", icon: Settings },
     ],

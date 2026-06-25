@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { LayoutDashboard, Building2 } from "lucide-react";
+import { LayoutDashboard, Building2, BarChart2 } from "lucide-react";
 import { hasPlatformSession } from "@/server/api-client";
 import { LogoutButton } from "@/features/logout-button";
 
@@ -30,6 +30,13 @@ export default async function Dashboard() {
         >
           <Building2 size={18} aria-hidden />
           Gestionar tenants
+        </a>
+        <a
+          href="/dashboard/operations"
+          style={{ display: "inline-flex", alignItems: "center", gap: "var(--ui-space-2)" }}
+        >
+          <BarChart2 size={18} aria-hidden />
+          Operaciones
         </a>
       </nav>
     </section>
