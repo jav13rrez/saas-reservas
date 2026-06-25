@@ -22,8 +22,20 @@ if [ -f .specify/feature.json ]; then
   feat="$(sed -n 's/.*"feature_directory":"\([^"]*\)".*/\1/p' .specify/feature.json 2>/dev/null)"
   if [ -n "${feat:-}" ]; then
     echo "Feature Spec-Kit activa: ${feat}"
-    [ -f "${feat}/plan.md" ] && [ -f "${feat}/tasks.md" ] && \
-      echo "  -> planificada; si toca implementar, lee ${feat}/plan.md + ${feat}/tasks.md y usa /speckit-implement"
+    if [ -f "${feat}/spec.md" ] && [ -f "${feat}/plan.md" ] && [ -f "${feat}/tasks.md" ]; then
+      echo "  -> planificada; para implementar lee EN ORDEN:"
+      echo "     1. ${feat}/spec.md"
+      echo "     2. ${feat}/plan.md"
+      echo "     3. ${feat}/tasks.md"
+      echo "  -> siguiente paso planificado: /speckit-implement"
+    elif [ -f "${feat}/plan.md" ] && [ -f "${feat}/tasks.md" ]; then
+      echo "  -> planificada; lee ${feat}/plan.md + ${feat}/tasks.md"
+      echo "  -> siguiente paso planificado: /speckit-implement"
+    elif [ -f "${feat}/spec.md" ]; then
+      echo "  -> especificada (sin plan/tasks); siguiente paso: /speckit-plan"
+    else
+      echo "  -> en curso; siguiente paso: /speckit-specify"
+    fi
   fi
 fi
 echo
