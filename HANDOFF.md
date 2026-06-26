@@ -8,13 +8,15 @@ Last updated: 2026-06-26 (feature 004 backend — booking lifecycle + manual pay
 > el backlog de features (por área del sidebar) en
 > `docs/analysis/menu-walkthrough-gap-analysis.md`.
 
-## Punto de reanudación (2026-06-26 — feature 004 backend completo, UI pendiente)
+## Punto de reanudación (2026-06-26 — feature 004 backend en `main`, UI pendiente)
 
-- **Rama de trabajo:** `claude/dazzling-edison-e8nu9o` — empujada a `origin`.
-- **CI montado:** `.github/workflows/ci.yml` (typecheck/lint/format/test + build de las 3 apps),
-  corre en cada push a `main` y cada PR. Fusionado a `main` (PR #7), validado en verde.
-- **Consolidación previa:** ADR-0021 + feature 002 (PR #5) y feature 003 (PR #6) fusionadas a `main`.
-  `main` está al día y es la base de esta rama.
+- **`main` está al día con TODO lo de esta sesión** (sin rama de trabajo pendiente). Integraciones por PR:
+  consolidación ADR-0021 + feature 002 (PR #5), **CI** (PR #7), feature 003 (PR #6), feature 004 backend (PR #8).
+- **CI vivo:** `.github/workflows/ci.yml` corre typecheck + lint + format:check + tests + build de las 3
+  apps en cada PR y push a `main`. Valida lo mismo en local antes de abrir PR. **Integra por PR, no
+  commitees features directo en `main`.** Nota: la app GitGuardian del repo a veces da un fallo
+  transitorio de 0 s (no bloquea); en el PR #8 pasó en verde.
+- **Para trabajar:** parte de `main` (`git checkout main && git pull`), crea rama, PR a `main`.
 - **Feature 004 — `reservas-ciclo-estados-pagos` BACKEND COMPLETO (T001–T011, T014–T016; UI T012/T013 pendiente):**
   - **US1 ciclo:** `completed`/`no_show` en el state machine (terminales desde `approved`);
     rutas `POST /v1/admin/bookings/:id/{approve,reject,complete,no-show}` (409 inválida); `reject`
