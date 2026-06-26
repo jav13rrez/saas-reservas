@@ -22,7 +22,9 @@ export type BookingStatus =
   | "rejected"
   | "expired"
   | "canceled"
-  | "rescheduled";
+  | "rescheduled"
+  | "completed"
+  | "no_show";
 
 /** A selected extra with the unit price captured at booking time. */
 export interface BookingExtra {
@@ -51,18 +53,20 @@ export interface Booking {
 }
 
 /**
- * Allowed transitions (data-model.md):
+ * Allowed transitions (data-model.md; feature 004 adds completed/no_show):
  *   pending  -> approved | rejected | expired
- *   approved -> canceled | rescheduled
+ *   approved -> canceled | rescheduled | completed | no_show
  * Everything else is invalid; terminal states have no outgoing transitions.
  */
 const TRANSITIONS: Record<BookingStatus, readonly BookingStatus[]> = {
   pending: ["approved", "rejected", "expired"],
-  approved: ["canceled", "rescheduled"],
+  approved: ["canceled", "rescheduled", "completed", "no_show"],
   rejected: [],
   expired: [],
   canceled: [],
   rescheduled: [],
+  completed: [],
+  no_show: [],
 };
 
 export class InvalidBookingTransitionError extends Error {

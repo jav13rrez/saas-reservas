@@ -80,6 +80,16 @@ export class BookingService {
     return this.transition(tenantId, bookingId, "rescheduled", actor);
   }
 
+  /** Mark an approved booking as completed (feature 004; terminal). */
+  complete(tenantId: string, bookingId: string, actor: Actor): Promise<Booking> {
+    return this.transition(tenantId, bookingId, "completed", actor);
+  }
+
+  /** Mark an approved booking as a no-show (feature 004; terminal). */
+  noShow(tenantId: string, bookingId: string, actor: Actor): Promise<Booking> {
+    return this.transition(tenantId, bookingId, "no_show", actor);
+  }
+
   private async transition(
     tenantId: string,
     bookingId: string,

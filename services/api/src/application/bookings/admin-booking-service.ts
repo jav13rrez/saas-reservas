@@ -46,6 +46,12 @@ export interface AdminBookingDeps {
   reads: AdminBookingReadRepository;
   occupancy: OccupancyRecorder;
   tenantTimezone(tenantId: string): Promise<string>;
+  /**
+   * Whether the tenant requires staff approval for new bookings (feature 003/004).
+   * When it resolves true, a new no-charge booking is created Pending (the slot is
+   * still held) instead of auto-approved. Defaults to false (prior behavior).
+   */
+  requiresApproval?(tenantId: string): Promise<boolean>;
 }
 
 export interface CreateAdminBookingInput {
@@ -150,15 +156,49 @@ export class AdminBookingService {
       service,
       actor: input.actor,
     });
-    const approved = await this.deps.bookings.approve(input.tenantId, pending.id, input.actor);
+    // Default-status policy (feature 004, FR-006): when the tenant requires
+    // approval the booking stays Pending; otherwise it is approved immediately.
+    // Either way occupancy is recorded so the slot is held (FR-007).
+    const requiresApproval =
+      this.deps.requiresApproval !== undefined &&
+      (await this.deps.requiresApproval(input.tenantId));
+    const booking = requiresApproval
+      ? pending
+      : await this.deps.bookings.approve(input.tenantId, pending.id, input.actor);
     await this.deps.occupancy.recordBookingOccupancy(
       input.tenantId,
       availability.provider.id,
       occupied,
       allocatedResource === null ? [] : [allocatedResource],
-      approved.id,
+      booking.id,
     );
-    return { ok: true, booking: approved };
+    return { ok: true, booking };
+  }
+
+  /** Approve a pending admin booking (occupancy already held). */
+  approveBooking(input: { tenantId: string; bookingId: string; actor: Actor }): Promise<Booking> {
+    return this.deps.bookings.approve(input.tenantId, input.bookingId, input.actor);
+  }
+
+  /** Reject a pending admin booking: state transition + free its occupancy. */
+  async rejectBooking(input: {
+    tenantId: string;
+    bookingId: string;
+    actor: Actor;
+  }): Promise<Booking> {
+    const rejected = await this.deps.bookings.reject(input.tenantId, input.bookingId, input.actor);
+    await this.deps.occupancy.releaseBookingOccupancy(input.tenantId, input.bookingId);
+    return rejected;
+  }
+
+  /** Mark an approved booking completed (terminal; occupancy is past, not freed). */
+  completeBooking(input: { tenantId: string; bookingId: string; actor: Actor }): Promise<Booking> {
+    return this.deps.bookings.complete(input.tenantId, input.bookingId, input.actor);
+  }
+
+  /** Mark an approved booking as a no-show (terminal; occupancy is past, not freed). */
+  noShowBooking(input: { tenantId: string; bookingId: string; actor: Actor }): Promise<Booking> {
+    return this.deps.bookings.noShow(input.tenantId, input.bookingId, input.actor);
   }
 
   /** Cancel an admin booking: state transition + free its occupancy. */

@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-06-26 (feature 003 tenant-settings)
+Last updated: 2026-06-26 (feature 004 backend — booking lifecycle + manual payments)
 
 ## Current State
 
@@ -908,6 +908,29 @@ None — production deployment and real adapter wiring are deferred per ADR-0007
   `availability-routes`, type-param/assertion en 2 tests) y un fallo de build (`LinkOff` →
   `Link2Off` en `features/providers`, no exportado por la versión de lucide-react). Corregidos para
   dejar lint/build verdes.
+
+### 2026-06-26 (feature 004 — ciclo de estados + pagos manuales: backend US1–US3)
+
+- **Spec-Kit** para `004-reservas-ciclo-estados-pagos` (spec/plan/tasks/quickstart) + ADR-0024.
+- **US1 — ciclo de estados:** añadidos `completed` y `no_show` al state machine del dominio
+  (terminales desde `approved`); `BookingService.complete/noShow`; rutas
+  `POST /v1/admin/bookings/:id/{approve,reject,complete,no-show}` (409 en transición inválida);
+  `reject` libera ocupación, `complete`/`no_show` no (la cita es pasada). Builders de notificación
+  `completed`/`no_show`.
+- **US2 — default configurable:** `AdminBookingService.createBooking` respeta `requiresApproval`
+  del tenant (feature 003): si true crea `pending` (slot retenido), si false crea+aprueba. El
+  checkout de pago sigue aprobando al cobrar, independiente del flag.
+- **US3 — pagos manuales:** dominio `manual-payment.ts` (método/estado/validación), migración
+  `012-manual-payments.sql` (RLS, 1 por reserva) + schema + `DrizzleManualPaymentRepository` +
+  in-memory; `ManualPaymentService` (upsert/get auditado); rutas `GET`/`PUT
+/v1/admin/bookings/:id/payment` (400 en inválido). Tabla separada de la pasarela (no contamina
+  reconciliación).
+- La columna `bookings.status` ahora se tipa desde el `BookingStatus` del dominio (antes union
+  hardcodeado).
+- **Tests:** +12 (state machine, validación pago manual, e2e de ciclo + default + pago, aislamiento
+  cross-tenant). Suite **376 passing / 7 skipped**. Typecheck/lint/Prettier limpios.
+- **Pendiente (slice siguiente):** UI del admin en Reservas — botones de acción de estado y sección
+  de pago (T012/T013), incluye extender el demo-store de 2 a 6 estados. El backend está completo.
 
 ## How To Update This File
 

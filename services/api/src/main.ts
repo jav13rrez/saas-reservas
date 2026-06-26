@@ -27,6 +27,7 @@ import {
   DrizzleResourceHubRepository,
   DrizzleStaffAccountRepository,
   DrizzlePlatformOperatorRepository,
+  DrizzleManualPaymentRepository,
   DrizzleTenantRepository,
 } from "@saas-reservas/persistence";
 import {
@@ -65,6 +66,8 @@ import { CartReconciliationService } from "./application/payments/cart-reconcili
 import { AvailabilityService } from "./application/scheduling/availability-service.js";
 import { CheckoutLockService } from "./application/scheduling/checkout-lock-service.js";
 import { InMemoryEventSink } from "./application/events.js";
+import { ManualPaymentService } from "./application/payments/manual-payment-service.js";
+import { InMemoryManualPaymentStore } from "./infrastructure/memory/in-memory-manual-payment-store.js";
 import { TenantAdminService } from "./application/tenancy/tenant-admin-service.js";
 import { InMemoryLockStore } from "./infrastructure/memory/in-memory-lock-store.js";
 import { InMemoryPaymentStore } from "./infrastructure/memory/in-memory-payment-store.js";
@@ -203,7 +206,10 @@ async function persistentBootstrap(): Promise<Bootstrap> {
       reads: paymentRepo,
       occupancy: catalogRepo,
       tenantTimezone,
+      requiresApproval: async (tenantId) =>
+        (await tenantRepo.findTenantById(tenantId))?.policies.requiresApproval ?? false,
     }),
+    manualPayments: new ManualPaymentService(new DrizzleManualPaymentRepository(db), events),
     tenantTimezone,
     checkout: {
       catalog: catalogRepo,
@@ -268,7 +274,10 @@ async function inMemoryBootstrap(): Promise<Bootstrap> {
       reads: paymentStore,
       occupancy: store,
       tenantTimezone,
+      requiresApproval: async (tenantId) =>
+        (await store.findTenantById(tenantId))?.policies.requiresApproval ?? false,
     }),
+    manualPayments: new ManualPaymentService(new InMemoryManualPaymentStore(), events),
     tenantTimezone,
     checkout: {
       catalog: store,

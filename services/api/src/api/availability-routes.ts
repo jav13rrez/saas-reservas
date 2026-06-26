@@ -11,6 +11,7 @@
 
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { SYSTEM_ACTOR, type Actor } from "@saas-reservas/domain/audit/events";
+import { InvalidBookingTransitionError } from "@saas-reservas/domain/bookings/booking";
 import type { ProviderScheduleEntry } from "@saas-reservas/domain/providers/provider";
 import { StaffLinkError, type StaffRole } from "@saas-reservas/domain/identity/staff";
 import type { CatalogService } from "../application/catalog/catalog-service.js";
@@ -21,6 +22,12 @@ import {
   type CustomerService,
 } from "../application/customers/customer-service.js";
 import type { AdminBookingService } from "../application/bookings/admin-booking-service.js";
+import { InvalidManualPaymentError } from "@saas-reservas/domain/payments/manual-payment";
+import type {
+  ManualPaymentMethod,
+  ManualPaymentStatus,
+} from "@saas-reservas/domain/payments/manual-payment";
+import type { ManualPaymentService } from "../application/payments/manual-payment-service.js";
 import type { StaffAuthService } from "../application/identity/staff-auth-service.js";
 import type { PlatformAuthService } from "../application/identity/platform-auth-service.js";
 import type { AvailabilityService } from "../application/scheduling/availability-service.js";
@@ -55,6 +62,8 @@ export interface AppDeps {
   customers?: CustomerService;
   /** Admin no-charge bookings ("book on behalf"); omit to disable the routes. */
   adminBookings?: AdminBookingService;
+  /** Manual (off-gateway) payments per booking (feature 004); omit to disable. */
+  manualPayments?: ManualPaymentService;
   /** Resource hub configuration (ADR-0016); omit to disable the hub admin routes. */
   resourceHub?: ResourceHubService;
   /**
@@ -587,6 +596,89 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         actor: adminActor(request),
       });
       return reply.send(canceled);
+    });
+
+    // Lifecycle actions (feature 004). Each maps to a domain transition; reject
+    // frees the slot occupancy, the others do not (approve keeps the held slot;
+    // complete/no-show are past-facing). Invalid transitions -> 409.
+    const lifecycleAction: Record<
+      string,
+      (i: { tenantId: string; bookingId: string; actor: Actor }) => Promise<unknown>
+    > = {
+      approve: (i) => adminBookings.approveBooking(i),
+      reject: (i) => adminBookings.rejectBooking(i),
+      complete: (i) => adminBookings.completeBooking(i),
+      "no-show": (i) => adminBookings.noShowBooking(i),
+    };
+    for (const [action, run] of Object.entries(lifecycleAction)) {
+      app.post(`/v1/admin/bookings/:bookingId/${action}`, async (request, reply) => {
+        const tenant = tenantOf(request);
+        const { bookingId } = request.params as { bookingId: string };
+        try {
+          const updated = await run({
+            tenantId: tenant.tenantId,
+            bookingId,
+            actor: adminActor(request),
+          });
+          return await reply.send(updated);
+        } catch (error) {
+          if (error instanceof InvalidBookingTransitionError) {
+            return reply.code(409).send({ error: "invalid-transition", from: error.from });
+          }
+          throw error;
+        }
+      });
+    }
+  }
+
+  // Manual payments per booking (feature 004, US3): off-gateway staff entry.
+  const manualPayments = deps.manualPayments;
+  if (manualPayments !== undefined) {
+    app.get("/v1/admin/bookings/:bookingId/payment", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const { bookingId } = request.params as { bookingId: string };
+      const payment = await manualPayments.getForBooking(tenant.tenantId, bookingId);
+      return reply.send(payment ?? null);
+    });
+
+    app.put("/v1/admin/bookings/:bookingId/payment", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const { bookingId } = request.params as { bookingId: string };
+      const body = (request.body ?? {}) as {
+        method?: ManualPaymentMethod;
+        status?: ManualPaymentStatus;
+        amount?: number;
+        deposit?: number;
+        currency?: string;
+        transactionRef?: string;
+        notes?: string;
+      };
+      try {
+        const saved = await manualPayments.upsertForBooking({
+          tenantId: tenant.tenantId,
+          actor: adminActor(request),
+          payment: {
+            bookingId,
+            // An empty/missing method/status is not in the allowlist, so the
+            // domain validation rejects it (400) rather than us asserting here.
+            method: (body.method ?? "") as ManualPaymentMethod,
+            status: (body.status ?? "") as ManualPaymentStatus,
+            amount: typeof body.amount === "number" ? body.amount : -1,
+            deposit: typeof body.deposit === "number" ? body.deposit : 0,
+            currency: typeof body.currency === "string" ? body.currency : "EUR",
+            ...(typeof body.transactionRef === "string"
+              ? { transactionRef: body.transactionRef }
+              : {}),
+            ...(typeof body.notes === "string" ? { notes: body.notes } : {}),
+          },
+        });
+        return await reply.send(saved);
+      } catch (error) {
+        if (error instanceof InvalidManualPaymentError) {
+          return reply.code(400).send({ error: error.code });
+        }
+        throw error;
+      }
     });
   }
 
