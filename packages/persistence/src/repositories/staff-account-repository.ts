@@ -4,7 +4,11 @@
  */
 
 import { and, eq } from "drizzle-orm";
-import { normalizeStaffEmail, StaffLinkError, type StaffAccount } from "@saas-reservas/domain/identity/staff";
+import {
+  normalizeStaffEmail,
+  StaffLinkError,
+  type StaffAccount,
+} from "@saas-reservas/domain/identity/staff";
 import type { TenantDb } from "../db.js";
 import { staffAccounts } from "../schema.js";
 
@@ -36,16 +40,16 @@ export class DrizzleStaffAccountRepository {
 
   async findByProviderId(tenantId: string, providerId: string): Promise<StaffAccount | null> {
     const rows = await this.db.withTenant(tenantId, (tx) =>
-      tx
-        .select()
-        .from(staffAccounts)
-        .where(eq(staffAccounts.providerId, providerId))
-        .limit(1),
+      tx.select().from(staffAccounts).where(eq(staffAccounts.providerId, providerId)).limit(1),
     );
     return rows[0] ?? null;
   }
 
-  async setProviderLink(tenantId: string, staffId: string, providerId: string): Promise<StaffAccount> {
+  async setProviderLink(
+    tenantId: string,
+    staffId: string,
+    providerId: string,
+  ): Promise<StaffAccount> {
     try {
       const rows = await this.db.withTenant(tenantId, (tx) =>
         tx
@@ -54,15 +58,12 @@ export class DrizzleStaffAccountRepository {
           .where(eq(staffAccounts.id, staffId))
           .returning(),
       );
-      if (rows.length === 0) throw new StaffLinkError("staff-not-found");
-      return rows[0]!;
+      const row = rows[0];
+      if (row === undefined) throw new StaffLinkError("staff-not-found");
+      return row;
     } catch (err) {
       // Postgres unique constraint violation: 23505
-      if (
-        err instanceof Error &&
-        "code" in err &&
-        (err as { code: string }).code === "23505"
-      ) {
+      if (err instanceof Error && "code" in err && (err as { code: string }).code === "23505") {
         throw new StaffLinkError("provider-conflict");
       }
       throw err;
@@ -77,8 +78,9 @@ export class DrizzleStaffAccountRepository {
         .where(eq(staffAccounts.id, staffId))
         .returning(),
     );
-    if (rows.length === 0) throw new StaffLinkError("staff-not-found");
-    return rows[0]!;
+    const row = rows[0];
+    if (row === undefined) throw new StaffLinkError("staff-not-found");
+    return row;
   }
 
   async list(tenantId: string): Promise<StaffAccount[]> {

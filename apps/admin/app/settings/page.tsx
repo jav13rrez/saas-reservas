@@ -1,5 +1,5 @@
-import { TenantSetup } from "@/features/tenant-setup";
+import { Settings } from "@/features/settings";
 
 export default function SettingsPage() {
-  return <TenantSetup />;
+  return <Settings />;
 }

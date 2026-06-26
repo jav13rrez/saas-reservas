@@ -134,6 +134,26 @@ export interface AdminBooking {
   createdAt: string;
 }
 
+/** Tenant settings projection (feature 003); mirrors the API GET/PATCH shape. */
+export interface AdminSettings {
+  profile: { displayName: string };
+  localization: { defaultTimezone: string; defaultLocale: string; currency: string };
+  policies: {
+    cancellationMinNoticeHours: number;
+    rescheduleMinNoticeHours: number;
+    bookingHorizonDays: number;
+    requiresApproval: boolean;
+  };
+  branding: { primaryColor: string; logoUrl?: string };
+}
+
+export interface UpdateSettingsInput {
+  profile?: { displayName?: string };
+  localization?: { defaultTimezone?: string; defaultLocale?: string; currency?: string };
+  policies?: Partial<AdminSettings["policies"]>;
+  branding?: { primaryColor?: string; logoUrl?: string };
+}
+
 interface DemoData {
   locations: AdminLocation[];
   resources: AdminResource[];
@@ -143,6 +163,7 @@ interface DemoData {
   bookings: AdminBooking[];
   /** Provider schedules keyed by provider id. */
   schedules: Record<string, AdminScheduleEntry[]>;
+  settings: AdminSettings;
 }
 
 // ---------------------------------------------------------------------------
@@ -363,7 +384,19 @@ function seed(): DemoData {
     })),
   };
 
-  return { locations, resources, services, providers, customers, bookings, schedules };
+  const settings: AdminSettings = {
+    profile: { displayName: "Mi Negocio" },
+    localization: { defaultTimezone: "Europe/Madrid", defaultLocale: "es-ES", currency: "EUR" },
+    policies: {
+      cancellationMinNoticeHours: 24,
+      rescheduleMinNoticeHours: 24,
+      bookingHorizonDays: 60,
+      requiresApproval: false,
+    },
+    branding: { primaryColor: "#1f6feb" },
+  };
+
+  return { locations, resources, services, providers, customers, bookings, schedules, settings };
 }
 
 const globalForStore = globalThis as typeof globalThis & {
@@ -976,4 +1009,76 @@ export function cancelBooking(id: string): StoreResult<AdminBooking> {
   }
   booking.status = "cancelled";
   return { ok: true, value: booking };
+}
+
+// ---------------------------------------------------------------------------
+// Tenant settings (feature 003)
+// ---------------------------------------------------------------------------
+
+const SUPPORTED_CURRENCIES = [
+  "EUR",
+  "USD",
+  "GBP",
+  "CHF",
+  "SEK",
+  "NOK",
+  "DKK",
+  "PLN",
+  "CAD",
+  "AUD",
+  "MXN",
+  "BRL",
+  "JPY",
+];
+const HEX_COLOR = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+export function getSettings(): AdminSettings {
+  return structuredClone(data().settings);
+}
+
+/**
+ * All-or-nothing settings update: validate the fully-merged result before
+ * mutating, so a single invalid field changes nothing (mirrors the API).
+ */
+export function updateSettings(input: UpdateSettingsInput): StoreResult<AdminSettings> {
+  const current = data().settings;
+  const next: AdminSettings = {
+    profile: { ...current.profile, ...input.profile },
+    localization: { ...current.localization, ...input.localization },
+    policies: { ...current.policies, ...input.policies },
+    branding: { ...current.branding, ...input.branding },
+  };
+
+  if (next.profile.displayName.trim() === "") {
+    return { ok: false, error: "El nombre del negocio es obligatorio." };
+  }
+  if (next.localization.defaultLocale.trim() === "") {
+    return { ok: false, error: "El idioma es obligatorio." };
+  }
+  if (
+    !timezoneIsValid(next.localization.defaultTimezone) ||
+    next.localization.defaultTimezone === ""
+  ) {
+    return { ok: false, error: "La zona horaria no es válida." };
+  }
+  if (!SUPPORTED_CURRENCIES.includes(next.localization.currency)) {
+    return { ok: false, error: "La moneda no es válida." };
+  }
+  if (!HEX_COLOR.test(next.branding.primaryColor)) {
+    return { ok: false, error: "El color de marca no es un color hex válido." };
+  }
+  if (
+    next.policies.cancellationMinNoticeHours < 0 ||
+    next.policies.rescheduleMinNoticeHours < 0 ||
+    next.policies.bookingHorizonDays < 1
+  ) {
+    return { ok: false, error: "Las políticas de reserva están fuera de rango." };
+  }
+  // Empty logo clears it.
+  if (next.branding.logoUrl?.trim() === "") {
+    delete next.branding.logoUrl;
+  }
+
+  data().settings = next;
+  return { ok: true, value: structuredClone(next) };
 }

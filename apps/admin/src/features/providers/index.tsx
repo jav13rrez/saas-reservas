@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { UserCog, Plus, RefreshCw, Save, X, Link, LinkOff } from "lucide-react";
+import { UserCog, Plus, RefreshCw, Save, X, Link, Link2Off } from "lucide-react";
 
 interface AdminLocation {
   id: string;
@@ -540,7 +540,7 @@ export function Providers() {
                             </>
                           ) : (
                             <>
-                              <LinkOff size={13} aria-hidden />
+                              <Link2Off size={13} aria-hidden />
                               Desvincular
                             </>
                           )}

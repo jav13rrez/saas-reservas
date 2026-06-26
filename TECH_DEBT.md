@@ -158,6 +158,19 @@ a real implementation + the provider account/credentials in
   Longer-term consideration: stop echoing the full `actor` in responses, or
   return the entity under an unambiguous key so id extraction is robust.
 
+## Tenant settings (feature 003)
+
+- **[HIGH] Migration `infra/postgres/011-tenant-currency.sql` must be applied to production.**
+  Adds `tenants.currency text NOT NULL DEFAULT 'EUR'` (backfills existing rows). Without it, the
+  Drizzle path fails to read/write the column. Apply before enabling `ADMIN_DATA_MODE=api` on a DB
+  provisioned before this migration.
+- **[LOW] Last-write-wins on concurrent settings saves.** Two admins saving near-simultaneously: the
+  later whole-record write wins (both audited). Optimistic concurrency is a deferred follow-up
+  (ADR-0023 / spec 003 Assumptions).
+- **[LOW] `tenant-setup` wizard component now orphaned.** The `/settings` route serves the real
+  settings screen (feature 003); the old `features/tenant-setup` provisioning wizard is no longer
+  mounted. Decide whether to repurpose it for first-run onboarding or remove it.
+
 ## Staff ↔ provider link (feature 002 US4)
 
 - **[HIGH] Migration `infra/postgres/010-staff-provider-link.sql` must be applied to production.**

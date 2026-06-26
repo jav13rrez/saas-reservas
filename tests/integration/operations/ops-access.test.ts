@@ -44,7 +44,9 @@ describe("ops access gate (/v1/ops/tenants)", () => {
       method,
       url,
       headers,
-      ...(options.payload !== undefined ? { payload: options.payload as Record<string, unknown> } : {}),
+      ...(options.payload !== undefined
+        ? { payload: options.payload as Record<string, unknown> }
+        : {}),
     });
     const setCookie = response.headers["set-cookie"];
     return {
@@ -78,7 +80,12 @@ describe("ops access gate (/v1/ops/tenants)", () => {
 
     // Bootstrap platform operator.
     await call("POST", "/v1/platform/operators/bootstrap", {
-      payload: { secret: BOOTSTRAP_SECRET, email: "owner@platform.test", password: "secure-pw-32-chars-long!", displayName: "Owner" },
+      payload: {
+        secret: BOOTSTRAP_SECRET,
+        email: "owner@platform.test",
+        password: "secure-pw-32-chars-long!",
+        displayName: "Owner",
+      },
     });
 
     // Get a platform session.
@@ -94,7 +101,7 @@ describe("ops access gate (/v1/ops/tenants)", () => {
       headers: { host: PLATFORM_HOST, cookie: platformSession },
       payload: { slug: "spa", displayName: "Spa Test", defaultTimezone: "UTC" },
     });
-    const tenantId = (tenant.json() as { id: string }).id;
+    const tenantId = tenant.json<{ id: string }>().id;
 
     await call("POST", `/v1/platform/tenants/${tenantId}/staff`, {
       cookie: platformSession,

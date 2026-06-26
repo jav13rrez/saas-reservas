@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-06-25 (feature 002 COMPLETE)
+Last updated: 2026-06-26 (feature 003 tenant-settings COMPLETE)
 
 > **Qué es este archivo:** el punto de reanudación corto para el siguiente agente
 > (estado, próximas acciones, blockers). **No es un diario** — el historial
@@ -8,11 +8,22 @@ Last updated: 2026-06-25 (feature 002 COMPLETE)
 > el backlog de features (por área del sidebar) en
 > `docs/analysis/menu-walkthrough-gap-analysis.md`.
 
-## Punto de reanudación (2026-06-25 — feature 002 COMPLETA)
+## Punto de reanudación (2026-06-26 — feature 003 COMPLETA)
 
-- **Rama de trabajo:** `claude/affectionate-wright-0vx6ka` — **empujada a `origin`** (no
-  fusionada, no borrar). Continuar en esta rama o abrir PR cuando el dueño lo decida.
-- **Spec 001 completa** (T001–T086) fusionada en `main`. Suite verde.
+- **Rama de trabajo:** `claude/dazzling-edison-e8nu9o` — empujada a `origin` (no fusionada).
+- **Consolidación previa:** ADR-0021 + feature 002 fusionados a `main` (PR #5); ramas viejas
+  borradas. `main` está al día y es la base de esta rama.
+- **Feature 003 — `tenant-settings` COMPLETA (T001–T025, US1–US3 + Polish):**
+  - Superficie de ajustes real sobre el agregado `Tenant` (Perfil, Localización, Políticas, Marca) +
+    nuevo campo **`currency`**. Reemplaza el wizard de la ruta `/settings`.
+  - **Persistencia (ADR-0023):** columna `currency` en `tenants` (migración `011`), no tabla aparte.
+  - **API:** `GET`/`PATCH /v1/admin/settings` (tenant por request, gate admin-role); `updateSettings`
+    all-or-nothing con audit por grupo. Moneda **no retroactiva**; servicios nuevos la heredan.
+  - **Admin:** seam `source/settings.ts` (demo+api) + handler + pantalla `features/settings`.
+  - **Tests:** +20 (unit/integración/e2e). Suite **364 passing, 7 skipped**. Lint/typecheck/Prettier
+    limpios; admin `next build` pasa.
+  - **Limpieza colateral:** corregidos errores de lint preexistentes (archivos 002) y un fallo de
+    build (`LinkOff`→`Link2Off`) que el toolchain de este contenedor destapó.
 - **Feature 002 — COMPLETA (T001–T034, US1–US4 + Polish):**
   - **US1:** identidad platform-global + gate `/v1/platform/*` y `/v1/ops/*` + bootstrap operador
     + login/logout + `apps/platform` (login + dashboard). Quickstart S1–S2 validados.
@@ -32,19 +43,20 @@ Last updated: 2026-06-25 (feature 002 COMPLETE)
 
 ## Próximas acciones (priorizadas) — PRÓXIMA SESIÓN
 
-> **→ Empieza por aquí:** `/speckit-specify` para la siguiente feature del clúster MVP.
+> **→ Empieza por aquí:** abrir PR de `claude/dazzling-edison-e8nu9o` → `main` para fusionar la
+> feature 003 (suite verde), luego `/speckit-specify` para la siguiente feature.
 
-1. **Siguiente feature** (elegir una y especificarla con `/speckit-specify`):
-   - **`tenant-settings`**: branding por tenant (colores, logo), políticas de reserva (horizonte,
-     cancelación, aprobación), zona horaria/locale. Alta prioridad para onboarding real.
+1. **Fusionar feature 003** a `main` (PR) cuando el dueño lo apruebe.
+2. **Siguiente feature** (elegir una y especificarla con `/speckit-specify`):
    - **`reservas-ciclo-estados-pagos`**: máquina de estados completa confirmed/cancelled/no-show +
-     flujo de pago/reembolso integrado con Stripe. Cierra el MVP de negocio.
-2. **Email worker**: Brevo ADR-0020 listo; dispatcher arma SMS y no cae a email. Necesita
-   bootstrap + handler de email en el worker. Ver `TECH_DEBT.md`.
+     flujo de pago/reembolso integrado con Stripe. Cierra el MVP de negocio. (Recomendada — `requiresApproval`
+     ya es configurable por tenant tras 003.)
+   - **Email worker**: Brevo ADR-0020 listo; dispatcher arma SMS y no cae a email. Necesita
+     bootstrap + handler de email en el worker. Ver `TECH_DEBT.md`.
 
 ## Blockers / notas de entorno
 
-- **Migración 010 pendiente de aplicar en producción.** Ver `TECH_DEBT.md` §"Staff ↔ provider link".
+- **Migraciones 010 y 011 pendientes de aplicar en producción.** Ver `TECH_DEBT.md`.
 - **Email worker** sin bootstrap (Brevo ADR-0020 listo); dispatcher arma SMS y no cae a
   email. Ver `TECH_DEBT.md`.
 - **Pre-VPS:** deudas en `TECH_DEBT.md` (rol app `NOSUPERUSER NOBYPASSRLS` validado;
@@ -60,6 +72,7 @@ Last updated: 2026-06-25 (feature 002 COMPLETE)
 - **Continuidad:** `HANDOFF.md` (esto) · `PROGRESS.md` (diario) · `PLANNING.md` (mapa+modelo).
 - **Producto (feature fundacional):** `specs/001-saas-multitenant-booking/` (Spec-Kit).
 - **Plataforma superadmin (completa):** `specs/002-plataforma-superadmin/` (T001–T034 todos ✅).
+- **Tenant settings (completa):** `specs/003-tenant-settings/` (T001–T025 ✅); ADR-0023.
 - **Backlog de crecimiento:** `docs/analysis/menu-walkthrough-gap-analysis.md` (índice de features).
 - **Investigación Amelia:** `docs/analysis/amelia-*-fine-grained.md` + `amelia-ux-reference.md`.
 - **Decisiones:** `docs/adr/0001…0022`. **Constitución:** `.specify/memory/constitution.md`.

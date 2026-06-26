@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-06-25 (US3)
+Last updated: 2026-06-26 (feature 003 tenant-settings)
 
 ## Current State
 
@@ -876,6 +876,39 @@ None — production deployment and real adapter wiring are deferred per ADR-0007
 
 - Production deployment target, reverse proxy/tenant routing topology, and managed-service choices (deferred by ADR-0007).
 - All previously open stack decisions are now closed in ADR-0001 through ADR-0007.
+
+### 2026-06-26 (feature 003 — tenant-settings: MVP completo US1–US3)
+
+- **Spec-Kit completo** para `003-tenant-settings`: spec, plan, research, data-model, contracts
+  (`admin-settings-api.md`), quickstart (S1–S10) y tasks (T001–T025). ADR-0023 registra la decisión
+  de persistencia.
+- **Decisión de persistencia (ADR-0023):** extender el registro `tenants` con una columna `currency`
+  (migración `011-tenant-currency.sql`, default `'EUR'`) en lugar de una tabla `tenant_settings`
+  aparte; cumple la intención de ADR-0021 #4 sin partir el agregado. El resto de campos (branding,
+  timezone, locale, policies) ya vivían en `tenants`.
+- **Dominio:** `currency` + `DEFAULT_CURRENCY` + `assertValidCurrency` (allowlist ISO-4217) +
+  `assertValidHexColor` + validación de locale no vacío en `validateTenant`. `InvalidTenantError`
+  ahora lleva un `code` estable mapeado 1:1 a los códigos 400 del contrato.
+- **Aplicación:** `TenantAdminService` gana `getSettings`, `updateLocalization` y el orquestador
+  all-or-nothing `updateSettings` (un merge → un `validateTenant` → un audit por grupo cambiado:
+  `tenant.localization-updated`/`policies-updated`/`branding-updated`). Las huérfanas
+  `updateBranding`/`updatePolicies` quedan cableadas vía el orquestador.
+- **API:** `GET`/`PATCH /v1/admin/settings` (módulo `admin-settings-routes.ts`) sobre el tenant
+  resuelto por request (sin `tenantId` en ruta), bajo el gate admin-role de staff-auth existente.
+  Creación de servicios: `currency` ahora opcional, hereda la del tenant (FR-008); cambio de moneda
+  **no retroactivo** (servicios/reservas/pagos previos conservan la suya).
+- **Admin (ADR-0018):** seam `source/settings.ts` (demo+api) + handler `app/api/settings/route.ts` +
+  pantalla `features/settings` (Perfil/Localización/Políticas/Marca, un Save → un PATCH); el
+  demo-store gana `getSettings`/`updateSettings` con validación local espejo. La ruta `/settings`
+  pasa del wizard de alta a la pantalla de ajustes real.
+- **Tests:** +20 (8 unit currency/color, 6 integración servicio, 6 e2e HTTP incl. no-retroactividad y
+  gate 401). Suite **364 passing / 7 skipped**. Typecheck, lint y Prettier limpios; admin `next build`
+  pasa (`/settings`).
+- **Limpieza colateral (preexistente, destapada por el toolchain de este contenedor):** errores de
+  lint en archivos de la feature 002 (non-null assertions en staff-account stores, return-await en
+  `availability-routes`, type-param/assertion en 2 tests) y un fallo de build (`LinkOff` →
+  `Link2Off` en `features/providers`, no exportado por la versión de lucide-react). Corregidos para
+  dejar lint/build verdes.
 
 ## How To Update This File
 
