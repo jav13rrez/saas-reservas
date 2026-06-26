@@ -1,6 +1,6 @@
 # Planning
 
-Last updated: 2026-06-23
+Last updated: 2026-06-26
 
 ## Purpose
 
@@ -120,9 +120,16 @@ Before ending a meaningful session:
 No implementation should be considered ready without:
 
 - Tests for tenant isolation, booking correctness, payments, integrations, and privacy where relevant.
-- Typecheck, lint, and test commands passing once the workspace exists.
+- Typecheck, lint, format, and test commands passing once the workspace exists.
 - Security review for auth, tenant boundaries, file uploads, payments, OAuth, webhooks, and secrets.
 - Updated docs when behavior, architecture, or task status changes.
+
+**Continuous Integration:** `.github/workflows/ci.yml` runs the gate on every push to `main` and
+every pull request — `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm test`, and a production
+build of all three Next.js apps (admin/platform/booking-widget). Validate the same locally before
+opening a PR. Work is integrated into `main` **via pull request**, not committed directly. The
+`.prettierignore` excludes `docs/`, `specs/`, `reference/`, `archive/` (hand-authored reference
+material keeps its own formatting).
 
 ## Decision Policy
 

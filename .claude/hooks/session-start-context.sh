@@ -14,6 +14,11 @@ echo "la feature activa (abajo): spec.md + plan.md + tasks.md ->"
 echo "docs/analysis/menu-walkthrough-gap-analysis.md (indice de features)."
 echo "Sigue 'Proximas acciones' del HANDOFF (abajo)."
 echo "Prompt de arranque completo: docs/START_PROMPT.md"
+echo
+echo "CI: GitHub Actions (.github/workflows/ci.yml) corre en cada PR y push a main:"
+echo "  typecheck + lint + format:check + tests + build de apps. Antes de abrir PR,"
+echo "  valida en local: pnpm typecheck && pnpm lint && pnpm format:check && pnpm test."
+echo "El trabajo se integra por PR a main (no commitees features directo en main)."
 
 branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
 echo "Rama actual: ${branch}"

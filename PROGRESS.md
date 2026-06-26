@@ -932,6 +932,21 @@ None — production deployment and real adapter wiring are deferred per ADR-0007
 - **Pendiente (slice siguiente):** UI del admin en Reservas — botones de acción de estado y sección
   de pago (T012/T013), incluye extender el demo-store de 2 a 6 estados. El backend está completo.
 
+### 2026-06-26 (cierre de sesión — CI + integración a main de todo lo de la sesión)
+
+- **CI montado (PR #7, en `main`):** `.github/workflows/ci.yml` corre en cada push a `main` y cada PR:
+  `pnpm typecheck` + `lint` + `format:check` + `test` + build de las 3 apps (admin/platform/booking-widget).
+  Habría cazado los fallos preexistentes que el toolchain destapó esta sesión. Para que `format:check`
+  pasara repo-wide: `.prettierignore` ahora ignora `docs/` (referencia hecha a mano) y se formateó el
+  código pendiente (archivos de la 002 + AGENTS/HANDOFF/PROGRESS).
+- **Integración por PR a `main`:** consolidación ADR-0021 + feature 002 (PR #5, fusionado), feature 003
+  (PR #6), CI (PR #7), feature 004 backend (PR #8). `main` quedó al día; ramas viejas borradas. A partir
+  de ahora el flujo es: rama desde `main` → PR → CI verde → merge.
+- **Nota operación:** la app de terceros **GitGuardian** en el repo daba `failure` de 0 s (sin configurar);
+  en el PR #8 pasó en verde — es una integración del dueño, no del CI propio.
+- Documentos de flujo, hook de arranque (`.claude/hooks/session-start-context.sh`) y `docs/START_PROMPT.md`
+  actualizados al cierre.
+
 ## How To Update This File
 
 Append dated entries when:

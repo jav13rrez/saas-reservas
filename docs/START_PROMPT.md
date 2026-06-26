@@ -27,48 +27,52 @@ Apoyo según contexto:
   - docs/analysis/amelia-ux-reference.md — LEER antes de diseñar cualquier UI o
     feature nueva. Es el barrido completo del admin de Amelia (referencia UX, no
     código). Sus "Decisiones pendientes" marcan lo que falta por decidir.
-  - docs/adr/ (ADR-0001 a ADR-0020) — el porqué de cada decisión de arquitectura.
+  - docs/adr/ (ADR-0001 a ADR-0024) — el porqué de cada decisión de arquitectura.
     El modelo de recursos vigente es el HUB de ADR-0016; la auth de staff es
     ADR-0017; la integración admin↔API persistente es ADR-0018 (incl. el ruteo de
     tenant por X-Forwarded-Host); el gateway real de Stripe es ADR-0019 (incl.
     payment-method + webhook firmado); el adaptador de email Brevo es ADR-0020.
+    Las 8 decisiones transversales están resueltas en ADR-0021; la auth de
+    plataforma/superadmin en ADR-0022 (feature 002); los tenant-settings persisten
+    en el registro `tenants` (ADR-0023, feature 003); el ciclo de estados de reserva
+    de 6 estados + pagos manuales en ADR-0024 (feature 004).
 
 Estado actual (a fecha de este prompt): las tareas de spec T001–T086 están
-COMPLETAS y TODO el trabajo post-spec hasta aquí está fusionado en `main`. Hecho:
-modelo HUB de recursos (ADR-0016), auth de staff para /v1/admin/* (ADR-0017),
-bootstrap de servidor (main.ts: Drizzle/Redis o in-memory), integración de
-apps/admin contra la API persistente en modo `api` **validada en vivo** y con el
-bug de ruteo `Host`/undici corregido vía X-Forwarded-Host (ADR-0018), agenda por
-proveedor, Stripe real con payment-method + webhook firmado platform-level
-(ADR-0019, seleccionado por STRIPE_SECRET_KEY; el fake sigue de default), y el
-adaptador de **email Brevo** detrás del puerto MessageProvider (ADR-0020,
-seleccionado por BREVO_API_KEY; el fake sigue de default). La suite está en 318
-tests verdes.
+COMPLETAS y TODO el trabajo post-spec está fusionado en `main`. Features de
+crecimiento completas: **002 plataforma-superadmin** (auth de plataforma + gate de
+/v1/platform/* y /v1/ops/* + ciclo de vida de tenant + Operaciones en apps/platform;
+ADR-0022), **003 tenant-settings** (superficie de ajustes real sobre el tenant:
+perfil, localización, políticas, marca + moneda; ADR-0023), y **004
+reservas-ciclo-estados-pagos — BACKEND** (6 estados de reserva con
+completed/no-show, default configurable por `requiresApproval`, y pagos manuales;
+ADR-0024). Base ya existente: HUB de recursos (ADR-0016), auth de staff (ADR-0017),
+integración admin↔API en modo `api` validada en vivo (ADR-0018), Stripe real
+(ADR-0019) y email Brevo (ADR-0020), ambos detrás de su puerto y seleccionados por
+env (los fakes siguen de default). **Hay CI** (GitHub Actions) que corre
+typecheck/lint/format/test + build en cada PR. La suite está en ~376 tests verdes.
 
-ESTA SESIÓN ARRANCA AQUÍ (objetivo del dueño): **correr el SaaS en local y
-recorrer el panel admin ÁREA POR ÁREA desde el menú** (Dashboard, Calendario,
-Reservas, Servicios, Recursos, Ubicaciones, Proveedores, Clientes, Ajustes…) para
-analizar qué hace cada funcionalidad y qué falta. En paralelo, el dueño quiere
-**resolver la autenticación de operador y dejar establecidas y recordadas dos
-cuentas**: (a) una **cuenta de tenant** (negocio) con su admin, y (b) una **cuenta
-superadmin / de plataforma**.
+ESTA SESIÓN ARRANCA AQUÍ — próxima acción prioritaria (ver HANDOFF "Próximas
+acciones"): **terminar la UI de la feature 004** en la pantalla Reservas (T012/T013):
+acciones de estado por fila (Aprobar/Rechazar/Completar/No-show) + sección de pago
+manual, vía el seam (demo+api). El backend (rutas `POST /v1/admin/bookings/:id/
+{approve,reject,complete,no-show}`, `GET`/`PUT .../payment`, dominio y persistencia)
+está completo y probado; falta la UI, que incluye extender el demo-store de 2 estados
+(`confirmed/cancelled`) a los 6 del dominio. Después, candidata fuerte: el **email
+worker** (cierra notificaciones del MVP, que las transiciones de 004 ya disparan).
 
-Contexto clave para ese objetivo (léelo antes de proponer):
-  - Para un **recorrido visual rápido del menú**, `apps/admin` en modo demo
+Contexto clave (léelo antes de proponer):
+  - Para un **recorrido visual del menú**, `apps/admin` en modo demo
     (ADMIN_DATA_MODE por defecto, `pnpm --filter @saas-reservas/admin dev`, Node 22)
-    trae la cadena completa sembrada en memoria — es lo más cómodo para ver la UI.
-    Para datos reales/persistentes y auth, usar modo `api` contra el stack
-    (Postgres + Redis + API), ya validado en vivo.
-  - **Auth hoy (gap a resolver):** existe auth de staff a nivel API (ADR-0017:
-    `staff_accounts` por tenant, cookie de sesión scrypt), pero el admin en modo
-    `api` usa UNA credencial de servicio por env (ADMIN_STAFF_EMAIL/PASSWORD), SIN
-    pantalla de login por operador; y el modo demo no tiene auth. Provisionar
-    tenants (`POST /v1/platform/tenants`) está ABIERTO: **no hay aún auth de
-    plataforma/superadmin**. Diseñar/implementar: una pantalla de login real para
-    el operador y el concepto de cuenta superadmin de plataforma; registrar las
-    credenciales de forma durable (seed/doc local fuera de git, nunca secretos en
-    el repo). Si tomas decisiones de auth, regístralas en un ADR.
-  - Antes de diseñar UI nueva, lee docs/analysis/amelia-ux-reference.md.
+    trae la cadena completa sembrada en memoria. Para datos reales/persistentes y
+    auth, usar modo `api` contra el stack (Postgres + Redis + API), ya validado.
+  - **Auth: el gap principal está RESUELTO** (feature 002, ADR-0022): existe identidad
+    de plataforma/superadmin, /v1/platform/* y /v1/ops/* están gateados, y la provisión
+    de tenants ya requiere sesión de operador. La pantalla de operaciones vive en
+    `apps/platform`. (Sigue pendiente, menor: migrar el portal de staff del header
+    `x-provider-id` a sesión — ver TECH_DEBT.)
+  - Antes de diseñar UI nueva, lee docs/analysis/amelia-*-fine-grained.md del área
+    (para Reservas: docs/analysis/amelia-bookings-fine-grained.md).
+  - **Migraciones 010, 011 y 012 pendientes de aplicar en producción** (TECH_DEBT).
 
 
 Contexto de operación (importante): el dueño es **principiante** (viene de
@@ -84,15 +88,15 @@ admin (un tenant real, login de staff por cookie, una reserva real cerrada). El
 admin corre con `pnpm --filter @saas-reservas/admin dev` (Node 22), en demo
 (memoria) o en modo `api` (ADMIN_DATA_MODE=api).
 
-Dirección actual (acordada al cerrar la sesión previa): se **pausó profundizar en
-pagos**; la prioridad de producto es el **camino a un MVP desplegable** (desplegar
+Dirección de producto: la prioridad es el **camino a un MVP desplegable** (desplegar
 en dominio/host real, widget público de reserva, notificaciones email mínimas vía
-worker). El objetivo inmediato del dueño (recorrer el menú + resolver Auth y las
-cuentas tenant/superadmin) encaja en ese rumbo. La deuda pre-VPS vive en
-TECH_DEBT.md (raíz): léela antes de planificar despliegue. Lado operador (en su
-máquina, no en el repo): Stripe CLI instalado + logueado y un `whsec_…` guardado
-en su `.env` local — preparado pero sin usar hasta que haya despliegue.
-Guías de apoyo: docs/operations/SETUP.md (checklist de operador) y .env.example.
+worker). Las features 002–004 han cerrado el grueso del modelo de negocio (auth de
+plataforma, ajustes del tenant, ciclo de estados + pagos manuales). La deuda pre-VPS
+vive en TECH_DEBT.md (raíz): léela antes de planificar despliegue — incluye las
+migraciones 010/011/012 pendientes de aplicar y la falta de un migration runner.
+Lado operador (en su máquina, no en el repo): Stripe CLI instalado + logueado y un
+`whsec_…` guardado en su `.env` local — preparado pero sin usar hasta que haya
+despliegue. Guías de apoyo: docs/operations/SETUP.md (checklist) y .env.example.
 
 Reglas de operación (de CLAUDE.md / AGENTS.md):
   - Spec Kit es la fuente de verdad de producto. PLANNING/PROGRESS/HANDOFF son la
@@ -102,6 +106,12 @@ Reglas de operación (de CLAUDE.md / AGENTS.md):
   - Toda UI sigue docs/design-system.md (ADR-0008): tokens de packages/ui, iconos
     solo de lucide-react, sin emojis en UI ni en strings de usuario.
   - No trates reference/ ni archive/ como código fuente (son research local).
+  - **CI + flujo de PR:** hay GitHub Actions (.github/workflows/ci.yml) que corre
+    typecheck/lint/format:check/test + build en cada PR y push a main. Valida lo mismo
+    en local (`pnpm typecheck && pnpm lint && pnpm format:check && pnpm test`) antes de
+    abrir PR. El trabajo se integra a `main` por PR (rama desde main → PR → CI verde →
+    merge), nunca commiteando features directo en main. `.prettierignore` excluye
+    `docs/`, `specs/`, `reference/`, `archive/`.
   - NO hagas push, merge, publicación, borrado de material de referencia ni cambio
     de credenciales sin mi aprobación explícita.
   - No commitees fuente de Amelia Premium, salidas pesadas de Graphify ni secretos.
