@@ -33,21 +33,29 @@ export interface TenantOverview {
 
 function billingStatusLabel(status: BillingStatus): string {
   switch (status) {
-    case "trialing":  return "En prueba";
-    case "active":    return "Activo";
-    case "past_due":  return "Pago vencido";
-    case "paused":    return "Pausado";
-    case "canceled":  return "Cancelado";
+    case "trialing":
+      return "En prueba";
+    case "active":
+      return "Activo";
+    case "past_due":
+      return "Pago vencido";
+    case "paused":
+      return "Pausado";
+    case "canceled":
+      return "Cancelado";
   }
 }
 
 function billingStatusColor(status: BillingStatus): string {
   switch (status) {
     case "trialing":
-    case "active":   return "var(--ui-color-success)";
+    case "active":
+      return "var(--ui-color-success)";
     case "past_due":
-    case "paused":   return "var(--ui-color-warning)";
-    case "canceled": return "var(--ui-color-danger)";
+    case "paused":
+      return "var(--ui-color-warning)";
+    case "canceled":
+      return "var(--ui-color-danger)";
   }
 }
 
@@ -55,10 +63,14 @@ function BillingStatusIcon({ status }: { status: BillingStatus }) {
   const size = 15;
   switch (status) {
     case "trialing":
-    case "active":   return <CheckCircle size={size} aria-hidden />;
-    case "past_due": return <Clock size={size} aria-hidden />;
-    case "paused":   return <AlertTriangle size={size} aria-hidden />;
-    case "canceled": return <XCircle size={size} aria-hidden />;
+    case "active":
+      return <CheckCircle size={size} aria-hidden />;
+    case "past_due":
+      return <Clock size={size} aria-hidden />;
+    case "paused":
+      return <AlertTriangle size={size} aria-hidden />;
+    case "canceled":
+      return <XCircle size={size} aria-hidden />;
   }
 }
 
@@ -136,7 +148,13 @@ function TenantCard({ tenant }: { tenant: TenantOverview }) {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
           <p style={{ margin: 0, fontWeight: 600 }}>{tenant.tenantName}</p>
-          <p style={{ margin: 0, fontSize: "var(--ui-text-sm)", color: "var(--ui-color-text-muted)" }}>
+          <p
+            style={{
+              margin: 0,
+              fontSize: "var(--ui-text-sm)",
+              color: "var(--ui-color-text-muted)",
+            }}
+          >
             {tenant.planName}
           </p>
         </div>
@@ -228,11 +246,7 @@ function TenantCard({ tenant }: { tenant: TenantOverview }) {
 
 export function OperationsDashboard({ tenants }: { tenants: TenantOverview[] }) {
   if (tenants.length === 0) {
-    return (
-      <p style={{ color: "var(--ui-color-text-muted)" }}>
-        No hay datos de uso disponibles.
-      </p>
-    );
+    return <p style={{ color: "var(--ui-color-text-muted)" }}>No hay datos de uso disponibles.</p>;
   }
 
   return (

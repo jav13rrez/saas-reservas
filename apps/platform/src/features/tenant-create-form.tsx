@@ -29,7 +29,11 @@ export function TenantCreateForm() {
       });
       if (!response.ok) {
         const data = (await response.json()) as { error?: string };
-        setError(data.error === "slug-taken" ? "El identificador ya existe." : "No se pudo crear el tenant.");
+        setError(
+          data.error === "slug-taken"
+            ? "El identificador ya existe."
+            : "No se pudo crear el tenant.",
+        );
         return;
       }
       setSlug("");

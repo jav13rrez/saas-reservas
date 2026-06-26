@@ -105,7 +105,11 @@ export class PlatformAuthService {
       return { ok: false, reason: decision.reason };
     }
     const operator = await this.createOperator(input);
-    await this.audit({ type: "platform", id: operator.id }, "platform.operator.bootstrapped", operator.id);
+    await this.audit(
+      { type: "platform", id: operator.id },
+      "platform.operator.bootstrapped",
+      operator.id,
+    );
     return { ok: true, operator };
   }
 

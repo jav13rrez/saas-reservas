@@ -37,9 +37,7 @@ export default async function OperationsPage() {
           marginBottom: "var(--ui-space-5)",
         }}
       >
-        <h1
-          style={{ display: "flex", alignItems: "center", gap: "var(--ui-space-2)", margin: 0 }}
-        >
+        <h1 style={{ display: "flex", alignItems: "center", gap: "var(--ui-space-2)", margin: 0 }}>
           <BarChart2 size={22} aria-hidden />
           Operaciones
         </h1>
