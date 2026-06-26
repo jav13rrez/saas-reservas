@@ -28,7 +28,10 @@ export async function PATCH(
 
   if (!result.ok) {
     const status = result.status === 404 ? 404 : result.status === 409 ? 409 : 502;
-    return NextResponse.json({ error: result.error ?? "Error al actualizar el vínculo." }, { status });
+    return NextResponse.json(
+      { error: result.error ?? "Error al actualizar el vínculo." },
+      { status },
+    );
   }
   return NextResponse.json(result.data);
 }

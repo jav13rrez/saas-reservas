@@ -66,10 +66,7 @@ export function registerPlatformRoutes(app: FastifyInstance, deps: PlatformRoute
       await platformAuth.logout(sessionId);
     }
     return reply
-      .header(
-        "set-cookie",
-        "platform_session=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax",
-      )
+      .header("set-cookie", "platform_session=; Max-Age=0; Path=/; HttpOnly; Secure; SameSite=Lax")
       .code(204)
       .send();
   });

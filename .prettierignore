@@ -7,4 +7,8 @@ specs/
 reference/
 archive/
 
+# Documentation (ADRs, Amelia analysis, design docs) keeps its own hand-authored
+# formatting — large reference tables should not be reflowed by Prettier.
+docs/
+
 pnpm-lock.yaml

@@ -55,7 +55,14 @@ export function TenantLifecycleButton({ tenantId, currentStatus }: Props) {
         {loading ? "…" : label}
       </button>
       {error !== null && (
-        <span role="alert" style={{ marginLeft: "var(--ui-space-2)", color: "var(--ui-color-danger)", fontSize: "0.85em" }}>
+        <span
+          role="alert"
+          style={{
+            marginLeft: "var(--ui-space-2)",
+            color: "var(--ui-color-danger)",
+            fontSize: "0.85em",
+          }}
+        >
           {error}
         </span>
       )}

@@ -26,7 +26,7 @@ Last updated: 2026-06-26 (feature 003 tenant-settings COMPLETE)
     build (`LinkOff`→`Link2Off`) que el toolchain de este contenedor destapó.
 - **Feature 002 — COMPLETA (T001–T034, US1–US4 + Polish):**
   - **US1:** identidad platform-global + gate `/v1/platform/*` y `/v1/ops/*` + bootstrap operador
-    + login/logout + `apps/platform` (login + dashboard). Quickstart S1–S2 validados.
+    - login/logout + `apps/platform` (login + dashboard). Quickstart S1–S2 validados.
   - **US2:** ciclo de vida de tenant (provision, suspend/reactivate) + UI en `apps/platform`.
     Quickstart S3–S4 validados.
   - **US3:** vista de Operaciones movida de `apps/admin` a `apps/platform`. Quickstart S5 validado.

@@ -81,26 +81,50 @@ describe("platform auth gate", () => {
   it("Scenario 1: bootstrap is deploy-secret gated and self-locking", async () => {
     // Fresh platform + wrong secret → 403.
     const badSecret = await call("POST", "/v1/platform/operators/bootstrap", {
-      payload: { secret: "wrong-secret", email: "owner@platform.test", password: "supersecret-pw", displayName: "Owner" },
+      payload: {
+        secret: "wrong-secret",
+        email: "owner@platform.test",
+        password: "supersecret-pw",
+        displayName: "Owner",
+      },
     });
     expect(badSecret.status).toBe(403);
 
     // Correct secret → 201 (first operator created).
-    const created = await call<{ id: string; email: string }>("POST", "/v1/platform/operators/bootstrap", {
-      payload: { secret: BOOTSTRAP_SECRET, email: "owner@platform.test", password: "supersecret-pw", displayName: "Owner" },
-    });
+    const created = await call<{ id: string; email: string }>(
+      "POST",
+      "/v1/platform/operators/bootstrap",
+      {
+        payload: {
+          secret: BOOTSTRAP_SECRET,
+          email: "owner@platform.test",
+          password: "supersecret-pw",
+          displayName: "Owner",
+        },
+      },
+    );
     expect(created.status).toBe(201);
     expect(created.body.email).toBe("owner@platform.test");
 
     // Repeat with the correct secret → 409 (self-locked).
     const repeat = await call("POST", "/v1/platform/operators/bootstrap", {
-      payload: { secret: BOOTSTRAP_SECRET, email: "second@platform.test", password: "supersecret-pw", displayName: "Second" },
+      payload: {
+        secret: BOOTSTRAP_SECRET,
+        email: "second@platform.test",
+        password: "supersecret-pw",
+        displayName: "Second",
+      },
     });
     expect(repeat.status).toBe(409);
 
     // Wrong secret after init → still 409 (self-lock precedence over the secret).
     const wrongAfterInit = await call("POST", "/v1/platform/operators/bootstrap", {
-      payload: { secret: "wrong-secret", email: "third@platform.test", password: "supersecret-pw", displayName: "Third" },
+      payload: {
+        secret: "wrong-secret",
+        email: "third@platform.test",
+        password: "supersecret-pw",
+        displayName: "Third",
+      },
     });
     expect(wrongAfterInit.status).toBe(409);
   });
@@ -135,11 +159,10 @@ describe("platform auth gate", () => {
       payload: { slug: "spa", displayName: "Spa", defaultTimezone: "Europe/Madrid" },
     });
     expect(tenant.status).toBe(201);
-    const staff = await call(
-      "POST",
-      `/v1/platform/tenants/${tenant.body.id}/staff`,
-      { cookie: platformSession, payload: { email: "admin@spa.test", password: "supersecret-pw", role: "admin" } },
-    );
+    const staff = await call("POST", `/v1/platform/tenants/${tenant.body.id}/staff`, {
+      cookie: platformSession,
+      payload: { email: "admin@spa.test", password: "supersecret-pw", role: "admin" },
+    });
     expect(staff.status).toBe(201);
 
     // A tenant staff_session is NOT interchangeable: presented at /v1/ops it is 403.

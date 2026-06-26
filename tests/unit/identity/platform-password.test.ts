@@ -34,7 +34,10 @@ describe("PlatformAuthService credentials", () => {
       password: "supersecret-pw",
       displayName: "Owner",
     });
-    const result = await auth.authenticate({ email: "owner@platform.test", password: "supersecret-pw" });
+    const result = await auth.authenticate({
+      email: "owner@platform.test",
+      password: "supersecret-pw",
+    });
     expect(result.ok).toBe(true);
   });
 
@@ -45,28 +48,49 @@ describe("PlatformAuthService credentials", () => {
       password: "supersecret-pw",
       displayName: "Owner",
     });
-    const result = await auth.authenticate({ email: "owner@platform.test", password: "wrong-password" });
+    const result = await auth.authenticate({
+      email: "owner@platform.test",
+      password: "wrong-password",
+    });
     expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
   });
 
   it("rejects an unknown email with the same generic reason (no account disclosure)", async () => {
     const auth = service();
-    const result = await auth.authenticate({ email: "nobody@platform.test", password: "whatever-pw" });
+    const result = await auth.authenticate({
+      email: "nobody@platform.test",
+      password: "whatever-pw",
+    });
     expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
   });
 
   it("rejects duplicate operator emails", async () => {
     const auth = service();
-    await auth.createOperator({ email: "dup@platform.test", password: "supersecret-pw", displayName: "A" });
+    await auth.createOperator({
+      email: "dup@platform.test",
+      password: "supersecret-pw",
+      displayName: "A",
+    });
     await expect(
-      auth.createOperator({ email: "dup@platform.test", password: "another-pw-9", displayName: "B" }),
+      auth.createOperator({
+        email: "dup@platform.test",
+        password: "another-pw-9",
+        displayName: "B",
+      }),
     ).rejects.toThrow();
   });
 
   it("mints a session that getSession resolves and logout invalidates", async () => {
     const auth = service();
-    await auth.createOperator({ email: "owner@platform.test", password: "supersecret-pw", displayName: "Owner" });
-    const result = await auth.authenticate({ email: "owner@platform.test", password: "supersecret-pw" });
+    await auth.createOperator({
+      email: "owner@platform.test",
+      password: "supersecret-pw",
+      displayName: "Owner",
+    });
+    const result = await auth.authenticate({
+      email: "owner@platform.test",
+      password: "supersecret-pw",
+    });
     if (!result.ok) {
       throw new Error("expected login to succeed");
     }

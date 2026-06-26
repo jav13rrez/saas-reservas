@@ -782,7 +782,7 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   active resuelve OK, suspended devuelve `tenant-suspended`, reactivado resuelve OK, audit registrado,
   datos preservados tras suspensión.
 - **T019:** `TenantAdminService.updateStatus()` — nuevo método en el service usando `findTenantById +
-  updateTenant` existentes; audita `tenant.suspended` / `tenant.reactivated`. `listTenants()` añadido
+updateTenant` existentes; audita `tenant.suspended` / `tenant.reactivated`. `listTenants()` añadido
   al port `TenantRepository`, `InMemoryStore`, y `DrizzleTenantRepository`.
 - **T020:** `PATCH /v1/platform/tenants/:tenantId` en `availability-routes.ts`; devuelve
   `{ id, status }`; 404 si el tenant no existe; actor resuelto desde la `platform_session`. También se
@@ -826,8 +826,7 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
 ### 2026-06-25 (feature 002 US4 + Polish — vínculo proveedor↔staff, cierre feature 002)
 
 - **T027:** `tests/integration/identity/staff-provider-link.test.ts` — 6 tests de integración:
-  link 200, duplicado-proveedor 409, opcionalidad en ambos lados, unlink 200, staff 404, proveedor
-  404. 344 passing (7 skipped), 60 archivos. Todos verdes.
+  link 200, duplicado-proveedor 409, opcionalidad en ambos lados, unlink 200, staff 404, proveedor 404. 344 passing (7 skipped), 60 archivos. Todos verdes.
 - **T028:** Migración SQL `infra/postgres/010-staff-provider-link.sql` — columna nullable
   `provider_id uuid REFERENCES providers(id)` en `staff_accounts` + índice único parcial
   `(tenant_id, provider_id) WHERE provider_id IS NOT NULL`. Schema Drizzle actualizado

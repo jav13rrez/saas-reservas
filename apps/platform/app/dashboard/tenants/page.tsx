@@ -43,9 +43,7 @@ export default async function TenantsPage() {
           marginBottom: "var(--ui-space-5)",
         }}
       >
-        <h1
-          style={{ display: "flex", alignItems: "center", gap: "var(--ui-space-2)", margin: 0 }}
-        >
+        <h1 style={{ display: "flex", alignItems: "center", gap: "var(--ui-space-2)", margin: 0 }}>
           <Building2 size={22} aria-hidden />
           Tenants
         </h1>
@@ -70,23 +68,49 @@ export default async function TenantsPage() {
         >
           <thead>
             <tr>
-              <th style={{ textAlign: "left", padding: "var(--ui-space-2) var(--ui-space-3)", borderBottom: "2px solid var(--ui-color-border)" }}>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: "var(--ui-space-2) var(--ui-space-3)",
+                  borderBottom: "2px solid var(--ui-color-border)",
+                }}
+              >
                 Tenant
               </th>
-              <th style={{ textAlign: "left", padding: "var(--ui-space-2) var(--ui-space-3)", borderBottom: "2px solid var(--ui-color-border)" }}>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: "var(--ui-space-2) var(--ui-space-3)",
+                  borderBottom: "2px solid var(--ui-color-border)",
+                }}
+              >
                 Identificador
               </th>
-              <th style={{ textAlign: "left", padding: "var(--ui-space-2) var(--ui-space-3)", borderBottom: "2px solid var(--ui-color-border)" }}>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: "var(--ui-space-2) var(--ui-space-3)",
+                  borderBottom: "2px solid var(--ui-color-border)",
+                }}
+              >
                 Estado
               </th>
-              <th style={{ padding: "var(--ui-space-2) var(--ui-space-3)", borderBottom: "2px solid var(--ui-color-border)" }} />
+              <th
+                style={{
+                  padding: "var(--ui-space-2) var(--ui-space-3)",
+                  borderBottom: "2px solid var(--ui-color-border)",
+                }}
+              />
             </tr>
           </thead>
           <tbody>
             {tenants.map((tenant) => (
               <tr key={tenant.id}>
                 <td
-                  style={{ padding: "var(--ui-space-2) var(--ui-space-3)", borderBottom: "1px solid var(--ui-color-border)" }}
+                  style={{
+                    padding: "var(--ui-space-2) var(--ui-space-3)",
+                    borderBottom: "1px solid var(--ui-color-border)",
+                  }}
                 >
                   {tenant.displayName}
                 </td>
@@ -104,9 +128,10 @@ export default async function TenantsPage() {
                   style={{
                     padding: "var(--ui-space-2) var(--ui-space-3)",
                     borderBottom: "1px solid var(--ui-color-border)",
-                    color: tenant.status === "active"
-                      ? "var(--ui-color-success)"
-                      : "var(--ui-color-warning)",
+                    color:
+                      tenant.status === "active"
+                        ? "var(--ui-color-success)"
+                        : "var(--ui-color-warning)",
                   }}
                 >
                   {tenant.status === "active" ? "Activo" : "Suspendido"}
@@ -118,10 +143,7 @@ export default async function TenantsPage() {
                     textAlign: "right",
                   }}
                 >
-                  <TenantLifecycleButton
-                    tenantId={tenant.id}
-                    currentStatus={tenant.status}
-                  />
+                  <TenantLifecycleButton tenantId={tenant.id} currentStatus={tenant.status} />
                 </td>
               </tr>
             ))}

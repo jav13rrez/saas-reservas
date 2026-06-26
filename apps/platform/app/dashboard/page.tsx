@@ -12,7 +12,9 @@ export default async function Dashboard() {
     redirect("/");
   }
   return (
-    <section style={{ maxWidth: 720, margin: "0 auto", padding: "var(--ui-space-7) var(--ui-space-6)" }}>
+    <section
+      style={{ maxWidth: 720, margin: "0 auto", padding: "var(--ui-space-7) var(--ui-space-6)" }}
+    >
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <h1 style={{ display: "flex", alignItems: "center", gap: "var(--ui-space-2)", margin: 0 }}>
           <LayoutDashboard size={22} aria-hidden />
@@ -20,7 +22,13 @@ export default async function Dashboard() {
         </h1>
         <LogoutButton />
       </header>
-      <p style={{ color: "var(--ui-color-text-muted)", maxWidth: 560, marginBottom: "var(--ui-space-5)" }}>
+      <p
+        style={{
+          color: "var(--ui-color-text-muted)",
+          maxWidth: 560,
+          marginBottom: "var(--ui-space-5)",
+        }}
+      >
         Has iniciado sesión como operador de la plataforma.
       </p>
       <nav style={{ display: "flex", flexDirection: "column", gap: "var(--ui-space-3)" }}>

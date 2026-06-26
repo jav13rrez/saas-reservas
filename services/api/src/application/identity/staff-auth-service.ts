@@ -180,7 +180,11 @@ export class StaffAuthService {
     if (existing !== null && existing.id !== input.staffId) {
       throw new StaffLinkError("provider-conflict");
     }
-    const staff = await this.accounts.setProviderLink(input.tenantId, input.staffId, input.providerId);
+    const staff = await this.accounts.setProviderLink(
+      input.tenantId,
+      input.staffId,
+      input.providerId,
+    );
     await this.audit(input.tenantId, input.actor, "staff.provider.linked", input.staffId, {
       providerId: input.providerId,
     });
