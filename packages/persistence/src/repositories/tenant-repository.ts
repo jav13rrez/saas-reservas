@@ -27,6 +27,7 @@ export class DrizzleTenantRepository {
         status: tenant.status,
         defaultTimezone: tenant.defaultTimezone,
         defaultLocale: tenant.defaultLocale,
+        currency: tenant.currency,
         branding: tenant.branding,
         policies: tenant.policies,
       }),
@@ -42,6 +43,7 @@ export class DrizzleTenantRepository {
           status: tenant.status,
           defaultTimezone: tenant.defaultTimezone,
           defaultLocale: tenant.defaultLocale,
+          currency: tenant.currency,
           branding: tenant.branding,
           policies: tenant.policies,
         })
@@ -119,6 +121,7 @@ function toTenant(row: typeof tenants.$inferSelect): Tenant {
     status: row.status,
     defaultTimezone: row.defaultTimezone,
     defaultLocale: row.defaultLocale,
+    currency: row.currency,
     branding: row.branding,
     policies: row.policies,
   };

@@ -23,9 +23,9 @@ independently. Paths follow the modular monolith layout in plan.md.
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-- [ ] T001 [P] Add `DEFAULT_CURRENCY = "EUR"` and an ISO-4217 allowlist constant to
+- [x] T001 [P] Add `DEFAULT_CURRENCY = "EUR"` and an ISO-4217 allowlist constant to
   `packages/domain/src/tenancy/tenant.ts` (no behavior change yet); export for reuse.
-- [ ] T002 [P] Add `MESSAGING`/currency-independent note to `.env.example` only if needed — otherwise
+- [x] T002 [P] Add `MESSAGING`/currency-independent note to `.env.example` only if needed — otherwise
   no env change (this feature adds none). Confirm `docs/operations/SETUP.md` lists the settings
   surface as admin-gated. (Documentation-only.)
 
@@ -36,25 +36,25 @@ independently. Paths follow the modular monolith layout in plan.md.
 **⚠️ CRITICAL**: The currency field, persistence, service orchestrator, and the admin route pair
 block all three user stories.
 
-- [ ] T003 Add `currency: string` to the `Tenant` interface and `assertValidCurrency(code)` in
+- [x] T003 Add `currency: string` to the `Tenant` interface and `assertValidCurrency(code)` in
   `packages/domain/src/tenancy/tenant.ts`; call it from `validateTenant`. Unit test first
   (`tests/unit/tenancy/currency.test.ts`): accept EUR/USD/GBP, reject `eur`, `EU`, `ZZZ`, ``.
-- [ ] T004 SQL migration `infra/postgres/011-tenant-currency.sql`:
+- [x] T004 SQL migration `infra/postgres/011-tenant-currency.sql`:
   `ALTER TABLE tenants ADD COLUMN IF NOT EXISTS currency text NOT NULL DEFAULT 'EUR';` (idempotent,
   backfills existing rows; no RLS change).
-- [ ] T005 Mirror the column in `packages/persistence/src/schema.ts` (`currency: text("currency").notNull()`)
+- [x] T005 Mirror the column in `packages/persistence/src/schema.ts` (`currency: text("currency").notNull()`)
   and map it on read/write in `packages/persistence/src/repositories/tenant-repository.ts`.
-- [ ] T006 Update `TenantAdminService.createTenant` and the in-memory tenant repository/seed
+- [x] T006 Update `TenantAdminService.createTenant` and the in-memory tenant repository/seed
   (`services/api/src/seeds/demo-tenants.ts`) to set `currency` (default `DEFAULT_CURRENCY`), keeping
   existing call sites compiling.
-- [ ] T007 Add `getSettings(tenantId)`, `updateLocalization(...)`, and the all-or-nothing
+- [x] T007 Add `getSettings(tenantId)`, `updateLocalization(...)`, and the all-or-nothing
   `updateSettings({ profile?, localization?, policies?, branding?, actor })` orchestrator to
   `services/api/src/application/tenancy/tenant-admin-service.ts` (one merge → one `validateTenant` →
   persist → one audit event per changed group). Unit test first for the all-or-nothing merge.
-- [ ] T008 Create `services/api/src/api/admin-settings-routes.ts` with `GET /v1/admin/settings` and
+- [x] T008 Create `services/api/src/api/admin-settings-routes.ts` with `GET /v1/admin/settings` and
   `PATCH /v1/admin/settings`, registered by `buildApp` as an optional `tenantSettings` dep, behind the
   staff-auth admin-role gate (401/403). The tenant is request-resolved (no path param).
-- [ ] T009 Wire the `tenantSettings` dep into both bootstraps in `services/api/src/main.ts`
+- [x] T009 Wire the `tenantSettings` dep into both bootstraps in `services/api/src/main.ts`
   (in-memory and persistent), reusing `TenantAdminService` + `EventSink`.
 
 **Checkpoint**: Currency exists end to end; the admin settings route pair is reachable and gated.
@@ -67,20 +67,20 @@ User stories can begin.
 **Goal**: An admin sets display name, time zone, locale, and currency; values persist and are read
 back; invalid input is rejected all-or-nothing; non-admin/customer rejected.
 
-- [ ] T010 [P] [US1] Integration test `tests/integration/settings/localization.test.ts` (in-memory
+- [x] T010 [P] [US1] Integration test `tests/integration/settings/localization.test.ts` (in-memory
   always; Drizzle/RLS self-skips): read settings; PATCH localization+profile persists + audits
   `tenant.localization-updated`; invalid timezone/currency/blank-name rejected with **no partial
   write**; cross-tenant isolation (tenant A's settings unreachable under tenant B).
-- [ ] T011 [P] [US1] E2E test `tests/e2e/admin-settings.test.ts`: admin `GET → PATCH → GET` reflects
+- [x] T011 [P] [US1] E2E test `tests/e2e/admin-settings.test.ts`: admin `GET → PATCH → GET` reflects
   new localization; non-admin staff session → 403; customer session rejected.
-- [ ] T012 [US1] Implement the `localization`/`profile` branch of `PATCH /v1/admin/settings` (maps to
+- [x] T012 [US1] Implement the `localization`/`profile` branch of `PATCH /v1/admin/settings` (maps to
   `updateSettings`) and `GET` projection; map the `400` error codes from the contract
   (`invalid-timezone`, `invalid-currency`, `invalid-locale`, `invalid-display-name`). Make T010/T011
   green.
-- [ ] T013 [US1] Admin console seam: `apps/admin/src/server/source/settings.ts` (demo vs api) +
+- [x] T013 [US1] Admin console seam: `apps/admin/src/server/source/settings.ts` (demo vs api) +
   `apps/admin/app/api/settings/route.ts` (GET/PATCH); demo store `getSettings`/`updateSettings` over
   the in-memory tenant in `apps/admin/src/server/demo-store.ts`.
-- [ ] T014 [US1] Admin Settings screen scaffold `apps/admin/src/features/settings/` with the
+- [x] T014 [US1] Admin Settings screen scaffold `apps/admin/src/features/settings/` with the
   **Perfil** + **Localización** sections (display name, timezone, locale, currency), design tokens +
   Lucide icons + Spanish + no emojis; one Save → one PATCH. `next build` passes.
 
@@ -94,15 +94,15 @@ gated.
 **Goal**: An admin sets booking horizon, cancellation/reschedule notice, and requires-approval; the
 public widget horizon and the change/cancel policy engine honor the saved values.
 
-- [ ] T015 [P] [US2] Integration test `tests/integration/settings/policies.test.ts`: PATCH policies
+- [x] T015 [P] [US2] Integration test `tests/integration/settings/policies.test.ts`: PATCH policies
   persists + audits `tenant.policies-updated`; out-of-range (negative notice, horizon < 1) rejected
   with no partial write.
-- [ ] T016 [P] [US2] E2E test in `tests/e2e/admin-settings.test.ts`: after PATCH `bookingHorizonDays`,
+- [x] T016 [P] [US2] E2E test in `tests/e2e/admin-settings.test.ts`: after PATCH `bookingHorizonDays`,
   `GET /v1/public/availability` for a date beyond the horizon returns no slots; restoring the horizon
   returns slots.
-- [ ] T017 [US2] Implement the `policies` branch of `PATCH /v1/admin/settings` (maps to the existing
+- [x] T017 [US2] Implement the `policies` branch of `PATCH /v1/admin/settings` (maps to the existing
   `updatePolicies` via `updateSettings`); map `policy-out-of-range`. Make T015/T016 green.
-- [ ] T018 [US2] Add the **Políticas de reserva** section to the Settings screen (horizon, cancel
+- [x] T018 [US2] Add the **Políticas de reserva** section to the Settings screen (horizon, cancel
   notice, reschedule notice, requires-approval toggle), through the seam in both modes.
 
 **Checkpoint**: US2 independently demonstrable — policies editable and enforced by existing engines.
@@ -114,11 +114,11 @@ public widget horizon and the change/cancel policy engine honor the saved values
 **Goal**: An admin sets primary color and logo; the widget/admin reflect the tenant's primary color
 at runtime; invalid color rejected.
 
-- [ ] T019 [P] [US3] Integration test `tests/integration/settings/branding.test.ts`: PATCH branding
+- [x] T019 [P] [US3] Integration test `tests/integration/settings/branding.test.ts`: PATCH branding
   persists + audits `tenant.branding-updated`; invalid hex color rejected; set/clear logo valid.
-- [ ] T020 [US3] Implement the `branding` branch of `PATCH /v1/admin/settings` (maps to the existing
+- [x] T020 [US3] Implement the `branding` branch of `PATCH /v1/admin/settings` (maps to the existing
   `updateBranding` via `updateSettings`); map `invalid-color`/`invalid-logo`. Make T019 green.
-- [ ] T021 [US3] Add the **Marca** section to the Settings screen (primary color picker + logo
+- [x] T021 [US3] Add the **Marca** section to the Settings screen (primary color picker + logo
   reference), through the seam; confirm the booking widget renders the saved `primaryColor` as the
   runtime token override.
 
@@ -129,14 +129,14 @@ at runtime; invalid color rejected.
 
 ## Phase 6: Polish & Cross-Cutting
 
-- [ ] T022 [P] Write `docs/adr/0023-tenant-settings-persistence.md`: extend the `tenants` registry
+- [x] T022 [P] Write `docs/adr/0023-tenant-settings-persistence.md`: extend the `tenants` registry
   with a `currency` column instead of a separate `tenant_settings` table; record the deviation from
   ADR-0021 #4's wording and the per-location-override revisit trigger.
-- [ ] T023 [P] Validate quickstart S1–S10; update the acceptance status table in `quickstart.md` to
+- [x] T023 [P] Validate quickstart S1–S10; update the acceptance status table in `quickstart.md` to
   `validated`.
-- [ ] T024 Run the full suite (typecheck, lint, Prettier, tests); confirm green (Drizzle/RLS
+- [x] T024 Run the full suite (typecheck, lint, Prettier, tests); confirm green (Drizzle/RLS
   self-skips without PostgreSQL) and `apps/admin` `next build` passes.
-- [ ] T025 [P] Update continuity docs at session close: `PROGRESS.md` (dated entry), `HANDOFF.md`
+- [x] T025 [P] Update continuity docs at session close: `PROGRESS.md` (dated entry), `HANDOFF.md`
   (resume point), mark feature 003 tasks complete; note in `TECH_DEBT.md` that migration `011` is
   pending production apply.
 

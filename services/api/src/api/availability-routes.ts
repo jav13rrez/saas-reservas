@@ -35,6 +35,7 @@ import {
 } from "../infrastructure/tenancy/tenant-resolver.js";
 import { cookieValue, serializeCookie } from "./http-cookies.js";
 import { registerPlatformRoutes } from "./platform-routes.js";
+import { registerAdminSettingsRoutes } from "./admin-settings-routes.js";
 import { registerCheckoutRoutes, type CheckoutDeps } from "./checkout-routes.js";
 import { registerEventRoutes, type EventDeps } from "./event-routes.js";
 import { registerPortalRoutes, type PortalDeps } from "./portal-routes.js";
@@ -270,12 +271,21 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   const adminActor = (request: FastifyRequest): Actor =>
     request.staff === undefined ? SYSTEM_ACTOR : { type: "staff", id: request.staff.id };
 
+  // Admin settings surface (feature 003): GET/PATCH /v1/admin/settings over the
+  // request-resolved tenant, behind the same admin-role staff-auth gate.
+  registerAdminSettingsRoutes(app, {
+    tenantAdmin: deps.tenantAdmin,
+    tenantOf,
+    adminActor,
+  });
+
   /** Platform actor: resolved from the platform_session cookie when available. */
   const platformActor = (request: FastifyRequest): Actor => {
     const sessionId = cookieValue(request, "platform_session");
-    const session = sessionId !== null && deps.platformAuth !== undefined
-      ? deps.platformAuth.getSession(sessionId)
-      : null;
+    const session =
+      sessionId !== null && deps.platformAuth !== undefined
+        ? deps.platformAuth.getSession(sessionId)
+        : null;
     return session !== null ? { type: "platform", id: session.operatorId } : { type: "platform" };
   };
 
@@ -300,7 +310,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   // List all tenants (platform-gated; used by the platform UI for the tenant table).
   app.get("/v1/platform/tenants", async (_request, reply) => {
     const items = await deps.tenantAdmin.listTenants();
-    return reply.send({ items: items.map((t) => ({ id: t.id, slug: t.slug, displayName: t.displayName, status: t.status })) });
+    return reply.send({
+      items: items.map((t) => ({
+        id: t.id,
+        slug: t.slug,
+        displayName: t.displayName,
+        status: t.status,
+      })),
+    });
   });
 
   // Tenant lifecycle: suspend or reactivate a tenant (FR-021).
@@ -316,7 +333,7 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         status: body.status,
         actor: platformActor(request),
       });
-      return reply.code(200).send({ id: updated.id, status: updated.status });
+      return await reply.code(200).send({ id: updated.id, status: updated.status });
     } catch (error) {
       if (error instanceof TenantAdminError && error.code === "tenant-not-found") {
         return reply.code(404).send({ error: "tenant-not-found" });
@@ -414,9 +431,12 @@ export function buildApp(deps: AppDeps): FastifyInstance {
 
       try {
         if (body.providerId !== null && body.providerId !== undefined) {
-          const provider = await deps.catalogService.findProviderById(tenant.tenantId, body.providerId);
+          const provider = await deps.catalogService.findProviderById(
+            tenant.tenantId,
+            body.providerId,
+          );
           if (provider === null) {
-            return reply.code(404).send({ error: "provider-not-found" });
+            return await reply.code(404).send({ error: "provider-not-found" });
           }
           const updated = await staffAuth.setProviderLink({
             tenantId: tenant.tenantId,
@@ -424,14 +444,14 @@ export function buildApp(deps: AppDeps): FastifyInstance {
             providerId: body.providerId,
             actor,
           });
-          return reply.send({ id: updated.id, providerId: updated.providerId ?? null });
+          return await reply.send({ id: updated.id, providerId: updated.providerId ?? null });
         } else {
           const updated = await staffAuth.clearProviderLink({
             tenantId: tenant.tenantId,
             staffId,
             actor,
           });
-          return reply.send({ id: updated.id, providerId: updated.providerId ?? null });
+          return await reply.send({ id: updated.id, providerId: updated.providerId ?? null });
         }
       } catch (err) {
         if (err instanceof StaffLinkError) {
@@ -631,19 +651,24 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       name: string;
       durationMinutes: number;
       priceAmount: number;
-      currency: string;
+      currency?: string;
       bufferBeforeMinutes?: number;
       bufferAfterMinutes?: number;
       minCapacity?: number;
       maxCapacity?: number;
     };
+    // New services inherit the tenant's default currency when none is given
+    // (feature 003, FR-008). Changing the tenant currency is non-retroactive:
+    // existing services keep the currency they were created with.
+    const currency =
+      body.currency ?? (await deps.tenantAdmin.getSettings(tenant.tenantId)).localization.currency;
     const service = await deps.catalogService.createService({
       tenantId: tenant.tenantId,
       categoryId: body.categoryId,
       name: body.name,
       durationMinutes: body.durationMinutes,
       priceAmount: body.priceAmount,
-      currency: body.currency,
+      currency,
       bufferBeforeMinutes: body.bufferBeforeMinutes ?? 0,
       bufferAfterMinutes: body.bufferAfterMinutes ?? 0,
       minCapacity: body.minCapacity ?? 1,

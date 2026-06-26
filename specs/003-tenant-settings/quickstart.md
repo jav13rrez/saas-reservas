@@ -83,15 +83,19 @@ against a running stack (`api` mode) as noted.
 
 ## Acceptance status
 
-| Scenario | User Story | Success Criterion | Status |
-|----------|-----------|-------------------|--------|
-| S1 | US1 | SC-001 | pending implementation |
-| S2 | US1 | SC-001 | pending implementation |
-| S3 | US1/US2/US3 | SC-007 | pending implementation |
-| S4 | US1 | SC-005 | pending implementation |
-| S5 | US2 | SC-003 | pending implementation |
-| S6 | US2 | SC-004 | pending implementation |
-| S7 | US3 | SC-001 | pending implementation |
-| S8 | US1 | SC-002 | pending implementation |
-| S9 | all | SC-006 | pending implementation |
-| S10 | all | SC-001 | pending implementation |
+| Scenario | User Story | Success Criterion | Status | Covered by |
+|----------|-----------|-------------------|--------|------------|
+| S1 | US1 | SC-001 | validated | `admin-settings.test.ts` (e2e), `settings.test.ts` (int) |
+| S2 | US1 | SC-001 | validated | `admin-settings.test.ts` round-trip |
+| S3 | US1/US2/US3 | SC-007 | validated | `admin-settings.test.ts` validation codes + all-or-nothing; `settings.test.ts` |
+| S4 | US1 | SC-005 | validated | `admin-settings.test.ts` non-retroactive currency |
+| S5 | US2 | SC-003 | covered | booking horizon consumed by the existing availability engine (feature 001) |
+| S6 | US2 | SC-004 | covered | notice hours consumed by the existing change-policy engine (feature 001) |
+| S7 | US3 | SC-001 | validated | `settings.test.ts` branding; runtime token override (ADR-0008) |
+| S8 | US1 | SC-002 | validated | `admin-settings.test.ts` admin-role gate (401) |
+| S9 | all | SC-006 | validated | `settings.test.ts` audit actions |
+| S10 | all | SC-001 | validated | `settings.test.ts` cross-tenant isolation |
+
+> S5/S6: the policy *values* persist and are read by the engines that feature 001 already tests; this
+> feature provides the configuration point, not the engine. The persistence + read-back is validated;
+> the engine enforcement is owned by feature 001's suite.

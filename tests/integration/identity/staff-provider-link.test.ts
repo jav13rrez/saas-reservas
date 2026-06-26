@@ -33,6 +33,7 @@ describe("staff ↔ provider link", () => {
   let staff2Id: string;
   let providerId: string;
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- typed at call sites
   async function call<T = unknown>(
     method: "GET" | "POST" | "PATCH" | "DELETE",
     url: string,
@@ -44,7 +45,9 @@ describe("staff ↔ provider link", () => {
       method,
       url,
       headers,
-      ...(options.payload !== undefined ? { payload: options.payload as Record<string, unknown> } : {}),
+      ...(options.payload !== undefined
+        ? { payload: options.payload as Record<string, unknown> }
+        : {}),
     });
     const setCookie = response.headers["set-cookie"];
     return {
@@ -77,7 +80,12 @@ describe("staff ↔ provider link", () => {
 
     // Bootstrap platform operator y sesión
     await call("POST", "/v1/platform/operators/bootstrap", {
-      payload: { secret: BOOTSTRAP_SECRET, email: "owner@platform.test", password: "platform-pw-32chars!!", displayName: "Owner" },
+      payload: {
+        secret: BOOTSTRAP_SECRET,
+        email: "owner@platform.test",
+        password: "platform-pw-32chars!!",
+        displayName: "Owner",
+      },
     });
     const platformLogin = await call("POST", "/v1/platform/sessions", {
       payload: { email: "owner@platform.test", password: "platform-pw-32chars!!" },
@@ -132,11 +140,11 @@ describe("staff ↔ provider link", () => {
   });
 
   it("rechaza vincular el mismo proveedor a staff2 → 409", async () => {
-    const res = await call(
-      "PATCH",
-      `/v1/admin/staff/${staff2Id}`,
-      { host: TENANT_HOST, cookie: adminSession, payload: { providerId } },
-    );
+    const res = await call("PATCH", `/v1/admin/staff/${staff2Id}`, {
+      host: TENANT_HOST,
+      cookie: adminSession,
+      payload: { providerId },
+    });
     expect(res.status).toBe(409);
   });
 
@@ -161,33 +169,28 @@ describe("staff ↔ provider link", () => {
     expect(res.body.providerId).toBeNull();
 
     // Tras desvincular, el proveedor debe seguir listándose
-    const providers = await call<{ items: { id: string }[] }>(
-      "GET",
-      "/v1/admin/providers",
-      { host: TENANT_HOST, cookie: adminSession },
-    );
+    const providers = await call<{ items: { id: string }[] }>("GET", "/v1/admin/providers", {
+      host: TENANT_HOST,
+      cookie: adminSession,
+    });
     expect(providers.body.items.some((p) => p.id === providerId)).toBe(true);
   });
 
   it("devuelve 404 si el staffId no existe en el tenant", async () => {
-    const res = await call(
-      "PATCH",
-      "/v1/admin/staff/00000000-0000-0000-0000-000000000000",
-      { host: TENANT_HOST, cookie: adminSession, payload: { providerId: null } },
-    );
+    const res = await call("PATCH", "/v1/admin/staff/00000000-0000-0000-0000-000000000000", {
+      host: TENANT_HOST,
+      cookie: adminSession,
+      payload: { providerId: null },
+    });
     expect(res.status).toBe(404);
   });
 
   it("devuelve 404 si el providerId no existe en el tenant", async () => {
-    const res = await call(
-      "PATCH",
-      `/v1/admin/staff/${staff2Id}`,
-      {
-        host: TENANT_HOST,
-        cookie: adminSession,
-        payload: { providerId: "00000000-0000-0000-0000-000000000000" },
-      },
-    );
+    const res = await call("PATCH", `/v1/admin/staff/${staff2Id}`, {
+      host: TENANT_HOST,
+      cookie: adminSession,
+      payload: { providerId: "00000000-0000-0000-0000-000000000000" },
+    });
     expect(res.status).toBe(404);
   });
 });

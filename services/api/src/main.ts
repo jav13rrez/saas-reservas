@@ -47,7 +47,11 @@ import {
   STARTER_PLAN,
 } from "@saas-reservas/domain/billing/billing";
 import type { Tenant } from "@saas-reservas/domain/tenancy/tenant";
-import { DEFAULT_BRANDING, DEFAULT_POLICIES } from "@saas-reservas/domain/tenancy/tenant";
+import {
+  DEFAULT_BRANDING,
+  DEFAULT_CURRENCY,
+  DEFAULT_POLICIES,
+} from "@saas-reservas/domain/tenancy/tenant";
 import { buildApp, type AppDeps } from "./api/availability-routes.js";
 import { AdminBookingService } from "./application/bookings/admin-booking-service.js";
 import { BookingService } from "./application/bookings/booking-service.js";
@@ -297,6 +301,7 @@ async function inMemoryBootstrap(): Promise<Bootstrap> {
         status: "active",
         defaultTimezone: "Europe/Madrid",
         defaultLocale: "es",
+        currency: DEFAULT_CURRENCY,
         branding: DEFAULT_BRANDING,
         policies: DEFAULT_POLICIES,
       };

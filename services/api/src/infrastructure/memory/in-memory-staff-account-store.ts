@@ -3,7 +3,11 @@
  * tenantId explicitly, mirroring the tenant-scoped SQL the Drizzle adapter runs.
  */
 
-import { normalizeStaffEmail, StaffLinkError, type StaffAccount } from "@saas-reservas/domain/identity/staff";
+import {
+  normalizeStaffEmail,
+  StaffLinkError,
+  type StaffAccount,
+} from "@saas-reservas/domain/identity/staff";
 import type { StaffAccountStore } from "../../application/identity/staff-auth-service.js";
 
 export class InMemoryStaffAccountStore implements StaffAccountStore {
@@ -52,7 +56,9 @@ export class InMemoryStaffAccountStore implements StaffAccountStore {
     );
     if (conflict !== undefined) throw new StaffLinkError("provider-conflict");
 
-    const updated = { ...this.accounts[idx]!, providerId };
+    const existing = this.accounts[idx];
+    if (existing === undefined) throw new StaffLinkError("staff-not-found");
+    const updated = { ...existing, providerId };
     this.accounts[idx] = updated;
     return Promise.resolve(updated);
   }
@@ -61,8 +67,9 @@ export class InMemoryStaffAccountStore implements StaffAccountStore {
     const idx = this.accounts.findIndex(
       (account) => account.tenantId === tenantId && account.id === staffId,
     );
-    if (idx === -1) throw new StaffLinkError("staff-not-found");
-    const updated = { ...this.accounts[idx]!, providerId: null };
+    const existing = this.accounts[idx];
+    if (existing === undefined) throw new StaffLinkError("staff-not-found");
+    const updated = { ...existing, providerId: null };
     this.accounts[idx] = updated;
     return Promise.resolve(updated);
   }

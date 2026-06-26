@@ -12,6 +12,7 @@ import {
 } from "@saas-reservas/domain/audit/events";
 import {
   DEFAULT_BRANDING,
+  DEFAULT_CURRENCY,
   DEFAULT_POLICIES,
   validateTenant,
   type Tenant,
@@ -21,6 +22,36 @@ import {
   type TenantPolicies,
 } from "@saas-reservas/domain/tenancy/tenant";
 import type { EventSink } from "../events.js";
+
+/** Editable settings projection exposed by the admin settings surface (feature 003). */
+export interface TenantSettings {
+  profile: { displayName: string };
+  localization: { defaultTimezone: string; defaultLocale: string; currency: string };
+  policies: TenantPolicies;
+  branding: TenantBranding;
+}
+
+export interface UpdateSettingsInput {
+  tenantId: string;
+  profile?: { displayName?: string };
+  localization?: { defaultTimezone?: string; defaultLocale?: string; currency?: string };
+  policies?: Partial<TenantPolicies>;
+  branding?: Partial<TenantBranding>;
+  actor: Actor;
+}
+
+function toSettings(tenant: Tenant): TenantSettings {
+  return {
+    profile: { displayName: tenant.displayName },
+    localization: {
+      defaultTimezone: tenant.defaultTimezone,
+      defaultLocale: tenant.defaultLocale,
+      currency: tenant.currency,
+    },
+    policies: tenant.policies,
+    branding: tenant.branding,
+  };
+}
 
 export interface TenantRepository {
   insertTenant(tenant: Tenant): Promise<void>;
@@ -53,6 +84,7 @@ export interface CreateTenantInput {
   displayName: string;
   defaultTimezone: string;
   defaultLocale?: string;
+  currency?: string;
   branding?: Partial<TenantBranding>;
   policies?: Partial<TenantPolicies>;
   actor: Actor;
@@ -76,6 +108,7 @@ export class TenantAdminService {
       status: "active",
       defaultTimezone: input.defaultTimezone,
       defaultLocale: input.defaultLocale ?? "es-ES",
+      currency: input.currency ?? DEFAULT_CURRENCY,
       branding: { ...DEFAULT_BRANDING, ...input.branding },
       policies: { ...DEFAULT_POLICIES, ...input.policies },
     };
@@ -159,6 +192,95 @@ export class TenantAdminService {
     await this.tenants.updateTenant(updated);
     await this.recordAudit(tenant.id, input.actor, "tenant.policies-updated", "tenant", tenant.id);
     return updated;
+  }
+
+  /** Read the editable settings projection for the resolved tenant (feature 003). */
+  async getSettings(tenantId: string): Promise<TenantSettings> {
+    const tenant = await this.requireTenant(tenantId);
+    return toSettings(tenant);
+  }
+
+  /** Update localization/profile (display name, timezone, locale, currency). */
+  async updateLocalization(input: {
+    tenantId: string;
+    displayName?: string;
+    defaultTimezone?: string;
+    defaultLocale?: string;
+    currency?: string;
+    actor: Actor;
+  }): Promise<TenantSettings> {
+    return this.updateSettings({
+      tenantId: input.tenantId,
+      actor: input.actor,
+      ...(input.displayName !== undefined ? { profile: { displayName: input.displayName } } : {}),
+      localization: {
+        ...(input.defaultTimezone !== undefined ? { defaultTimezone: input.defaultTimezone } : {}),
+        ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale } : {}),
+        ...(input.currency !== undefined ? { currency: input.currency } : {}),
+      },
+    });
+  }
+
+  /**
+   * All-or-nothing settings update (feature 003, FR-017): merge any provided
+   * subset of the four groups, validate ONCE, persist ONCE, then emit one audit
+   * record per changed group. A single invalid field changes nothing.
+   */
+  async updateSettings(input: UpdateSettingsInput): Promise<TenantSettings> {
+    const tenant = await this.requireTenant(input.tenantId);
+    const updated: Tenant = {
+      ...tenant,
+      ...(input.profile?.displayName !== undefined
+        ? { displayName: input.profile.displayName }
+        : {}),
+      ...(input.localization?.defaultTimezone !== undefined
+        ? { defaultTimezone: input.localization.defaultTimezone }
+        : {}),
+      ...(input.localization?.defaultLocale !== undefined
+        ? { defaultLocale: input.localization.defaultLocale }
+        : {}),
+      ...(input.localization?.currency !== undefined
+        ? { currency: input.localization.currency }
+        : {}),
+      ...(input.policies !== undefined
+        ? { policies: { ...tenant.policies, ...input.policies } }
+        : {}),
+      ...(input.branding !== undefined
+        ? { branding: { ...tenant.branding, ...input.branding } }
+        : {}),
+    };
+    validateTenant(updated);
+    await this.tenants.updateTenant(updated);
+
+    const localizationChanged = input.profile !== undefined || input.localization !== undefined;
+    if (localizationChanged) {
+      await this.recordAudit(
+        tenant.id,
+        input.actor,
+        "tenant.localization-updated",
+        "tenant",
+        tenant.id,
+      );
+    }
+    if (input.policies !== undefined) {
+      await this.recordAudit(
+        tenant.id,
+        input.actor,
+        "tenant.policies-updated",
+        "tenant",
+        tenant.id,
+      );
+    }
+    if (input.branding !== undefined) {
+      await this.recordAudit(
+        tenant.id,
+        input.actor,
+        "tenant.branding-updated",
+        "tenant",
+        tenant.id,
+      );
+    }
+    return toSettings(updated);
   }
 
   private async requireTenant(tenantId: string): Promise<Tenant> {

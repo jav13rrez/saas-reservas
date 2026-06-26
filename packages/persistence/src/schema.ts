@@ -29,6 +29,7 @@ export const tenants = pgTable("tenants", {
   status: text("status").$type<"active" | "suspended" | "archived">().notNull(),
   defaultTimezone: text("default_timezone").notNull(),
   defaultLocale: text("default_locale").notNull(),
+  currency: text("currency").notNull(),
   branding: jsonb("branding").$type<TenantBranding>().notNull(),
   policies: jsonb("policies").$type<TenantPolicies>().notNull(),
 });
