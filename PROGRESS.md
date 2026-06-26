@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-06-23
+Last updated: 2026-06-25 (US3)
 
 ## Current State
 
@@ -644,9 +644,215 @@ stripe-http.ts`) — real `api.stripe.com` calls (form-encoded, Bearer auth,
   Decisión operativa: **una feature de Spec-Kit por área de crecimiento** (002, 003…),
   sembrada desde el gap-analysis + la referencia Amelia.
 
+### 2026-06-24 (8 decisiones transversales resueltas — ADR-0021)
+
+- Resueltas con el dueño las **8 decisiones transversales** surgidas del recorrido del
+  menú (gap-analysis), que bloqueaban abrir specs limpias. Registradas en
+  `docs/adr/0021-cross-cutting-product-decisions.md` (nuevo) y marcadas en
+  `docs/analysis/menu-walkthrough-gap-analysis.md`:
+  1. **Categoría** → entidad de primera clase (no texto libre) → `categorias-entidad`.
+  2. **Online/virtual** → diferido a post-MVP (Decisión pendiente #5).
+  3. **Group booking / partición de cantidad** → sigue diferido (ADR-0016).
+  4. **Políticas (cancelación/reprogramación) + moneda** → global por tenant
+     (`tenant_settings`); override por sede como extensión futura → `tenant-settings`.
+  5. **IA Facturación** → separar Facturación (SaaS) de Finanzas (negocio) en el menú.
+  6. **IA sidebar** → Notifications/Custom Fields/Integrations plegadas en Configuración;
+     Customize ligado al widget público.
+  7. **Auth/plataforma** → superficie de plataforma separada con auth superadmin (mueve
+     Operaciones + provisión de tenants); proveedor separado de `staff_accounts` pero
+     vinculable (`staff.providerId` opcional) → `plataforma-superadmin`.
+  8. **Ciclo de estados de reserva** → 6 estados (Pending/Approved/Rejected/Cancelled/
+     Completed/No-show), default **Approved**, configurable por tenant →
+     `reservas-ciclo-estados-pagos`.
+- También: completado el índice de `docs/adr/README.md` (faltaban 0009–0014, 0018–0020;
+  añadido 0021). Actualizados `HANDOFF.md` (punto de reanudación + próximas acciones) y
+  este diario. Sin cambios de código ni de stack.
+- **Abierta la primera feature de crecimiento con `/speckit-specify`:**
+  `specs/002-plataforma-superadmin/` (spec.md + checklists/requirements.md). 4 historias de
+  usuario priorizadas: P1 auth de plataforma + superficie protegida (cierra el agujero de
+  `/operations` y de la provisión de tenants abierta), P2 provisión/ciclo de vida de tenants
+  bajo auth, P3 panel de Operaciones cross-tenant migrado a la plataforma + alineado al DS, P3
+  vínculo proveedor↔cuenta staff (ADR-0021 #7). Checklist de calidad: todos los ítems en verde.
+  `.specify/feature.json` apunta ya a 002.
+- **`/speckit-clarify` (sesión 2026-06-24):** 3 preguntas resueltas e integradas en la spec
+  (sección `## Clarifications` + FR-020/FR-021): (a) bootstrap del primer operador =
+  gatillado por secreto de deploy y autobloqueante; (b) suspensión de tenant bloquea logins
+  de staff + reservas nuevas, conserva datos; (c) reservas futuras se conservan sin tocar.
+  Checklist 16/16 sin cambios de estado.
+- **`/speckit-plan` (2026-06-24):** generados `plan.md`, `research.md`, `data-model.md`,
+  `contracts/platform-api.md`, `quickstart.md`. Constitución: PASS (sin violaciones; la
+  complejidad notable —app `apps/platform` separada— justificada en Complexity Tracking).
+  Decisiones clave: identidad `platform_operators` platform-global (sin RLS, espejo de
+  `StaffAuthService`/ADR-0017, cookie `platform_session`); gate de plataforma sobre
+  `/v1/platform/*` y `/v1/ops/*` (hoy abiertos); bootstrap autobloqueante con
+  `PLATFORM_BOOTSTRAP_SECRET`; suspensión en el tenant-resolver; vínculo proveedor↔staff vía
+  `staff_accounts.provider_id` (único por tenant); Operaciones migrado a `apps/platform` +
+  alineado al DS. `AGENTS.md` (bloque SPECKIT) repuntado a 002.
+  **Decisión confirmada por el dueño:** **app separada `apps/platform`** (vs área dentro de
+  `apps/admin`). Registrada en **ADR-0022** (auth de plataforma + superficie separada + identidad
+  platform-global + gate + bootstrap autobloqueante + suspensión + vínculo proveedor↔staff).
+- **`/speckit-tasks` (2026-06-24):** generado `tasks.md` — 34 tareas en 7 fases (Setup,
+  Foundational, US1–US4, Polish), con tests primero (exigidos por la constitución). MVP = US1
+  (lockdown + login de operador). US4 (vínculo proveedor↔staff) es paralelizable. Siguiente:
+  `/speckit-implement` (o implementar fase a fase). Rama empujada a `origin`.
+- **Cierre de sesión (2026-06-24):** parada deliberada **antes de implementar**. El dueño detectó
+  que varios `docs/analysis/amelia-*-fine-grained.md` no quedaron lo bastante profundos y volverá
+  con todos documentados a fondo. La feature 002 queda **planificada pero sin implementar**; la
+  próxima sesión debe (1) releer los Amelia profundizados, (2) reevaluar si 002 necesita ajustes y
+  (3) solo entonces `/speckit-implement`. **Rama `claude/affectionate-wright-0vx6ka` se deja VIVA**
+  (empujada, no fusionada, no borrar). Hook de inicio ajustado para mostrar la feature Spec-Kit
+  activa desde `.specify/feature.json`.
+
+### 2026-06-24 (Amelia deep-dive en Cowork — Catalog/Finance/Bookings)
+
+- Sesión externa con **Cowork** (no Claude Code) sobre la rama `claude/affectionate-wright-0vx6ka`
+  (commit `470bd74`, encima del cierre `fbae0a4`). Profundizó la documentación fina de Amelia donde
+  la versión previa (2026-06-23) se había quedado superficial (solo el primer tab de secciones
+  multi-tab):
+  - `docs/analysis/amelia-catalog-fine-grained.md` — TAB 2 **Packages** documentado a fondo (5 tabs
+    internos: Details, Services con tabla por-servicio, Pricing, Gallery, Settings); Resources con
+    group-booking + partición de cantidad.
+  - `docs/analysis/amelia-finance-fine-grained.md` — 3 tabs reales corregidos a **Transactions /
+    Invoices / Coupons** (antes se asumía Payments/Coupons/Gift Cards); modal de cupón al detalle.
+  - `docs/analysis/amelia-bookings-fine-grained.md` — ampliado (base).
+  - `docs/analysis/AMELIA-FINE-GRAINED-SCRAPE-PROMPT.md` — retoque menor.
+- **Nota de verificación (Claude Code, 2026-06-24):** el resumen de Cowork afirmaba "13 docs
+  actualizados/reconfirmados" y "HANDOFF.md updated", pero el commit `470bd74` solo modificó **3**
+  `amelia-*-fine-grained.md` (catalog/finance/bookings) + el prompt de scrape + `PROGRESS.md`;
+  **`HANDOFF.md` NO se tocó** en ese commit (sobrevivió la versión de cierre de Claude Code). Los
+  otros 11 docs de Amelia siguen en su estado de 2026-06-23. Decisión del dueño: por ahora solo
+  estos 3; quizá más áreas tras el MVP.
+- Esta entrada se reubicó aquí (estaba insertada fuera de orden entre las de 2026-06-12).
+- **Gap-analysis actualizado** (Claude Code) con lo aprendido del deep-dive: 🆕 candidata
+  **`paquetes`** (modal Amelia de 5 tabs + config por servicio; + pestaña Packages en Reservas);
+  área 10 **corregida** (Finanzas de Amelia = **Transactions/Invoices/Coupons**, **sin Gift Cards**
+  → `gift-cards-store-credit` retirado del catálogo); áreas 5 y 2 enriquecidas con el detalle
+  confirmado (Settings de servicio, categoría-entidad, tab Payment, filtros, 6 estados).
+  **Verificado: la feature 002 NO se ve afectada** por estos docs (son superficies de tenant; 002
+  es la capa de plataforma). 002 sigue lista para `/speckit-implement` sin cambios.
+- **Cierre (2026-06-24):** corregida la duplicación de la sección Coupons en
+  `amelia-finance-fine-grained.md` (se conservó la copia con columna TYPE y filtro Status).
+  `HANDOFF.md` y el hook de inicio actualizados para que **la próxima sesión arranque con
+  `/speckit-implement`** de la 002 (MVP US1 primero). Rama viva y empujada. Sin cambios de código.
+
+### 2026-06-24 (feature 002 — MVP US1 implementado: auth de plataforma)
+
+- **Implementadas las Fases 1–3 de la feature 002 (plataforma-superadmin), US1**, en la rama
+  `claude/affectionate-wright-0vx6ka`. Cierra el agujero de seguridad: `/v1/platform/*` y `/v1/ops/*`
+  pasan a requerir sesión de plataforma. **Detenido en US1** (US2/US3/US4 pendientes), según objetivo.
+- **Fase 1 (Setup):**
+  - `apps/platform` — nueva superficie Next.js (App Router, puerto 3003) con login + dashboard,
+    tokens de `packages/ui` + iconos `lucide-react` + textos en español + sin emojis (ADR-0008).
+    `next build` verde.
+  - `PLATFORM_BOOTSTRAP_SECRET` (opcional, min 32) añadido a `packages/contracts/environment.ts`,
+    `.env.example` y `docs/operations/SETUP.md`.
+- **Fase 2 (Foundational):**
+  - Migración `infra/postgres/009-platform-operators.sql` — tabla **platform-global** `platform_operators`
+    (sin RLS, como `tenants`), email único; `tenants.status` confirmado idempotente.
+  - `platform_operators` reflejado en `packages/persistence/schema.ts`.
+  - Puerto `PlatformOperatorStore` + adaptador in-memory + `DrizzlePlatformOperatorRepository`
+    (vía `db.global`, sin contexto de tenant).
+  - Dep opcional `platformAuth` en `buildApp` + gate de sesión sobre `/v1/platform/*` (excepto
+    bootstrap y login) y `/v1/ops/*`. `platform-routes.ts` registrado por `buildApp`; cableado en
+    ambos bootstraps de `main.ts`.
+- **Fase 3 (US1):**
+  - `PlatformAuthService` (scrypt reutilizado ADR-0017; cookie opaca `platform_session`; mapa de
+    sesiones in-memory; timing uniforme con placeholder hash). Regla de bootstrap **pura**
+    (`packages/domain/identity/platform.ts`: self-lock con precedencia sobre el secreto).
+  - Rutas: `POST /v1/platform/operators/bootstrap` (gated por secreto, self-locking → 409),
+    `POST/DELETE /v1/platform/sessions` (login/logout), `POST /v1/platform/operators` (gated).
+  - Gate: 401 sin sesión de plataforma; 403 con `staff_session` (sesiones no intercambiables).
+  - Página de login `apps/platform` + cliente de API server-only (origen sin tenant) + redirección.
+- **Tests:** `tests/unit/identity/platform-bootstrap.test.ts` (4), `…/platform-password.test.ts` (6),
+  `tests/e2e/platform-auth.test.ts` (2, escenarios 1 y 2). Suite total: unit 112, e2e 40, contract 58,
+  todo verde; typecheck y lint limpios. Integración Drizzle/RLS se auto-salta sin Postgres (convención).
+- **Quickstart escenarios 1 y 2 validados en terminal** contra la API in-memory real (curl):
+  S1 `403 → 201 → 409 → 409`; S2 `401/401 → login 200 → ops 200 → staff_session 403 → logout 204 → 401`.
+  Tabla de aceptación de `quickstart.md` actualizada; T001–T016 marcados en `tasks.md`.
+- **Deuda registrada (`TECH_DEBT.md`):** sesiones de plataforma in-memory (= staff), sin rate limiting
+  en `/v1/platform/sessions`, y **audit platform-global best-effort** (se escribe vía sink tenant-scoped
+  con pseudo-tenant `platform`; en persistente falla y se traga con log — falta store de audit global).
+
+### 2026-06-24 — feature 002 US2 (ciclo de vida de tenants)
+
+- **T017:** `tests/e2e/platform-tenant-lifecycle.test.ts` — 3 tests E2E que cubren escenarios 3
+  (aprovisionamiento autenticado) y 4 (suspensión/reactivación): creación de tenant gateada por sesión
+  de plataforma, bootstrap de admin, login del admin, PATCH suspend/active, bloqueo/restauración.
+- **T018:** `tests/integration/tenancy/tenant-suspension.test.ts` — 5 tests de integración in-memory:
+  active resuelve OK, suspended devuelve `tenant-suspended`, reactivado resuelve OK, audit registrado,
+  datos preservados tras suspensión.
+- **T019:** `TenantAdminService.updateStatus()` — nuevo método en el service usando `findTenantById +
+  updateTenant` existentes; audita `tenant.suspended` / `tenant.reactivated`. `listTenants()` añadido
+  al port `TenantRepository`, `InMemoryStore`, y `DrizzleTenantRepository`.
+- **T020:** `PATCH /v1/platform/tenants/:tenantId` en `availability-routes.ts`; devuelve
+  `{ id, status }`; 404 si el tenant no existe; actor resuelto desde la `platform_session`. También se
+  añadió `GET /v1/platform/tenants` para la UI.
+- **T021:** `tenant-resolver.ts` — `checkActive` distingue ahora `"tenant-suspended"` (status ===
+  "suspended") de `"tenant-inactive"` (otros estados no-active). `failureStatus` mapea ambos a 403.
+  Bloqueo es puramente a nivel de resolver: ninguna ruta de tenant se ejecuta.
+- **T022:** `apps/platform` — nueva página `/dashboard/tenants` (server component) con tabla de
+  tenants, estado coloreado, botones de suspender/reactivar (`TenantLifecycleButton` client), y
+  formulario de creación (`TenantCreateForm` client). Dashboard actualizado con enlace a la nueva
+  página.
+- **Tests:** suite total 334 passing (7 skipped por falta de Postgres/Redis en entorno remoto);
+  54 archivos de test (4 skipped). Typecheck y lint limpios.
+- **Quickstart escenarios 3 y 4 validados en terminal** contra la API in-memory (curl):
+  S3: provision 201 → staff bootstrap 201 → staff login 201.
+  S4: suspend 200 → staff login 403 → public availability 403 → reactivate 200 → staff login 201.
+  Tabla de aceptación de `quickstart.md` actualizada; T017–T022 marcados en `tasks.md`.
+
+### 2026-06-25 (feature 002 US3 — Operaciones en plataforma)
+
+- **T023:** `tests/integration/operations/ops-access.test.ts` — test de acceso a `/v1/ops/tenants`:
+  sin sesión → 401; `staff_session` → 403 (no intercambiable); `platform_session` → 200. RLS
+  isolation documentada: la ruta está fuera de `resolveRequestTenant`, sin `app.current_tenant_id`.
+- **T024:** Verificado que `/v1/ops/*` está bajo el gate de plataforma (Phase 2/US1) y que el
+  handler en `main.ts` sirve datos via array directo (static TENANT_OVERVIEWS), sin contexto de
+  tenant. Ningún cambio de código necesario.
+- **T025:** Vista de Operaciones movida de `apps/admin` a `apps/platform`:
+  - Creados `apps/platform/src/features/operations/operations-dashboard.tsx` (server component, DS)
+    y `apps/platform/app/dashboard/operations/page.tsx` (server page con auth guard, usa
+    `platformFetch("/v1/ops/tenants")`).
+  - Eliminados `apps/admin/app/operations/page.tsx`, `apps/admin/src/features/operations/index.tsx`,
+    `apps/admin/app/api/ops/tenants/route.ts` y directorios vacios resultantes.
+  - Quitada entrada "Operaciones" + import `BarChart2` de `apps/admin/src/components/sidebar.tsx`.
+- **T026:** UI realineada al DS: CSS tokens (`var(--ui-color-*)`, `var(--ui-space-*)`), solo
+  lucide-react, strings en español, sin Tailwind, sin emojis. Barra de cuota calculada
+  server-side (componente server, sin estado).
+- Dashboard de plataforma (`/dashboard`) actualizado con enlace a Operaciones.
+- **Tests:** suite total 338 passing (7 skipped); 55 archivos de test. Typecheck limpio.
+- Quickstart Scenario 5 marcado como implementado en `quickstart.md`; T023–T026 marcados en `tasks.md`.
+
+### 2026-06-25 (feature 002 US4 + Polish — vínculo proveedor↔staff, cierre feature 002)
+
+- **T027:** `tests/integration/identity/staff-provider-link.test.ts` — 6 tests de integración:
+  link 200, duplicado-proveedor 409, opcionalidad en ambos lados, unlink 200, staff 404, proveedor
+  404. 344 passing (7 skipped), 60 archivos. Todos verdes.
+- **T028:** Migración SQL `infra/postgres/010-staff-provider-link.sql` — columna nullable
+  `provider_id uuid REFERENCES providers(id)` en `staff_accounts` + índice único parcial
+  `(tenant_id, provider_id) WHERE provider_id IS NOT NULL`. Schema Drizzle actualizado
+  (`packages/persistence/src/schema.ts`).
+- **T029:** Puerto `StaffAccountStore` extendido con `findByProviderId`, `setProviderLink`,
+  `clearProviderLink`, `list`. Adaptadores: in-memory (`InMemoryStaffAccountStore`) y Drizzle
+  (`DrizzleStaffAccountRepository`), ambos con manejo de conflicto 23505/manual. `StaffLinkError`
+  definida en `packages/domain` para evitar dependencia circular. `StaffAuthService` expone
+  `findById`, `listAccounts`, `setProviderLink`, `clearProviderLink` como métodos públicos.
+- **T030:** `GET /v1/admin/staff` (lista con `providerId`) y `PATCH /v1/admin/staff/:staffId`
+  `{ providerId }` — 200/409/404 — implementados en `availability-routes.ts`. Audita
+  `staff.provider.linked`/`unlinked`. `CatalogService.findProviderById` añadido como método público.
+- **T031:** UI de vínculo en `apps/admin/src/features/providers/index.tsx`: tabla staff con
+  selector de proveedor + botón Vincular/Desvincular; estado `linkPending`/`linkError`; Next.js
+  route handlers `app/api/staff/route.ts` (GET) y `app/api/staff/[id]/route.ts` (PATCH).
+- **T032:** `TECH_DEBT.md` actualizado con deuda de US4 (migración 010, portal `x-provider-id`).
+- **T033:** Quickstart Scenarios 1–6 validados contra API in-memory (curl):
+  S6: GET staff 200 → link 200 → verify 200 → conflict 409 → unlink 200 → verify null 200.
+  Tabla de aceptación en `specs/002-plataforma-superadmin/quickstart.md` completada.
+- **T034:** `tasks.md` (T027–T034 marcados ✅), `PROGRESS.md` (esta entrada), `HANDOFF.md` actualizados.
+- **Feature 002 — COMPLETA.** T001–T034 todos marcados. Suite: 344 passing, 7 skipped, 60 archivos.
+
 ## Current Backlog
 
-All tasks T001–T086 are complete. The implementation covers the full spec for the SaaS multitenant booking platform.
+Features 001 y 002 completas (T001–T086 + T001–T034). La implementación cubre el núcleo multitenant y la plataforma superadmin.
 
 Primary implementation backlog:
 

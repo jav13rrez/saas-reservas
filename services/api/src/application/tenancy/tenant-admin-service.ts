@@ -27,6 +27,7 @@ export interface TenantRepository {
   updateTenant(tenant: Tenant): Promise<void>;
   findTenantById(tenantId: string): Promise<Tenant | null>;
   findTenantBySlug(slug: string): Promise<Tenant | null>;
+  listTenants(): Promise<Tenant[]>;
   insertDomain(domain: TenantDomain): Promise<void>;
   findDomainByHostname(hostname: string): Promise<TenantDomain | null>;
 }
@@ -39,6 +40,12 @@ export class TenantAdminError extends Error {
     super(message);
     this.name = "TenantAdminError";
   }
+}
+
+export interface UpdateTenantStatusInput {
+  tenantId: string;
+  status: "active" | "suspended";
+  actor: Actor;
 }
 
 export interface CreateTenantInput {
@@ -56,6 +63,10 @@ export class TenantAdminService {
     private readonly tenants: TenantRepository,
     private readonly events: EventSink,
   ) {}
+
+  async listTenants(): Promise<Tenant[]> {
+    return this.tenants.listTenants();
+  }
 
   async createTenant(input: CreateTenantInput): Promise<Tenant> {
     const tenant: Tenant = {
@@ -123,6 +134,17 @@ export class TenantAdminService {
     validateTenant(updated);
     await this.tenants.updateTenant(updated);
     await this.recordAudit(tenant.id, input.actor, "tenant.branding-updated", "tenant", tenant.id);
+    return updated;
+  }
+
+  async updateStatus(input: UpdateTenantStatusInput): Promise<Tenant> {
+    const tenant = await this.requireTenant(input.tenantId);
+    const updated: Tenant = { ...tenant, status: input.status };
+    await this.tenants.updateTenant(updated);
+    const action = input.status === "suspended" ? "tenant.suspended" : "tenant.reactivated";
+    await this.recordAudit(tenant.id, input.actor, action, "tenant", tenant.id, {
+      status: input.status,
+    });
     return updated;
   }
 

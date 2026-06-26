@@ -28,13 +28,19 @@ Run it with: `pnpm --filter @saas-reservas/api build && pnpm --filter @saas-rese
 ## 2. Cryptographic secrets (generate; store in a secret manager)
 
 ```bash
-openssl rand -base64 48   # PASSWORDLESS_TOKEN_SECRET (required, min 32)
-openssl rand -base64 48   # SESSION_COOKIE_SECRET     (required, min 32)
-openssl rand -base64 48   # CREDENTIALS_MASTER_KEY    (optional until integrations are wired)
+openssl rand -base64 48   # PASSWORDLESS_TOKEN_SECRET  (required, min 32)
+openssl rand -base64 48   # SESSION_COOKIE_SECRET      (required, min 32)
+openssl rand -base64 48   # PLATFORM_BOOTSTRAP_SECRET  (optional; gates platform operator bootstrap)
+openssl rand -base64 48   # CREDENTIALS_MASTER_KEY     (optional until integrations are wired)
 ```
 
 - [ ] `PASSWORDLESS_TOKEN_SECRET` — required.
 - [ ] `SESSION_COOKIE_SECRET` — required.
+- [ ] `PLATFORM_BOOTSTRAP_SECRET` — optional (feature 002). Set where the platform
+      superadmin surface is deployed; it gates the self-locking first-operator
+      bootstrap (`POST /v1/platform/operators/bootstrap`). Keep it and the resulting
+      operator credentials out of source control. Once the first operator exists the
+      bootstrap endpoint self-locks, so the secret can be rotated/retired afterwards.
 - [ ] `CREDENTIALS_MASTER_KEY` — optional now; required once the integration
       credential vault is wired (in production fronted by a real KMS CMK).
 

@@ -1,6 +1,6 @@
 # Recorrido del menú admin — Análisis de huecos (puente a Spec-Kit)
 
-Última actualización: 2026-06-23
+Última actualización: 2026-06-24 (deep-dive Amelia: Catalog/Finance/Bookings)
 
 ## Propósito
 
@@ -30,16 +30,25 @@ Convención de estado por área del recorrido:
 | **Placeholder, backend existe** | Eventos (4), Facturación (10), Auditoría (12) |
 | **Placeholder / wizard** | Inicio (1), Configuración (13) |
 
-### Decisiones transversales surgidas (resolver antes de planificar specs)
+### Decisiones transversales surgidas — RESUELTAS (2026-06-24, ADR-0021)
 
-1. **Categoría como entidad** (no texto libre) — Decisión pendiente #2. Toca Servicios/Reservas/widget.
-2. **Online/virtual** (servicio + ubicación) — Decisión pendiente #5.
-3. **Group booking / partición de cantidad** — Decisiones pendientes #1/#4 (diferidas).
-4. **Dónde viven políticas (cancelación/reprogramación) + moneda**: global / sede / servicio.
-5. **IA Facturación**: separar **Facturación (SaaS)** de **Finanzas (negocio)**.
-6. **IA sidebar**: ¿añadir Notifications / Customize / Custom Fields / Integrations como áreas o plegarlas?
-7. **Auth/plataforma**: superficie superadmin (mover Operaciones + provisión de tenants), proveedor-como-login, vínculo con portal de cliente.
-8. **Ciclo de estados de reserva** (binario → 6 estados) + default status (Pending/Approved).
+Las ocho quedaron resueltas con el dueño y registradas en
+`docs/adr/0021-cross-cutting-product-decisions.md`. Resumen:
+
+1. **Categoría como entidad** → **Sí**, entidad de primera clase (no texto libre).
+   Toca Servicios/Reservas/widget. → feature `categorias-entidad`.
+2. **Online/virtual** (servicio + ubicación) → **Diferido a post-MVP**.
+3. **Group booking / partición de cantidad** → **Sigue diferido** (ADR-0016).
+4. **Políticas (cancelación/reprogramación) + moneda** → **Global por tenant**
+   (`tenant_settings`); override por sede como extensión futura. → `tenant-settings`.
+5. **IA Facturación** → **Separar** Facturación (SaaS) de Finanzas (negocio) en el menú.
+6. **IA sidebar** (Notifications/Customize/Custom Fields/Integrations) → **Plegadas en
+   Configuración**; Customize ligado al widget público.
+7. **Auth/plataforma** → **Superficie de plataforma separada con auth superadmin**
+   (mueve Operaciones + provisión de tenants); proveedor separado de `staff_accounts`
+   pero **vinculable** (`staff.providerId` opcional). → `plataforma-superadmin`.
+8. **Ciclo de estados de reserva** → **6 estados**, default **Approved**, configurable
+   por tenant. → `reservas-ciclo-estados-pagos`.
 
 ### Clúster crítico para el MVP (🔴)
 
@@ -52,10 +61,19 @@ Convención de estado por área del recorrido:
 
 `dashboard-operacion` · `reservas-ciclo-estados-pagos` · `reservas-gestion-ux` ·
 `calendario-vistas-interaccion` · `eventos-admin-ui` · `servicios-edicion-ux` ·
-`categorias-entidad` · `ubicaciones-edicion-detalle` · `proveedores-detalle-ux` ·
+`categorias-entidad` · `paquetes` · `ubicaciones-edicion-detalle` · `proveedores-detalle-ux` ·
 `proveedores-finanzas-comisiones` · `clientes-perfil-360` · `saas-billing-plan-ui` ·
-`finanzas-pagos` · `cupones` · `gift-cards-store-credit` · `plataforma-superadmin` ·
+`finanzas-pagos` · `cupones` · `plataforma-superadmin` ·
 `tenant-settings` · `auditoria-busqueda-ui` · `recursos-cantidad-avanzada`.
+
+> **Correcciones del deep-dive Amelia (2026-06-24, Catalog/Finance/Bookings):**
+> - 🆕 **`paquetes`** añadido — el modal de Package en Amelia es grande (5 tabs + config por
+>   servicio: nº de citas, min/max bookings, empleados, ubicaciones, "cliente elige empleado",
+>   capacidad compartida). No estaba capturado. Tiene además su pestaña en Reservas (compra del
+>   cliente con contador de uso). Áreas 5 (Catálogo) y 2 (Reservas).
+> - ❌ **`gift-cards-store-credit` retirado** — el Finance real de Amelia es **Transactions /
+>   Invoices / Coupons**; **no hay Gift Cards**. La candidata anterior se basaba en una suposición
+>   errónea (ver área 10 corregida).
 
 ---
 
@@ -138,7 +156,20 @@ Duplicate, Send SMS/Email, View Invoice, Reschedule, Change Status. Cliente nuev
   (pagos manuales). Toca dominio. Prioridad: alta.
 - `reservas-gestion-ux` — búsqueda/filtros/orden/bulk/acciones de fila/slot picker/modal
   con tabs. Prioridad: alta.
-- (Group booking, Packages y Events se tratan en sus propias áreas/decisiones pendientes.)
+- `paquetes` (parte de Reservas) — pestaña **Packages** = compras de paquete del cliente con
+  contador de uso (`0/12 Booked`) y estado Active/Expired/Cancelled. Ver área 5.
+- (Group booking y Events se tratan en sus propias áreas/decisiones pendientes.)
+
+**Detalle confirmado (deep-dive 2026-06-24, `amelia-bookings-fine-grained.md`)**
+- **6 estados** corroborados (Pending/Approved/Rejected/Cancelled/Completed/No-show) — alinea con
+  ADR-0021 #8 (nuestro default = Approved configurable; Amelia usa default Pending).
+- **Tab Payment** al detalle: Payment Method (`Cash/Card/Check/Bank Transfer/Stripe/PayPal/Offline`),
+  Payment Status (`Paid/Not Paid/Partial`), Deposit, Transaction ID, Coupon/Discount Code, Notes.
+- **Filtros avanzados** por status/employee/service/location/customer/payment-status; búsqueda por
+  cliente/servicio/empleado/referencia; rango de fechas; acciones de fila (Edit/Delete/Duplicate/
+  Send SMS/Email/View Invoice/Reschedule/Change Status).
+- **3 pestañas** distintas con modales propios (Appointments documentado; Packages y Events con
+  modal de creación aún TBD en la referencia).
 
 ---
 
@@ -219,9 +250,43 @@ como entidad** (nombre, color, icono, orden, conteo).
 - Ventanas de reserva (min/max advance), **depósito**, **buffer-before**, require confirmation.
 - UI: **editar** (modal con tabs), galería, descripción/color/icono, búsqueda/filtros/orden.
 
+**Detalle confirmado (deep-dive 2026-06-24, `amelia-catalog-fine-grained.md`)**
+- **Categoría como entidad** confirmada: nombre (unique), descripción, color, icono, **display
+  order**, conteo de servicios. Modal y lista propios. Alinea con ADR-0021 #1.
+- **Tab Settings del servicio** al detalle: Min/Max Duration, Min/Max Advance Booking (días),
+  Buffer before/after, Min/Max Capacity, Allow Group Booking, **Online/Virtual** (toggle Zoom/Meet),
+  Require Customer Confirmation. (Online/virtual y group booking siguen diferidos — ADR-0021 #2/#3.)
+- **Tabs del modal**: Details / Employees / Gallery / Settings (en algún caso + Tips). Acciones de
+  fila: Edit / Delete / Duplicate / View Analytics.
+
 **Candidato(s) a spec**
 - `servicios-edicion-ux` — editar + modal con tabs + settings de agenda + búsqueda/filtros.
 - `categorias-entidad` — categoría como entidad de primera clase (transversal). Prioridad alta.
+- `paquetes` — ver sub-sección siguiente. **Feature nueva** (no estaba capturada).
+
+### Sub-sección Packages (Catálogo) — 🆕 candidata `paquetes`
+
+**Referencia Amelia** (`amelia-catalog-fine-grained.md`, TAB 2)
+Un paquete agrupa varios servicios (ej: "10 clases de yoga"). Lista propia (NAME · SERVICES ·
+PRICE · DURATION) + modal con **5 tabs**:
+- **Details**: imagen, nombre, color, **Duration** (unidad Months/Years + cantidad), "limit
+  package purchases per customer", descripción rich-text.
+- **Services**: multi-select de servicios + "shared capacity across services"; **por servicio**:
+  precio, empleados, ubicaciones, **nº de citas incluidas**, **min/max bookings**, "cliente elige
+  empleado".
+- **Pricing**: price type (Custom), precio, descuento %, precio calculado, depósito.
+- **Gallery** (hasta 4 imágenes) · **Settings** (TBD).
+
+**Huecos / notas**
+- Dominio nuevo: entidad Package + relación N:M con servicios con atributos por línea + reglas de
+  consumo (citas usadas vs incluidas). Conecta con la pestaña **Packages de Reservas** (área 2:
+  compra del cliente con contador `0/12 Booked`, estado Active/Expired/Cancelled).
+- "shared capacity across services" y group booking enlazan con `recursos-cantidad-avanzada`
+  (diferido).
+
+**Candidato a spec**
+- `paquetes` — catálogo de paquetes + compra/uso en reservas. Prioridad: media (post-MVP;
+  feature amplia, dominio nuevo). Depende de `categorias-entidad`/`servicios-edicion-ux` flojamente.
 
 ---
 
@@ -343,30 +408,42 @@ Apunta a la **facturación del SaaS**: planes (Starter/Professional/Enterprise),
 **cuotas de uso del tenant**. Backend hecho: dominio billing (`packages/domain/src/billing`:
 hasFeature/isWithinQuota/bookingQuotaRemaining), conciliación Stripe (worker), gating premium.
 
-**Referencia Amelia** (`amelia-finance-fine-grained.md`) — **otro concepto**
-"Finance" de Amelia = dinero del negocio frente a SUS clientes: **Payments** (historial, refund,
-recibo), **Coupons**, **Gift Cards** (store credit), **KPIs de ingresos** + export.
+**Referencia Amelia** (`amelia-finance-fine-grained.md`) — **otro concepto** · ⚠️ **corregido 2026-06-24**
+"Finance" de Amelia = dinero del negocio frente a SUS clientes, con **3 tabs reales**:
+- **Transactions** (solo lectura): historial de pagos (ID · payment date · customer · employees ·
+  booking · **status** Pending/Paid · amount); date-range + filtros.
+- **Invoices** (solo lectura): facturas (invoice # · customer · date · booking · status
+  Pending/Sent/Paid).
+- **Coupons** (editable): lista (code · discount · type · usage · valid until · status) + modal
+  (code, descripción, **Percentage/Fixed**, value, max usage, valid from/until, applicable to
+  All/Specific services, status).
+- Global: KPIs (Total Revenue / Outstanding / Refunds / Discounts) + **export** (CSV/PDF/Excel).
+- ❌ **NO hay "Gift Cards"** en el Finance de Amelia (la versión anterior de este doc lo asumía por
+  error). Tampoco "Payments" como tab — es **Transactions**.
 
 **Hallazgo de IA (arquitectura de información)**
 Nuestro menú mezcla dos conceptos bajo "Facturación":
 1. **Facturación SaaS** (plan/cuota del tenant) — tu negocio cobra al tenant. Backend hecho,
    falta UI.
-2. **Finanzas del negocio** (pagos de SUS clientes, cupones, gift cards) — sin sitio en el
+2. **Finanzas del negocio** (transacciones, facturas y cupones de SUS clientes) — sin sitio en el
    sidebar hoy.
 
 **Huecos**
 - (1) `saas-billing-plan-ui` — UI sobre backend existente.
-- (2) Payments: dominio existe (checkout/Stripe/conciliación); falta pantalla + reporting +
-  refund/recibo desde admin.
-- 🆕 **Cupones** — no modelados (dominio nuevo), aplican en checkout.
-- 🆕 **Gift cards / store credit** — no modelados (dominio nuevo); enlaza con Clientes.
+- (2) **Transactions**: dominio existe (checkout/Stripe/conciliación); falta pantalla + reporting
+  (KPIs) + refund/recibo desde admin + export.
+- 🆕 **Invoices**: superficie nueva (lista readonly + estado Pending/Sent/Paid; ¿generación auto
+  por reserva?). Dominio de facturación del negocio aún no modelado.
+- 🆕 **Cupones** — no modelados (dominio nuevo), aplican en checkout. Modal ya 100% especificado.
 
 **Decisión transversal pendiente**
-Separar en el menú **"Facturación (SaaS)"** de **"Finanzas (negocio)"** antes de hacer specs.
+Separar en el menú **"Facturación (SaaS)"** de **"Finanzas (negocio)"** antes de hacer specs
+(ADR-0021 #5).
 
 **Candidato(s) a spec**
-- `saas-billing-plan-ui` (UI; backend hecho) · `finanzas-pagos` (pantalla pagos + refund + KPIs;
-  depende de reporting) · `cupones` (dominio nuevo) · `gift-cards-store-credit` (dominio nuevo).
+- `saas-billing-plan-ui` (UI; backend hecho) · `finanzas-pagos` (pantalla Transactions + Invoices +
+  refund/recibo + KPIs + export; depende de reporting) · `cupones` (dominio nuevo; modal
+  especificado). _(`gift-cards-store-credit` retirado: no existe en Amelia.)_
 
 ---
 

@@ -2,17 +2,22 @@
 
 ## Overview
 
-**Catalog** administra los **Servicios** y opcionalmente **Categorías** que ofrece el negocio. Un servicio es la unidad fundamental de reserva (ej: "Aerobic", "Yoga", "Massage"). Cada servicio tiene duración, precio, descripción, y puede pertenecer a una categoría.
+**Catalog** administra **3 tipos de recursos principales:**
+1. **Services** — Servicios individuales (ej: "Aerobic", "Yoga", "Massage")
+2. **Packages** — Paquetes de servicios (ej: "10 clases de yoga")
+3. **Resources** — Recursos compartidos (ej: "Yoga mats", "Studio Room 1")
+
+Cada tipo tiene su propia lista, filtros, y modal de creación/edición.
 
 ---
 
-## Catalog Structure
+## Estructura de Pestañas Principales
 
-**Catalog** puede tener dos sub-secciones:
-1. **Services** (lista principal)
-2. **Categories** (organizador de servicios)
-
-En Amelia, parece que Services es el tab principal, potencialmente con Categories como sub-tab o expandible.
+| Tab | Botón Crear | Tabla Principal | Columnas Clave | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **Services** | "+ Service" | Services List | NAME, CATEGORY, DURATION, PRICE, EMPLOYEES | ✅ | 🟢 |
+| **Packages** | "+ Package" | Packages List | NAME, SERVICES, PRICE, DURATION | 🔶 | 🟡 |
+| **Resources** | "+ Resource" | Resources List (vacía si no existen) | NAME, QUANTITY, SHARED/PER-SERVICE/PER-LOCATION | 🔶 | 🟡 |
 
 ---
 
@@ -183,3 +188,163 @@ Lista de empleados que ofrecen este servicio. Puede ser multi-select de todos lo
 - Images en Gallery pueden ser drag-droppable para reordenar.
 - **Category** es una relación M:1 (muchos servicios, una categoría). Permitir crear categoría nueva on-the-fly.
 - **Online Services** debería tener toggle visual distinto (ej: "🌐 Online") en tabla.
+
+---
+
+## TAB 2: Packages List View
+
+### Overview
+
+La pestaña **Packages** muestra los paquetes de servicios que ofrece el negocio. Un paquete es un conjunto de servicios bundleados (ej: "10 clases de yoga"). Cada paquete tiene precio, duración y lista de servicios incluidos.
+
+### Controles Superiores
+
+| Control | Tipo | Opciones/Valores | Default | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **Search Box** | Input text | Buscar por: nombre paquete | - | 🔶 | 🟡 |
+| **Filter Button** | Botón icono | Abre filtros avanzados (por servicio, categoría) | - | 🔶 | 🟡 |
+| **+ Package** | Botón primario | Abre modal New Package | - | 🔶 | 🟡 |
+
+### Tabla Packages
+
+| Columna | Tipo | Contenido | Acciones | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **NAME** | Texto | Nombre paquete (ej: "Online Yoga & Meditation") | Click abre modal Edit | 🔶 | 🟡 |
+| **SERVICES** | Número | Cantidad de servicios en el paquete | - | 🔶 | 🟡 |
+| **PRICE** | Monto USD | `$XX.XX` | - | 🔶 | 🟡 |
+| **DURATION** | Texto | Duración total o periodo (ej: "1 Month") | - | 🔶 | 🟡 |
+| **ACTIONS** | Menú | Edit, Delete, Duplicate | ⋯ menu | 🔶 | 🟡 |
+
+### Modal: New / Edit Package
+
+#### Estructura General
+
+El modal tiene **5 tabs principales**:
+1. **Details** (formulario básico)
+2. **Services** (servicios incluidos + configuración por servicio)
+3. **Pricing** (cálculo de precio con descuentos)
+4. **Gallery** (imágenes: hasta 4)
+5. **Settings** (opciones avanzadas)
++ Tab adicional: **Tips & suggestions**
+
+#### Tab 1: Details
+
+| Campo | Tipo | Opciones/Valores | Validación | Default | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **Image** | File upload (dragdrop) | JPG, PNG | - | - | 🔶 | 🟡 |
+| **Name** | Input text | Nombre paquete | Required | - | 🔶 | 🟡 |
+| **Translate** | Link | (abre traducción) | - | - | 🔶 | 🟡 |
+| **Color** | Color picker | Hex color (#1788FB default) | - | #1788FB | 🔶 | 🟡 |
+| **Duration** | Dropdown + Spinner | Unidad (Months/Years/etc) + cantidad | Required | Months, 1 | 🔶 | 🟡 |
+| **Limit package purchases per customer** | Toggle | ☑ / ☐ | - | False | 🔶 | 🟡 |
+| **Description** | Rich text editor | WYSIWYG (Text/HTML modes) | Optional | - | 🔶 | 🟡 |
+
+#### Tab 2: Services
+
+**Configuración detallada por servicio incluido en el paquete.**
+
+| Elemento | Tipo | Contenido | Estado SaaS | Prioridad |
+|---|---|---|---|---|
+| **Services Multi-select** | Dropdown | Seleccionar servicios a incluir | 🔶 | 🟡 |
+| **Shared capacity across services** | Toggle | ☑ Compartir capacidad entre servicios | 🔶 | 🟡 |
+| **Tabla Servicios Incluidos** | Lista expandible | Para cada servicio: |  |  |
+| - **Nombre + ID** | Display | (ej: "Online Yoga ID: 25") | 🔶 | 🟡 |
+| - **Precio** | Input currency | Precio del servicio en paquete | 🔶 | 🟡 |
+| - **Empleados** | Avatar group | (mostrar empleados asignados) | 🔶 | 🟡 |
+| - **Tipo** | Badge | "Multiple" (indica multi-employee) | 🔶 | 🟡 |
+| - **Number of appointments** | Spinner | Cuántas citas de este servicio incluye | 🔶 | 🟡 |
+| - **Minimum bookings required** | Spinner | Mínimo de citas a reservar | 🔶 | 🟡 |
+| - **Maximum bookings allowed** | Spinner | Máximo de citas permitidas | 🔶 | 🟡 |
+| - **Employees** | Dropdown | Seleccionar empleados (si editable) | 🔶 | 🟡 |
+| - **Locations** | Dropdown | Ubicaciones donde aplica (ej: "Zoom Meeting") | 🔶 | 🟡 |
+| - **☑ Allow customers to choose employee on the customer panel** | Checkbox | Permitir que cliente elige empleado | 🔶 | 🟡 |
+
+#### Tab 3: Pricing
+
+| Campo | Tipo | Opciones/Valores | Validación | Default | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **Price type** | Dropdown | `Custom`, (otros tipos si existen) | - | `Custom` | 🔶 | 🟡 |
+| **Price** | Input currency | Precio base paquete USD | Required, ≥0 | - | 🔶 | 🟡 |
+| **Discount (%)** | Spinner | Descuento porcentaje (0-100) | - | 0 | 🔶 | 🟡 |
+| **Package price** (calculated) | Display | Precio final después descuento | Read-only | Auto | 🔶 | 🟡 |
+| **Deposit payment** | Toggle | ☑ Requiere depósito | - | False | 🔶 | 🟡 |
+
+#### Tab 4: Gallery
+
+Similar a Services — grid de imágenes hasta 4.
+
+#### Tab 5: Settings
+
+Probablemente contiene opciones avanzadas (TBD — no explorado completamente).
+
+---
+
+
+
+---
+
+## TAB 3: Resources List View
+
+### Overview
+
+La pestaña **Resources** muestra los recursos compartidos necesarios para cumplir servicios (ej: "Yoga mats", "Studio Room 1", "Whiteboard"). Cada recurso tiene una cantidad y puede ser compartido (shared across all services) o específico (per service/per location).
+
+### Controles Superiores
+
+| Control | Tipo | Opciones/Valores | Default | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **Search Box** | Input text | Buscar por: nombre recurso | - | 🔶 | 🟡 |
+| **+ Resource** | Botón primario | Abre modal New Resource | - | 🔶 | 🟡 |
+
+### Tabla Resources (si hay items)
+
+| Columna | Tipo | Contenido | Acciones | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **NAME** | Texto | Nombre recurso (ej: "Studio Room 1") | Click abre modal Edit | 🔶 | 🟡 |
+| **QUANTITY** | Número | Cantidad disponible (ej: 2) | - | 🔶 | 🟡 |
+| **TYPE** | Badge | "Shared", "Per Service", "Per Location" | - | 🔶 | 🟡 |
+| **ACTIONS** | Menú | Edit, Delete | ⋯ menu | 🔶 | 🟡 |
+
+### Modal: New / Edit Resource
+
+#### Tab 1: Details
+
+| Campo | Tipo | Opciones/Valores | Validación | Default | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **Name** | Input text | Nombre recurso | Required | - | 🔶 | 🟡 |
+| **Quantity** | Spinner | Número (1-9999) | Required, ≥1 | 1 | 🔶 | 🟡 |
+| **Enable resource usage for a group booking** | Toggle | ☑ / ☐ | - | False | 🔶 | 🟡 |
+| **Quantity is shared** (radio option) | Radio button | ☑ Compartido para todos (con dropdowns) | - | Selected | 🔶 | 🟡 |
+| **(si Shared) Services** | Dropdown | "All services" (default) | - | All services | 🔶 | 🟡 |
+| **(si Shared) Locations** | Dropdown | "All locations" (default) | - | All locations | 🔶 | 🟡 |
+| **(si Shared) Employees** | Dropdown | "All employees" (default) | - | All employees | 🔶 | 🟡 |
+| **Quantity per service** (radio option) | Radio button | ☐ Cantidad diferente por servicio | - | Not selected | 🔶 | 🟡 |
+| **Quantity per location** (radio option) | Radio button | ☐ Cantidad diferente por ubicación | - | Not selected | 🔶 | 🟡 |
+
+#### Tab 2: Tips & suggestions
+
+Sección informativa (descripción, ayuda, documentación interna).
+
+---
+
+## Resumen Actualizado de Brechas Críticas
+
+### Prioridad Roja (🔴)
+
+1. **Packages Modal Structure** — NO DOCUMENTADO. Requiere exploración: servicios incluidos, duración, validaciones.
+2. **Resources Modal Structure** — PARCIALMENTE documentado. Requiere verificar si hay tabs adicionales, dependencias service/location.
+
+### Prioridad Amarilla (🟡)
+
+1. **Service-Employee Model** — ADR-0016 indica cambio pendiente de modelo.
+2. **Buffer Time (before/after)** — Confirmar mecánica exacta.
+3. **Group Booking en Packages** — ¿Cómo se maneja?
+4. **Resource Allocation Logic** — Cómo se valida cantidad compartida vs específica.
+5. **Package Deletion Policy** — Soft vs hard delete, impacto en reservas.
+
+### Notas de Implementación
+
+- **Resources** son un componente avanzado (probablemente necesario solo en SaaS con high-concurrency).
+- El selector de **"Quantity is shared" vs "per service" vs "per location"** es mutuamente excluyente (radio buttons).
+- **Packages** necesitan validación: si servicio A de duración 1h + servicio B duración 1.5h = paquete total 2.5h.
+- **Categories** pueden aplicarse a Services pero probablemente NO a Packages.

@@ -26,6 +26,7 @@ import {
   DrizzleProcessedWebhookStore,
   DrizzleResourceHubRepository,
   DrizzleStaffAccountRepository,
+  DrizzlePlatformOperatorRepository,
   DrizzleTenantRepository,
 } from "@saas-reservas/persistence";
 import {
@@ -55,6 +56,7 @@ import { LocationService } from "./application/catalog/location-service.js";
 import { ResourceHubService } from "./application/catalog/resource-hub-service.js";
 import { CustomerService } from "./application/customers/customer-service.js";
 import { StaffAuthService } from "./application/identity/staff-auth-service.js";
+import { PlatformAuthService } from "./application/identity/platform-auth-service.js";
 import { CartReconciliationService } from "./application/payments/cart-reconciliation-service.js";
 import { AvailabilityService } from "./application/scheduling/availability-service.js";
 import { CheckoutLockService } from "./application/scheduling/checkout-lock-service.js";
@@ -64,6 +66,7 @@ import { InMemoryLockStore } from "./infrastructure/memory/in-memory-lock-store.
 import { InMemoryPaymentStore } from "./infrastructure/memory/in-memory-payment-store.js";
 import { InMemoryStore } from "./infrastructure/memory/in-memory-store.js";
 import { InMemoryStaffAccountStore } from "./infrastructure/memory/in-memory-staff-account-store.js";
+import { InMemoryPlatformOperatorStore } from "./infrastructure/memory/in-memory-platform-operator-store.js";
 import {
   InMemoryProcessedWebhookStore,
   WebhookProcessor,
@@ -164,6 +167,7 @@ async function persistentBootstrap(): Promise<Bootstrap> {
   const locationRepo = new DrizzleLocationRepository(db);
   const hubRepo = new DrizzleResourceHubRepository(db);
   const staffRepo = new DrizzleStaffAccountRepository(db);
+  const platformOperatorRepo = new DrizzlePlatformOperatorRepository(db);
   const paymentRepo = new DrizzlePaymentRepository(db);
   const events = new DrizzleEventSink(db);
   const gateway = await resolvePaymentGateway();
@@ -182,6 +186,10 @@ async function persistentBootstrap(): Promise<Bootstrap> {
     customers: new CustomerService(paymentRepo, events),
     resourceHub: new ResourceHubService(hubRepo, events),
     staffAuth: new StaffAuthService(staffRepo, events),
+    platformAuth: new PlatformAuthService(platformOperatorRepo, events),
+    ...(env.PLATFORM_BOOTSTRAP_SECRET !== undefined
+      ? { platformBootstrapSecret: env.PLATFORM_BOOTSTRAP_SECRET }
+      : {}),
     availability: availabilityService,
     adminBookings: new AdminBookingService({
       availability: availabilityService,
@@ -243,6 +251,10 @@ async function inMemoryBootstrap(): Promise<Bootstrap> {
     customers: new CustomerService(paymentStore, events),
     resourceHub: new ResourceHubService(store, events),
     staffAuth: new StaffAuthService(new InMemoryStaffAccountStore(), events),
+    platformAuth: new PlatformAuthService(new InMemoryPlatformOperatorStore(), events),
+    ...(process.env.PLATFORM_BOOTSTRAP_SECRET !== undefined
+      ? { platformBootstrapSecret: process.env.PLATFORM_BOOTSTRAP_SECRET }
+      : {}),
     availability: availabilityService,
     adminBookings: new AdminBookingService({
       availability: availabilityService,

@@ -20,7 +20,7 @@ implementación en nuestro SaaS (✅/🔶/❌) y prioridad (🔴/🟡/🟢).
 
 URL base:
 ```
-https://sports.wpamelia.com/wp-admin/admin.php?page=wpamelia-
+https://sports.wpamelia.com/wp-admin/admin.php?page=wpamelia-dashboard#/appointments
 ```
 
 Credenciales del demo: **admin / admin**

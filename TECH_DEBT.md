@@ -1,6 +1,6 @@
 # Technical Debt — Pre-Production Ledger
 
-Last updated: 2026-06-19
+Last updated: 2026-06-24
 
 Cumulative register of known shortcuts, simplifications, and dev-only choices
 that MUST be reviewed (and most resolved) **before a real production launch on a
@@ -35,6 +35,17 @@ How to use this file:
   (Redis or Postgres) before horizontal scaling or zero-downtime deploys.
 - **[HIGH] No login rate limiting** for staff auth (`/v1/admin/sessions`)
   (ADR-0017). Add throttling / lockout before exposing the admin surface.
+- **[HIGH] Platform operator sessions also live in an in-memory map**
+  (feature 002 / ADR-0022, `PlatformAuthService`). Same limitation and fix as
+  staff sessions; the two share the follow-up. Login rate limiting for
+  `/v1/platform/sessions` is the same pending item as the staff surface.
+- **[MEDIUM] Platform-global audit is best-effort.** Platform-only actions
+  (operator bootstrap/login/logout/create — feature 002) are audited through the
+  tenant-scoped event sink with a `platform` pseudo-tenant; on the persistent
+  Drizzle path that write fails (no such tenant under RLS) and is currently logged
+  and swallowed so it never breaks auth. The in-memory sink captures it exactly.
+  Needs a durable platform-global audit store (relaxed tenant scope or a separate
+  `platform_audit` table) before relying on platform audit in production.
 - **[MEDIUM] Password hashing uses scrypt, not argon2id** (ADR-0017) — chosen
   because argon2 had no native build in the dev environment. Re-evaluate
   argon2id for production.
@@ -146,6 +157,19 @@ a real implementation + the provider account/credentials in
   Workarounds: parse with `jq -r .id`, use `tail -1`, or read ids from Postgres.
   Longer-term consideration: stop echoing the full `actor` in responses, or
   return the entity under an unambiguous key so id extraction is robust.
+
+## Staff ↔ provider link (feature 002 US4)
+
+- **[HIGH] Migration `infra/postgres/010-staff-provider-link.sql` must be applied to production.**
+  Adds `provider_id uuid REFERENCES providers(id)` to `staff_accounts` and a partial unique index
+  `(tenant_id, provider_id) WHERE provider_id IS NOT NULL`. Without it, the in-memory store used
+  in dev/test mode handles the uniqueness constraint manually; the Drizzle path expects the DB
+  index and catches `23505` at the repository layer. Apply before enabling
+  `ADMIN_DATA_MODE=api` for the first time on a fresh DB.
+- **[MEDIUM] Staff portal `x-provider-id` header still present.** The public booking portal
+  identifies the provider via a dev header rather than through the staff session ↔ provider link.
+  Once `staff_accounts.provider_id` is populated in production, the portal should resolve the
+  provider from the session instead.
 
 ## Admin ↔ persistent API integration (ADR-0018)
 

@@ -18,6 +18,7 @@ import {
 import {
   normalizeStaffEmail,
   validateStaffAccount,
+  StaffLinkError,
   type StaffAccount,
   type StaffRole,
 } from "@saas-reservas/domain/identity/staff";
@@ -28,6 +29,10 @@ export interface StaffAccountStore {
   insert(account: StaffAccount): Promise<void>;
   findByEmail(tenantId: string, email: string): Promise<StaffAccount | null>;
   findById(tenantId: string, staffId: string): Promise<StaffAccount | null>;
+  findByProviderId(tenantId: string, providerId: string): Promise<StaffAccount | null>;
+  setProviderLink(tenantId: string, staffId: string, providerId: string): Promise<StaffAccount>;
+  clearProviderLink(tenantId: string, staffId: string): Promise<StaffAccount>;
+  list(tenantId: string): Promise<StaffAccount[]>;
 }
 
 export interface StaffSession {
@@ -154,6 +159,43 @@ export class StaffAuthService {
 
   logout(sessionId: string): void {
     this.sessions.delete(sessionId);
+  }
+
+  findById(tenantId: string, staffId: string): Promise<StaffAccount | null> {
+    return this.accounts.findById(tenantId, staffId);
+  }
+
+  listAccounts(tenantId: string): Promise<StaffAccount[]> {
+    return this.accounts.list(tenantId);
+  }
+
+  /** Links a catalog provider to a staff account (one-to-one within tenant). */
+  async setProviderLink(input: {
+    tenantId: string;
+    staffId: string;
+    providerId: string;
+    actor: Actor;
+  }): Promise<StaffAccount> {
+    const existing = await this.accounts.findByProviderId(input.tenantId, input.providerId);
+    if (existing !== null && existing.id !== input.staffId) {
+      throw new StaffLinkError("provider-conflict");
+    }
+    const staff = await this.accounts.setProviderLink(input.tenantId, input.staffId, input.providerId);
+    await this.audit(input.tenantId, input.actor, "staff.provider.linked", input.staffId, {
+      providerId: input.providerId,
+    });
+    return staff;
+  }
+
+  /** Removes the provider link from a staff account. */
+  async clearProviderLink(input: {
+    tenantId: string;
+    staffId: string;
+    actor: Actor;
+  }): Promise<StaffAccount> {
+    const staff = await this.accounts.clearProviderLink(input.tenantId, input.staffId);
+    await this.audit(input.tenantId, input.actor, "staff.provider.unlinked", input.staffId);
+    return staff;
   }
 
   private async audit(

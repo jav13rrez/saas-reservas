@@ -28,7 +28,7 @@ export type TenantSource = "subdomain" | "custom-domain" | "authenticated";
 export type TenantResolution =
   | { ok: true; tenant: ResolvedTenant; source: TenantSource }
   | { ok: false; reason: "platform-host" | "unknown-host" | "invalid-host" | "invalid-session" }
-  | { ok: false; reason: "tenant-inactive"; tenant: ResolvedTenant }
+  | { ok: false; reason: "tenant-inactive" | "tenant-suspended"; tenant: ResolvedTenant }
   | { ok: false; reason: "tenant-mismatch"; hostTenantId: string; sessionTenantId: string };
 
 export interface ResolveRequestTenantInput {
@@ -53,6 +53,9 @@ export function normalizeHost(rawHost: string | undefined): string | null {
 }
 
 function checkActive(tenant: ResolvedTenant, source: TenantSource): TenantResolution {
+  if (tenant.status === "suspended") {
+    return { ok: false, reason: "tenant-suspended", tenant };
+  }
   if (tenant.status !== "active") {
     return { ok: false, reason: "tenant-inactive", tenant };
   }

@@ -164,7 +164,7 @@ A full sweep of the Amelia Premium admin console is permanently recorded in `doc
 >
 > **Walkthrough (2026-06-23):** el backlog de crecimiento por área del sidebar y el
 > clúster crítico de MVP (tenant-settings, ciclo de estados de reserva,
-> plataforma-superadmin, worker de email) viven en
+> plataforma-superadmin ✅, worker de email) viven en
 > `docs/analysis/menu-walkthrough-gap-analysis.md`. La lista numerada de abajo es el
 > registro histórico de la ruta post-spec ya completada.
 
@@ -176,3 +176,4 @@ Prioritized follow-up work — see `HANDOFF.md` for detail:
 4. **Real adapter wiring**: swap fake gateway, message provider, KMS, and storage adapters for Stripe Connect, SendGrid/Twilio, AWS KMS, and S3. **Stripe Connect — DONE (2026-06-19, ADR-0019)**: `StripePaymentGateway` + `FetchStripeHttp` behind the existing port, destination charges + application fee, selected by `STRIPE_SECRET_KEY` (fake stays default). Remaining in this item: AWS KMS, S3, and SMS — plus the Stripe follow-ups in `TECH_DEBT.md` (DB-backed vault for connected-account ids, checkout payment-method/webhook-capture flow, webhook signature verification). **Messaging (email) — DONE (2026-06-22, ADR-0020)**: `BrevoMessageProvider` (transactional email, free tier) behind the existing `MessageProvider` port, selected by `BREVO_API_KEY` (fake stays default); SMS deferred (paid) and the worker bootstrap that consumes the provider is still pending.
 5. **Scheduling per provider**: Work hours / Days off / Special days — **DONE (2026-06-19, objective 3)**: per-provider agenda editor end to end in `demo` and `api` modes.
 6. **Deferred resource features**: quantity partition (`shared/per-service/per-location`) and group booking (registered in ADR-0016 and `amelia-ux-reference.md` pending decisions #1/#4).
+7. **Plataforma superadmin (feature 002)** — _COMPLETE (2026-06-25, ADR-0022)_. Platform-global operator identity + gate sobre `/v1/platform/*` y `/v1/ops/*` + bootstrap/login/logout + provisión y ciclo de vida de tenants (suspend/reactivate) + vista de Operaciones movida a `apps/platform` + vínculo opcional 1-a-1 `staff_accounts.provider_id` (T001–T034, US1–US4). Suite: 344 passing, 7 skipped.

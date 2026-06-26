@@ -102,6 +102,10 @@ export class CatalogService {
     return this.catalog.listResources(tenantId);
   }
 
+  findProviderById(tenantId: string, providerId: string): Promise<Provider | null> {
+    return this.catalog.findProviderById(tenantId, providerId);
+  }
+
   /** A provider's schedule entries (weekly windows, special days, days off). */
   listProviderSchedule(tenantId: string, providerId: string): Promise<ProviderScheduleEntry[]> {
     return this.catalog.listScheduleEntries(tenantId, providerId);

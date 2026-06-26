@@ -63,6 +63,11 @@ export class DrizzleTenantRepository {
     return rows[0] !== undefined ? toTenant(rows[0]) : null;
   }
 
+  async listTenants(): Promise<Tenant[]> {
+    const rows = await this.db.global((db) => db.select().from(tenants));
+    return rows.map(toTenant);
+  }
+
   async insertDomain(domain: TenantDomain): Promise<void> {
     await this.db.global((db) => db.insert(tenantDomains).values(domain));
   }

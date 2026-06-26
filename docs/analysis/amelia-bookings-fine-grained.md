@@ -1,12 +1,27 @@
-# Amelia Bookings (Appointments) — Fine-Grained Documentation
+# Amelia Bookings — Fine-Grained Documentation
 
 ## Overview
 
-La sección **Bookings** (o **Appointments** en el hash routing) es la lista central de todas las reservas/citas en el sistema. Permite visualizar, filtrar, buscar, editar y crear nuevas reservas. Cada reserva tiene un conjunto completo de campos relacionados con cliente, empleado, servicio, horario, pago y estado.
+La sección **Bookings** contiene **3 pestañas principales**:
+1. **Appointments** — Reservas individuales (citas de clientes)
+2. **Packages** — Paquetes de servicios comprados por clientes
+3. **Events** — Registros de asistencia a eventos
+
+Cada pestaña tiene su propia lista, filtros, y modal de creación/edición diferenciados. Esta documentación cubre TODAS las 3 pestañas y sus campos específicos.
 
 ---
 
-## Bookings List View
+## Estructura de Pestañas Principales
+
+| Pestaña | Botón Crear | Tabla Principal | Columnas Clave | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **Appointments** | "+ Book appointment" | Appointments List | DATE, TIME, CUSTOMER, SERVICE, EMPLOYEE, DURATION, STATUS, PAID | ✅ | 🟢 |
+| **Packages** | "+ Book package" | Packages List | DATE PURCHASED, CUSTOMER, PACKAGE, STATUS, APPOINTMENTS | 🔶 | 🟡 |
+| **Events** | "+ Book event" | Events List | CODE, DATE, TIME, ATTENDEE, EVENT, STATUS | 🔶 | 🟡 |
+
+---
+
+## TAB 1: Appointments List View
 
 ### Controles Superiores
 
@@ -140,21 +155,86 @@ El modal tiene múltiples secciones / tabs:
 
 ---
 
+## TAB 2: Packages List View
+
+### Overview
+
+La pestaña **Packages** muestra los paquetes de servicios adquiridos por clientes. Un paquete es un conjunto de servicios comprados en lote (ej: "10 clases de yoga"). Cada paquete tiene un estado (Active, Expired, etc.) y un contador de citas usadas vs. disponibles.
+
+### Controles Superiores (Packages)
+
+| Control | Tipo | Opciones/Valores | Default | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **Search Box** | Input text | Buscar por: nombre cliente, nombre paquete | - | 🔶 | 🟡 |
+| **Filter Button** | Botón icono | Abre filtros avanzados | - | 🔶 | 🟡 |
+| **Date Range Picker** | Input rango | `MMM DD, YYYY - MMM DD, YYYY` | Última semana | 🔶 | 🟡 |
+| **+ Book package** | Botón primario | Abre modal New Package Booking | - | 🔶 | 🟡 |
+
+### Tabla Packages
+
+| Columna | Tipo | Contenido | Acciones | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **DATE PURCHASED** | Texto | `MMM DD, YYYY` | - | 🔶 | 🟡 |
+| **CUSTOMER** | Avatar + Texto | Nombre cliente + foto | Click abre perfil | 🔶 | 🟡 |
+| **PACKAGE** | Texto | Nombre paquete (ej: "Online Yoga & Meditation") | - | 🔶 | 🟡 |
+| **STATUS** | Badge | `Active`, `Expired`, `Cancelled` | Click abre menu | 🔶 | 🟡 |
+| **APPOINTMENTS** | Texto | `0/12 Booked` (usado/total) | - | 🔶 | 🟡 |
+| **ACTIONS** | Menú | Edit, Delete, View Details | ⋯ menu | 🔶 | 🟡 |
+
+### Modal: New / Edit Package Booking
+
+*Estructura TBD — No documentado en detalle ayer. Requiere exploración.*
+
+---
+
+## TAB 3: Events List View
+
+### Overview
+
+La pestaña **Events** dentro de Bookings muestra registros de asistencia a eventos/clases grupales. Cada registro tiene un código único, fecha, asistente, evento al que asiste, y estado de aprobación.
+
+### Controles Superiores (Events)
+
+| Control | Tipo | Opciones/Valores | Default | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **Search Box** | Input text | Buscar por: código, nombre asistente, evento | - | 🔶 | 🟡 |
+| **Filter Button** | Botón icono | Abre filtros | - | 🔶 | 🟡 |
+| **Date Range Picker** | Input rango | `MMM DD, YYYY - MMM DD, YYYY` | Última semana | 🔶 | 🟡 |
+| **+ Book event** | Botón primario | Abre modal New Event Booking | - | 🔶 | 🟡 |
+
+### Tabla Events (Registros de Asistencia)
+
+| Columna | Tipo | Contenido | Acciones | Estado SaaS | Prioridad |
+|---|---|---|---|---|---|
+| **CODE** | Texto | ID único (ej: "38dec", "9364f") | - | 🔶 | 🟡 |
+| **DATE** | Texto | `MMM DD, YYYY` | - | 🔶 | 🟡 |
+| **TIME** | Texto | `HH:MM am/pm` | - | 🔶 | 🟡 |
+| **ATTENDEE** | Texto | Nombre persona que asiste | - | 🔶 | 🟡 |
+| **EVENT** | Texto | Nombre evento (ej: "Outdoor Fitness", "Morning Stretching...") | - | 🔶 | 🟡 |
+| **STATUS** | Badge | `Approved` (verde), `Rejected` (rojo), Pending | Dropdown cambiar | 🔶 | 🟡 |
+| **ACTIONS** | Menú | Edit, Delete, View Details | ⋯ menu | 🔶 | 🟡 |
+
+### Modal: New / Edit Event Booking
+
+*Estructura TBD — No documentado en detalle ayer. Requiere exploración.*
+
+---
+
 ## Resumen de Brechas Críticas
 
 ### Prioridad Roja (🔴)
 
-*(Ninguna bloqueante identificada.)*
+1. **Packages & Events Modals** — Los modales de creación/edición para Packages y Events NO FUERON DOCUMENTADOS AYER. Esto es una brecha crítica: cada tab tiene SU PROPIO modal con CAMPOS DISTINTOS.
 
 ### Prioridad Amarilla (🟡)
 
-1. **Filtros Avanzados Panel** — No explorado en detalle. Documentar estructura exacta de filtros, combinabilidad, estado de cada filtro.
-2. **Bulk Actions** — ¿Existen? ¿Qué opciones hay (cambiar status masivo, enviar email, etc.)?
-3. **Custom Fields en Modal** — Si están habilitados, ¿dónde aparecen? ¿En tab separado o dentro de Details?
-4. **Payment Methods** — Confirmar lista exacta de métodos soportados (Stripe, PayPal, Square, etc.).
-5. **Notifications / Email Templates** — Confirmar qué eventos disparan emails/SMS automáticos.
-6. **Reschedule UX** — ¿Es inline en la fila o abre modal? ¿Valida disponibilidad al reschedule?
-7. **Customer Creation** — Al crear cliente nuevo desde modal, ¿qué campos son required? ¿Se crea un perfil completo o solo email/name/phone?
+1. **Appointments Modal (Details/Customers/Tips tabs)** — Documentado parcialmente. Requiere revisión de TODOS los campos en cada tab.
+2. **Packages Modal** — NO DOCUMENTADO. Necesita exploración exhaustiva.
+3. **Events Modal** — NO DOCUMENTADO. Necesita exploración exhaustiva.
+4. **Filtros Avanzados Panel** — No explorado en detalle. Documentar estructura exacta de filtros en CADA TAB.
+5. **Custom Fields en Modals** — Si están habilitados, ¿dónde aparecen en cada tab?
+6. **Payment Methods en Packages** — ¿Cómo se pagan los paquetes?
+7. **Events Status Workflow** — Confirmar qué cambios de estado son permitidos (Approved ↔ Rejected, etc.).
 
 ### Notas de Implementación
 

@@ -12,7 +12,7 @@
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { SYSTEM_ACTOR, type Actor } from "@saas-reservas/domain/audit/events";
 import type { ProviderScheduleEntry } from "@saas-reservas/domain/providers/provider";
-import type { StaffRole } from "@saas-reservas/domain/identity/staff";
+import { StaffLinkError, type StaffRole } from "@saas-reservas/domain/identity/staff";
 import type { CatalogService } from "../application/catalog/catalog-service.js";
 import type { LocationService } from "../application/catalog/location-service.js";
 import type { ResourceHubService } from "../application/catalog/resource-hub-service.js";
@@ -22,13 +22,19 @@ import {
 } from "../application/customers/customer-service.js";
 import type { AdminBookingService } from "../application/bookings/admin-booking-service.js";
 import type { StaffAuthService } from "../application/identity/staff-auth-service.js";
+import type { PlatformAuthService } from "../application/identity/platform-auth-service.js";
 import type { AvailabilityService } from "../application/scheduling/availability-service.js";
-import type { TenantAdminService } from "../application/tenancy/tenant-admin-service.js";
+import {
+  TenantAdminError,
+  type TenantAdminService,
+} from "../application/tenancy/tenant-admin-service.js";
 import {
   resolveRequestTenant,
   type TenantLookup,
   type TenantResolution,
 } from "../infrastructure/tenancy/tenant-resolver.js";
+import { cookieValue, serializeCookie } from "./http-cookies.js";
+import { registerPlatformRoutes } from "./platform-routes.js";
 import { registerCheckoutRoutes, type CheckoutDeps } from "./checkout-routes.js";
 import { registerEventRoutes, type EventDeps } from "./event-routes.js";
 import { registerPortalRoutes, type PortalDeps } from "./portal-routes.js";
@@ -56,6 +62,16 @@ export interface AppDeps {
    * When omitted, `/v1/admin/*` stays open (development/tests).
    */
   staffAuth?: StaffAuthService;
+  /**
+   * Platform-operator authentication (ADR-0022). When provided, the
+   * `/v1/platform/*` (except the self-locking bootstrap and login) and `/v1/ops/*`
+   * route groups require a valid `platform_session`, and the operator
+   * bootstrap/login/logout/create routes are exposed. When omitted, those groups
+   * stay open (development/tests), preserving prior behavior.
+   */
+  platformAuth?: PlatformAuthService;
+  /** Deploy secret gating the first-operator bootstrap (env PLATFORM_BOOTSTRAP_SECRET). */
+  platformBootstrapSecret?: string;
   availability: AvailabilityService;
   /** Tenant default timezone lookup for availability queries. */
   tenantTimezone(tenantId: string): Promise<string>;
@@ -86,36 +102,11 @@ declare module "fastify" {
   }
 }
 
-/** Reads a cookie value from the request's Cookie header, or null. */
-function cookieValue(request: FastifyRequest, name: string): string | null {
-  const header = request.headers.cookie;
-  if (header === undefined) {
-    return null;
-  }
-  for (const part of header.split(";")) {
-    const [key, ...rest] = part.trim().split("=");
-    if (key === name) {
-      return rest.join("=");
-    }
-  }
-  return null;
-}
-
-function serializeCookie(cookie: {
-  name: string;
-  value: string;
-  maxAgeSeconds: number;
-  path: string;
-  sameSite: string;
-}): string {
-  return `${cookie.name}=${cookie.value}; Max-Age=${String(cookie.maxAgeSeconds)}; Path=${cookie.path}; HttpOnly; Secure; SameSite=${cookie.sameSite}`;
-}
-
 function failureStatus(resolution: Exclude<TenantResolution, { ok: true }>): number {
   switch (resolution.reason) {
     case "tenant-mismatch":
-      return 403;
     case "tenant-inactive":
+    case "tenant-suspended":
       return 403;
     case "invalid-session":
       return 401;
@@ -235,9 +226,58 @@ export function buildApp(deps: AppDeps): FastifyInstance {
     });
   }
 
+  // Platform-auth gate (ADR-0022): when configured, the platform/ops route groups
+  // require a valid platform_session. The self-locking bootstrap and login stay
+  // public. A tenant `staff_session` is NOT interchangeable: it yields 403, not a
+  // pass. Missing/invalid platform session with no staff session yields 401.
+  const platformAuth = deps.platformAuth;
+  if (platformAuth !== undefined) {
+    const publicPlatformRoutes = new Set([
+      "POST /v1/platform/operators/bootstrap",
+      "POST /v1/platform/sessions",
+    ]);
+    app.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
+      const path = request.url.split("?")[0] ?? request.url;
+      const gated = path.startsWith("/v1/platform/") || path.startsWith("/v1/ops/");
+      if (!gated) {
+        return;
+      }
+      if (publicPlatformRoutes.has(`${request.method} ${path}`)) {
+        return;
+      }
+      const sessionId = cookieValue(request, "platform_session");
+      const session = sessionId === null ? null : platformAuth.getSession(sessionId);
+      if (session !== null) {
+        return;
+      }
+      // A tenant/customer session presented here is the wrong kind, not absent.
+      if (cookieValue(request, "staff_session") !== null) {
+        await reply.code(403).send({ error: "forbidden" });
+        return reply;
+      }
+      await reply.code(401).send({ error: "unauthenticated" });
+      return reply;
+    });
+    registerPlatformRoutes(app, {
+      platformAuth,
+      ...(deps.platformBootstrapSecret !== undefined
+        ? { platformBootstrapSecret: deps.platformBootstrapSecret }
+        : {}),
+    });
+  }
+
   /** Audit actor for admin routes: the authenticated staff member, else system. */
   const adminActor = (request: FastifyRequest): Actor =>
     request.staff === undefined ? SYSTEM_ACTOR : { type: "staff", id: request.staff.id };
+
+  /** Platform actor: resolved from the platform_session cookie when available. */
+  const platformActor = (request: FastifyRequest): Actor => {
+    const sessionId = cookieValue(request, "platform_session");
+    const session = sessionId !== null && deps.platformAuth !== undefined
+      ? deps.platformAuth.getSession(sessionId)
+      : null;
+    return session !== null ? { type: "platform", id: session.operatorId } : { type: "platform" };
+  };
 
   app.post("/v1/platform/tenants", async (request, reply) => {
     const body = request.body as {
@@ -246,14 +286,43 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       defaultTimezone: string;
       defaultLocale?: string;
     };
-    const tenant = await deps.tenantAdmin.createTenant({ ...body, actor: adminActor(request) });
+    const actor = platformActor(request);
+    const tenant = await deps.tenantAdmin.createTenant({ ...body, actor });
     await deps.tenantAdmin.addDomain({
       tenantId: tenant.id,
       hostname: `${tenant.slug}.${deps.platformBaseDomain}`,
       kind: "subdomain",
-      actor: adminActor(request),
+      actor,
     });
     return reply.code(201).send(tenant);
+  });
+
+  // List all tenants (platform-gated; used by the platform UI for the tenant table).
+  app.get("/v1/platform/tenants", async (_request, reply) => {
+    const items = await deps.tenantAdmin.listTenants();
+    return reply.send({ items: items.map((t) => ({ id: t.id, slug: t.slug, displayName: t.displayName, status: t.status })) });
+  });
+
+  // Tenant lifecycle: suspend or reactivate a tenant (FR-021).
+  app.patch("/v1/platform/tenants/:tenantId", async (request, reply) => {
+    const { tenantId } = request.params as { tenantId: string };
+    const body = request.body as { status?: unknown };
+    if (body.status !== "active" && body.status !== "suspended") {
+      return reply.code(400).send({ error: "status must be active or suspended" });
+    }
+    try {
+      const updated = await deps.tenantAdmin.updateStatus({
+        tenantId,
+        status: body.status,
+        actor: platformActor(request),
+      });
+      return reply.code(200).send({ id: updated.id, status: updated.status });
+    } catch (error) {
+      if (error instanceof TenantAdminError && error.code === "tenant-not-found") {
+        return reply.code(404).send({ error: "tenant-not-found" });
+      }
+      throw error;
+    }
   });
 
   if (staffAuth !== undefined) {
@@ -303,6 +372,20 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         .send();
     });
 
+    app.get("/v1/admin/staff", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const accounts = await staffAuth.listAccounts(tenant.tenantId);
+      return reply.send({
+        items: accounts.map((a) => ({
+          id: a.id,
+          email: a.email,
+          role: a.role,
+          status: a.status,
+          providerId: a.providerId ?? null,
+        })),
+      });
+    });
+
     // An authenticated admin provisions additional staff for the tenant.
     app.post("/v1/admin/staff", async (request, reply) => {
       const tenant = tenantOf(request);
@@ -315,6 +398,50 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         actor: adminActor(request),
       });
       return reply.code(201).send({ id: account.id, email: account.email, role: account.role });
+    });
+
+    // Set or clear the optional provider link for a staff account (US4 / FR-016–FR-019).
+    app.patch("/v1/admin/staff/:staffId", async (request, reply) => {
+      const tenant = tenantOf(request);
+      const { staffId } = request.params as { staffId: string };
+      const body = request.body as { providerId?: string | null };
+      const actor = adminActor(request);
+
+      const staff = await staffAuth.findById(tenant.tenantId, staffId);
+      if (staff === null) {
+        return reply.code(404).send({ error: "staff-not-found" });
+      }
+
+      try {
+        if (body.providerId !== null && body.providerId !== undefined) {
+          const provider = await deps.catalogService.findProviderById(tenant.tenantId, body.providerId);
+          if (provider === null) {
+            return reply.code(404).send({ error: "provider-not-found" });
+          }
+          const updated = await staffAuth.setProviderLink({
+            tenantId: tenant.tenantId,
+            staffId,
+            providerId: body.providerId,
+            actor,
+          });
+          return reply.send({ id: updated.id, providerId: updated.providerId ?? null });
+        } else {
+          const updated = await staffAuth.clearProviderLink({
+            tenantId: tenant.tenantId,
+            staffId,
+            actor,
+          });
+          return reply.send({ id: updated.id, providerId: updated.providerId ?? null });
+        }
+      } catch (err) {
+        if (err instanceof StaffLinkError) {
+          if (err.reason === "provider-conflict") {
+            return reply.code(409).send({ error: "provider-already-linked" });
+          }
+          return reply.code(404).send({ error: err.reason });
+        }
+        throw err;
+      }
     });
   }
 

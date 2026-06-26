@@ -16,9 +16,20 @@ Use ADRs for decisions that affect framework choice, tenancy, database strategy,
 | [0006](0006-ai-provider-adapter-deferred.md)         | Reserve AIProviderAdapter Interface, Defer Implementation   | accepted | 2026-06-11 |
 | [0007](0007-local-dev-docker-compose.md)             | Docker Compose For Local Development, Cloud Target Deferred | accepted | 2026-06-11 |
 | [0008](0008-design-system.md)                        | Design System — Holded-Inspired UI With Lucide Icons        | accepted | 2026-06-12 |
+| [0009](0009-postgres-rls-tenant-isolation.md)        | PostgreSQL RLS For Tenant Isolation                         | accepted | 2026-06-15 |
+| [0010](0010-redis-distributed-lock.md)               | Redis Distributed Lock For Checkout                         | accepted | 2026-06-15 |
+| [0011](0011-payment-reconciliation-strategy.md)      | Payment Reconciliation Strategy                             | accepted | 2026-06-15 |
+| [0012](0012-oauth-gateway-design.md)                 | OAuth Gateway Design                                        | accepted | 2026-06-15 |
+| [0013](0013-worker-idempotency.md)                   | Worker Idempotency                                          | accepted | 2026-06-15 |
+| [0014](0014-gdpr-data-handling.md)                   | GDPR Data Handling                                          | accepted | 2026-06-15 |
 | [0015](0015-resource-model-locations-eligibility.md) | Resource Model — Locations And Provider Eligibility         | accepted | 2026-06-16 |
 | [0016](0016-resource-hub-model.md)                   | Resource Hub Model — Partial Amelia Alignment               | accepted | 2026-06-16 |
 | [0017](0017-staff-auth-implementation.md)            | Staff Authentication Implementation                         | accepted | 2026-06-17 |
+| [0018](0018-admin-persistent-api-integration.md)     | Admin ↔ Persistent API Integration                          | accepted | 2026-06-19 |
+| [0019](0019-stripe-connect-gateway-wiring.md)        | Stripe Connect Gateway Wiring                               | accepted | 2026-06-19 |
+| [0020](0020-brevo-email-messaging-adapter.md)        | Brevo Transactional Email Adapter                           | accepted | 2026-06-22 |
+| [0021](0021-cross-cutting-product-decisions.md)      | Cross-Cutting Product Decisions From The Admin Walkthrough  | accepted | 2026-06-24 |
+| [0022](0022-platform-superadmin-surface.md)          | Platform Superadmin — Separate Surface And Platform Identity | accepted | 2026-06-24 |
 
 ## Template
 

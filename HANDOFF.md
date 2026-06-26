@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-06-23
+Last updated: 2026-06-25 (feature 002 COMPLETE)
 
 > **Qué es este archivo:** el punto de reanudación corto para el siguiente agente
 > (estado, próximas acciones, blockers). **No es un diario** — el historial
@@ -8,49 +8,45 @@ Last updated: 2026-06-23
 > el backlog de features (por área del sidebar) en
 > `docs/analysis/menu-walkthrough-gap-analysis.md`.
 
-## Punto de reanudación (2026-06-23)
+## Punto de reanudación (2026-06-25 — feature 002 COMPLETA)
 
-- **Rama de trabajo:** `claude/nice-brahmagupta-ltqera` (sincronizada con `main`).
-- **Spec 001 completa** (T001–T086) y todo el trabajo post-spec fusionado en `main`.
-  Suite verde (~318 tests). Stack local validado E2E (Postgres+Redis+API; admin en
-  `demo` y en `api`).
-- **Esta sesión:** recorrido del panel admin **área por área (13/13)** volcado a
-  `docs/analysis/menu-walkthrough-gap-analysis.md` (estado actual ↔ referencia Amelia
-  ↔ huecos ↔ candidatos a feature) + reorganización de los docs de continuidad.
-  Sesión previa: barrido **Amelia fine-grained** (13 docs, 160+ tablas).
-- **Dirección de producto:** pagos pausados; prioridad = **camino a un MVP
-  desplegable** (deploy en host/dominio, widget público, notificaciones email mínimas).
+- **Rama de trabajo:** `claude/affectionate-wright-0vx6ka` — **empujada a `origin`** (no
+  fusionada, no borrar). Continuar en esta rama o abrir PR cuando el dueño lo decida.
+- **Spec 001 completa** (T001–T086) fusionada en `main`. Suite verde.
+- **Feature 002 — COMPLETA (T001–T034, US1–US4 + Polish):**
+  - **US1:** identidad platform-global + gate `/v1/platform/*` y `/v1/ops/*` + bootstrap operador
+    + login/logout + `apps/platform` (login + dashboard). Quickstart S1–S2 validados.
+  - **US2:** ciclo de vida de tenant (provision, suspend/reactivate) + UI en `apps/platform`.
+    Quickstart S3–S4 validados.
+  - **US3:** vista de Operaciones movida de `apps/admin` a `apps/platform`. Quickstart S5 validado.
+  - **US4:** vínculo opcional 1-a-1 `staff_accounts.provider_id`:
+    - Migración `infra/postgres/010-staff-provider-link.sql` + schema Drizzle.
+    - Puerto `StaffAccountStore` extendido; adaptadores in-memory y Drizzle.
+    - `StaffLinkError` en `packages/domain` (evita dependencia circular).
+    - `GET /v1/admin/staff` + `PATCH /v1/admin/staff/:staffId { providerId }` (200/409/404).
+    - `apps/admin` Providers screen: tabla staff con selector + botón Vincular/Desvincular.
+    - Next.js handlers `app/api/staff/route.ts` y `app/api/staff/[id]/route.ts`.
+    - Quickstart S6 validado (curl in-memory).
+  - **Polish:** `TECH_DEBT.md` actualizado; Quickstart S1–S6 completos.
+  - Suite: **344 passing, 7 skipped**, 60 archivos.
 
-## Próximas acciones (priorizadas)
+## Próximas acciones (priorizadas) — PRÓXIMA SESIÓN
 
-Detalle en el gap-analysis (índice de features) y su sección "Síntesis".
+> **→ Empieza por aquí:** `/speckit-specify` para la siguiente feature del clúster MVP.
 
-> **→ Empieza por aquí (recomendación):** primero **cerrar las 8 decisiones
-> transversales** (bloquean specs limpias); en cuanto estén, la **primera feature**
-> a abrir con `/speckit-specify` es **`plataforma-superadmin`** — es el objetivo de
-> Auth del dueño y cierra el agujero de seguridad de `/operations` (vista
-> cross-tenant sin auth). Le siguen `tenant-settings` y `reservas-ciclo-estados-pagos`.
-
-1. **Cerrar las 8 decisiones transversales** del recorrido antes de abrir specs
-   (categoría-entidad, online/virtual, group booking, dónde viven políticas+moneda,
-   IA Facturación-vs-Finanzas, IA de las 4 áreas Amelia sin menú, **Auth/superadmin**,
-   ciclo de estados de reserva).
-2. **Clúster crítico MVP** → convertir en features Spec-Kit (`/speckit-specify`):
-   - `tenant-settings` — políticas de tiempo, sender email por tenant, activar
-     pasarela, perfil del tenant. **Fundacional.**
-   - `reservas-ciclo-estados-pagos` — de estado binario a 6 estados + pagos manuales.
-   - `plataforma-superadmin` — auth de plataforma; hoy `/operations` expone **todos los
-     tenants sin protección** (seguridad + objetivo del dueño).
-   - Worker de notificaciones email (Brevo wired; falta bootstrap + dispatcher email).
-3. **Objetivo del dueño (Auth):** login de operador + cuenta tenant/admin + cuenta
-   superadmin de plataforma; credenciales durables fuera de git; registrar en un ADR.
+1. **Siguiente feature** (elegir una y especificarla con `/speckit-specify`):
+   - **`tenant-settings`**: branding por tenant (colores, logo), políticas de reserva (horizonte,
+     cancelación, aprobación), zona horaria/locale. Alta prioridad para onboarding real.
+   - **`reservas-ciclo-estados-pagos`**: máquina de estados completa confirmed/cancelled/no-show +
+     flujo de pago/reembolso integrado con Stripe. Cierra el MVP de negocio.
+2. **Email worker**: Brevo ADR-0020 listo; dispatcher arma SMS y no cae a email. Necesita
+   bootstrap + handler de email en el worker. Ver `TECH_DEBT.md`.
 
 ## Blockers / notas de entorno
 
+- **Migración 010 pendiente de aplicar en producción.** Ver `TECH_DEBT.md` §"Staff ↔ provider link".
 - **Email worker** sin bootstrap (Brevo ADR-0020 listo); dispatcher arma SMS y no cae a
   email. Ver `TECH_DEBT.md`.
-- **Seguridad:** `/operations` (cross-tenant) vive en `apps/admin` sin auth; provisión de
-  tenants (`POST /v1/platform/tenants`) abierta. Resolver con `plataforma-superadmin`.
 - **Pre-VPS:** deudas en `TECH_DEBT.md` (rol app `NOSUPERUSER NOBYPASSRLS` validado;
   falta migration runner). Leer antes de planificar deploy.
 - **Operador (su máquina):** Stripe CLI logueado + `whsec_…` en `.env` local, preparado
@@ -63,18 +59,16 @@ Detalle en el gap-analysis (índice de features) y su sección "Síntesis".
 
 - **Continuidad:** `HANDOFF.md` (esto) · `PROGRESS.md` (diario) · `PLANNING.md` (mapa+modelo).
 - **Producto (feature fundacional):** `specs/001-saas-multitenant-booking/` (Spec-Kit).
+- **Plataforma superadmin (completa):** `specs/002-plataforma-superadmin/` (T001–T034 todos ✅).
 - **Backlog de crecimiento:** `docs/analysis/menu-walkthrough-gap-analysis.md` (índice de features).
 - **Investigación Amelia:** `docs/analysis/amelia-*-fine-grained.md` + `amelia-ux-reference.md`.
-- **Decisiones:** `docs/adr/0001…0020`. **Constitución:** `.specify/memory/constitution.md`.
+- **Decisiones:** `docs/adr/0001…0022`. **Constitución:** `.specify/memory/constitution.md`.
 - **Arranque de sesión:** `docs/START_PROMPT.md`.
 
 ## Suggested skills (próximo agente)
 
-- `/speckit-clarify` — para resolver las 8 decisiones transversales una a una.
-- `/speckit-specify` — abrir la primera feature (`plataforma-superadmin`), luego
-  `tenant-settings`, `reservas-ciclo-estados-pagos`. Sembrar desde el gap-analysis +
-  `docs/analysis/amelia-*-fine-grained.md`.
-- `/speckit-plan` y `/speckit-tasks` — tras cada spec.
+- `/speckit-specify` — para la siguiente feature (`tenant-settings` o `reservas-ciclo-estados-pagos`).
+- `/speckit-implement` — una vez especificada la siguiente feature.
 - `/handoff` — al cerrar la sesión, para refrescar este archivo.
 
 ## Reglas de cierre de sesión
