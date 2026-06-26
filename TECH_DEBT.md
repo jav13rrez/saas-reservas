@@ -158,6 +158,22 @@ a real implementation + the provider account/credentials in
   Longer-term consideration: stop echoing the full `actor` in responses, or
   return the entity under an unambiguous key so id extraction is robust.
 
+## Booking lifecycle + manual payments (feature 004)
+
+- **[HIGH] Migration `infra/postgres/012-manual-payments.sql` must be applied to production.**
+  Adds the tenant-scoped `manual_payments` table (RLS, one row per booking). Without it the
+  Drizzle path fails to read/write manual payments. Apply before enabling `ADMIN_DATA_MODE=api`
+  on a DB provisioned before this migration.
+- **[MEDIUM] Admin UI pending (T012/T013).** The Reservas screen still uses the demo store's
+  simplified two-state model (`confirmed/cancelled`) and has no status actions or Payment section.
+  The backend (six-state lifecycle, approve/reject/complete/no-show routes, manual-payment GET/PUT)
+  is complete and tested; the UI slice is the remaining work.
+- **[LOW] No time gate on Completed/No-show.** Marking a booking completed/no-show is allowed from
+  Approved regardless of the clock (staff may close early). A time-aware guard is a deferred follow-up
+  (ADR-0024).
+- **[LOW] Single manual payment per booking.** No multi-payment ledger / coupon-gift-card integration
+  yet (ADR-0024); a later feature.
+
 ## Tenant settings (feature 003)
 
 - **[HIGH] Migration `infra/postgres/011-tenant-currency.sql` must be applied to production.**
