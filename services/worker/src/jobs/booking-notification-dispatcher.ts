@@ -21,7 +21,9 @@ export type BookingNotificationEvent =
   | "cancelled"
   | "rescheduled"
   | "reminder"
-  | "rejected";
+  | "rejected"
+  | "completed"
+  | "no_show";
 
 export interface BookingNotificationPayload {
   tenantId: string;
@@ -51,6 +53,8 @@ function subjectFor(event: BookingNotificationEvent, serviceName: string): strin
     rescheduled: `Booking rescheduled: ${serviceName}`,
     reminder: `Reminder: ${serviceName}`,
     rejected: `Booking rejected: ${serviceName}`,
+    completed: `Booking completed: ${serviceName}`,
+    no_show: `Missed appointment: ${serviceName}`,
   };
   return map[event];
 }

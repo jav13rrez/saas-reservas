@@ -10,3 +10,4 @@ export { DrizzleProcessedWebhookStore } from "./repositories/webhook-store.js";
 export { DrizzleHoldStore } from "./repositories/hold-store.js";
 export { DrizzleStaffAccountRepository } from "./repositories/staff-account-repository.js";
 export { DrizzlePlatformOperatorRepository } from "./repositories/platform-operator-repository.js";
+export { DrizzleManualPaymentRepository } from "./repositories/manual-payment-repository.js";

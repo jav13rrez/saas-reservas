@@ -13,7 +13,11 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { BookingExtra } from "@saas-reservas/domain/bookings/booking";
+import type { BookingExtra, BookingStatus } from "@saas-reservas/domain/bookings/booking";
+import type {
+  ManualPaymentMethod,
+  ManualPaymentStatus,
+} from "@saas-reservas/domain/payments/manual-payment";
 import type {
   ProviderScheduleEntry,
   StaffPermission,
@@ -189,9 +193,7 @@ export const bookings = pgTable("bookings", {
   customerId: uuid("customer_id").notNull(),
   serviceId: uuid("service_id").notNull(),
   providerId: uuid("provider_id").notNull(),
-  status: text("status")
-    .$type<"pending" | "approved" | "rejected" | "expired" | "canceled" | "rescheduled">()
-    .notNull(),
+  status: text("status").$type<BookingStatus>().notNull(),
   startAt: timestamp("start_at", { withTimezone: true, mode: "date" }).notNull(),
   endAt: timestamp("end_at", { withTimezone: true, mode: "date" }).notNull(),
   durationMinutes: integer("duration_minutes").notNull(),
@@ -200,6 +202,23 @@ export const bookings = pgTable("bookings", {
   totalAmount: integer("total_amount").notNull(),
   currency: text("currency").notNull(),
   source: text("source").$type<"widget" | "admin" | "api">().notNull(),
+});
+
+// Feature 004: staff-entered payment record, one per booking, for money taken
+// outside the gateway. Distinct from cart_transactions/sub_payments.
+export const manualPayments = pgTable("manual_payments", {
+  id: uuid("id").primaryKey(),
+  tenantId: uuid("tenant_id").notNull(),
+  bookingId: uuid("booking_id").notNull(),
+  method: text("method").$type<ManualPaymentMethod>().notNull(),
+  status: text("status").$type<ManualPaymentStatus>().notNull(),
+  amount: integer("amount").notNull(),
+  deposit: integer("deposit").notNull(),
+  currency: text("currency").notNull(),
+  transactionRef: text("transaction_ref"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" }).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" }).notNull(),
 });
 
 export const cartTransactions = pgTable("cart_transactions", {

@@ -37,10 +37,22 @@ describe("booking state machine", () => {
     }
   });
 
-  it("allows approved -> canceled | rescheduled", () => {
-    for (const to of ["canceled", "rescheduled"] as const) {
+  it("allows approved -> canceled | rescheduled | completed | no_show", () => {
+    for (const to of ["canceled", "rescheduled", "completed", "no_show"] as const) {
       expect(transitionBooking(booking("approved"), to).status).toBe(to);
     }
+  });
+
+  it("makes completed and no_show terminal (feature 004)", () => {
+    for (const terminal of ["completed", "no_show"] as const) {
+      for (const to of ["pending", "approved", "completed", "no_show", "canceled"] as const) {
+        expect(canTransition(terminal, to)).toBe(false);
+      }
+    }
+    expect(() => transitionBooking(booking("pending"), "completed")).toThrow(
+      InvalidBookingTransitionError,
+    );
+    expect(transitionEventType("no_show")).toBe("booking.no_show");
   });
 
   it("rejects skipping pending and reviving terminal states", () => {
