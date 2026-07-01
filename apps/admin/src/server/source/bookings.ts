@@ -4,9 +4,10 @@
  * store, so handlers only swap their import.
  *
  * Admin bookings are no-charge "book on behalf" (decided). Impedance owned here:
- * the persistent booking carries ids and a richer status set, while the console
- * DTO carries resolved names and a confirmed/cancelled status. This module
- * enriches ids to names from the admin list endpoints and maps the status.
+ * the persistent booking carries ids and the API's raw status; the console DTO
+ * carries resolved names and the same 6-state `BookingStatus` (feature 004 —
+ * pending/approved/rejected/canceled/completed/no_show), unmapped/uncollapsed
+ * so the UI can render lifecycle actions and badges for every state.
  *
  * Note: the API validates the slot against the availability engine (no double
  * booking / off-schedule), so in `api` mode an arbitrary `startAt` may be
@@ -16,13 +17,19 @@
 
 import { dataMode } from "../config";
 import {
+  approveBooking as demoApproveBooking,
   cancelBooking as demoCancelBooking,
+  completeBooking as demoCompleteBooking,
   createBooking as demoCreateBooking,
   listBookings as demoListBookings,
+  noShowBooking as demoNoShowBooking,
+  rejectBooking as demoRejectBooking,
   type AdminBooking,
+  type BookingStatus,
   type CreateBookingInput,
   type StoreResult,
 } from "../demo-store";
+import { getSettings } from "./settings";
 import { apiGet, apiSend } from "../api-client";
 
 interface ApiBooking {
@@ -32,7 +39,7 @@ interface ApiBooking {
   customerId: string;
   startAt: string;
   endAt: string;
-  status: string;
+  status: BookingStatus;
   totalAmount: number;
   currency: string;
 }
@@ -84,7 +91,7 @@ function toAdmin(booking: ApiBooking, lookups: Lookups): AdminBooking {
     customerEmail: customer?.email ?? "",
     startAt: booking.startAt,
     endAt: booking.endAt,
-    status: booking.status === "approved" ? "confirmed" : "cancelled",
+    status: booking.status,
     priceAmount: booking.totalAmount,
     currency: booking.currency,
     createdAt: "",
@@ -111,7 +118,8 @@ export async function listBookings(): Promise<AdminBooking[]> {
 
 export async function createBooking(input: CreateBookingInput): Promise<StoreResult<AdminBooking>> {
   if (dataMode() === "demo") {
-    return demoCreateBooking(input);
+    const settings = await getSettings();
+    return demoCreateBooking(input, settings.policies.requiresApproval);
   }
   const result = await apiSend<ApiBooking>("POST", "/v1/admin/bookings", {
     serviceId: input.serviceId,
@@ -137,6 +145,50 @@ export async function cancelBooking(id: string): Promise<StoreResult<AdminBookin
   return { ok: true, value: toAdmin(result.data, await loadLookups()) };
 }
 
+/**
+ * Lifecycle transitions (feature 004, US1). In `demo` mode they mutate the
+ * store, validating against the domain `TRANSITIONS` (via `canTransition`);
+ * an invalid transition throws `InvalidBookingTransitionError`, mirrored here
+ * as a rejected `StoreResult` so callers don't need to catch. In `api` mode
+ * they call the admin lifecycle routes, which answer 409 on an invalid
+ * transition.
+ */
+async function transition(
+  id: string,
+  action: "approve" | "reject" | "complete" | "no-show",
+  demoFn: (id: string) => StoreResult<AdminBooking>,
+): Promise<StoreResult<AdminBooking>> {
+  if (dataMode() === "demo") {
+    try {
+      return demoFn(id);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Transición no válida.";
+      return { ok: false, error: message };
+    }
+  }
+  const result = await apiSend<ApiBooking>("POST", `/v1/admin/bookings/${id}/${action}`, {});
+  if (!result.ok || result.data === undefined) {
+    return { ok: false, error: transitionError(result.error) };
+  }
+  return { ok: true, value: toAdmin(result.data, await loadLookups()) };
+}
+
+export async function approveBooking(id: string): Promise<StoreResult<AdminBooking>> {
+  return transition(id, "approve", demoApproveBooking);
+}
+
+export async function rejectBooking(id: string): Promise<StoreResult<AdminBooking>> {
+  return transition(id, "reject", demoRejectBooking);
+}
+
+export async function completeBooking(id: string): Promise<StoreResult<AdminBooking>> {
+  return transition(id, "complete", demoCompleteBooking);
+}
+
+export async function noShowBooking(id: string): Promise<StoreResult<AdminBooking>> {
+  return transition(id, "no-show", demoNoShowBooking);
+}
+
 const BOOKING_ERRORS: Record<string, string> = {
   "slot-not-available": "Ese horario no está disponible (fuera de agenda o ya ocupado).",
   "provider-required": "Selecciona un proveedor para el servicio.",
@@ -148,4 +200,11 @@ function bookingError(reason: string | undefined): string {
     return "No se pudo crear la reserva.";
   }
   return BOOKING_ERRORS[reason] ?? reason;
+}
+
+function transitionError(reason: string | undefined): string {
+  if (reason === "invalid-transition") {
+    return "Esa transición de estado no es válida desde el estado actual.";
+  }
+  return reason ?? "No se pudo actualizar el estado de la reserva.";
 }
