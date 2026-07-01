@@ -947,6 +947,73 @@ None — production deployment and real adapter wiring are deferred per ADR-0007
 - Documentos de flujo, hook de arranque (`.claude/hooks/session-start-context.sh`) y `docs/START_PROMPT.md`
   actualizados al cierre.
 
+### 2026-07-01 (feature 004 — UI Reservas: ciclo de 6 estados + pago manual, T012/T013)
+
+- **Loop `loops/reservas-ui-ciclo-pagos.md` ejecutado de punta a punta (worktree aislado), éxito.**
+  La pantalla Reservas de `apps/admin` (modos `demo` y `api`) pasa del modelo simplificado
+  `confirmed/cancelled` a los 6 estados reales del dominio
+  (`pending/approved/rejected/canceled/completed/no_show`).
+- **`demo-store.ts`:** `BookingStatus` ahora es el `BookingStatus` del dominio
+  (`@saas-reservas/domain/bookings/booking`); `createBooking` acepta `requiresApproval` y crea en
+  `pending` o `approved` acorde; ocupación (`unitsInUse`/`providerBusy`) usa el nuevo conjunto
+  `OCCUPIES_SLOT` (pending/approved/completed/no_show) en vez de `status === "confirmed"`; nuevas
+  funciones `approveBooking`/`rejectBooking`/`completeBooking`/`noShowBooking` validan contra
+  `canTransition` del dominio y lanzan `InvalidBookingTransitionError` si la transición no es
+  válida. Añadido almacenamiento de pago manual (`payments: Record<bookingId, ManualPayment>`) con
+  `getBookingPayment`/`upsertBookingPayment` (usa `validateManualPayment` del dominio).
+- **`apps/admin` ahora depende de `@saas-reservas/domain`** (antes solo `@saas-reservas/ui`); su
+  export es `dist/*`, así que requiere `pnpm --filter @saas-reservas/domain build` antes de que
+  `next build`/`tsc` de admin puedan resolverlo (ya está así en el flujo normal del monorepo).
+- **`source/bookings.ts`:** el mapeo ya no colapsa a `confirmed/cancelled`; pasa el status crudo de
+  la API (los 6 estados) y añade `approveBooking`/`rejectBooking`/`completeBooking`/`noShowBooking`
+  que en modo demo mutan el store y en modo API llaman a las rutas ya existentes
+  `POST /v1/admin/bookings/:id/{approve,reject,complete,no-show}`.
+- **Nuevo `source/booking-payment.ts`** + rutas Next `app/api/bookings/[id]/{approve,reject,
+complete,no-show,payment}/route.ts` (patrón de 3 capas igual que `source/settings.ts`).
+- **UI (`features/bookings/index.tsx`):** badge de estado por color/icono de token (pending=warning,
+  approved=success, completed=primary con icono doble-check para distinguirlo de approved,
+  rejected/no_show=danger, canceled=muted); botones de acción por fila solo para las transiciones
+  válidas desde el estado actual (Aprobar/Rechazar desde pending, Completar/No-show desde approved);
+  sección de pago expandible por fila (método/estado/importe/depósito/referencia/notas) que valida
+  depósito ≤ importe en cliente antes de enviar. Iconos solo `lucide-react`, sin emojis
+  (`docs/design-system.md`, ADR-0008).
+- **`features/calendar/index.tsx`** actualizado en consecuencia: la vista semanal ahora filtra por
+  `OCCUPIES_SLOT` en vez de `status === "confirmed"` (mismo criterio que la ocupación del store).
+- **`vitest.config.ts`:** el proyecto `unit` ahora incluye `apps/admin/src/**/*.test.ts` (antes
+  `apps/admin` no tenía tests). Nuevo `apps/admin/src/server/__tests__/booking-lifecycle.test.ts`
+  (8 tests): 6 estados sin colapso, 2 transiciones inválidas rechazadas
+  (`InvalidBookingTransitionError`), ocupación correcta tras reject (desde pending) y cancel (desde
+  approved), upsert/lectura de pago manual con depósito ≤ importe aceptado y depósito > importe
+  rechazado, pago para reserva inexistente rechazado.
+- **VERIFY completo en verde:** `pnpm typecheck` · `pnpm lint` · `pnpm format:check` ·
+  `pnpm test` (384 passed, 7 skipped — 376 previos + 8 nuevos) ·
+  `pnpm --filter @saas-reservas/admin build` (24 rutas, incluye las 5 nuevas de bookings).
+  También verificado `pnpm -r --filter "./apps/*" build` (las 3 apps) en verde.
+- **T012/T013 marcadas `[x]` en `specs/004-reservas-ciclo-estados-pagos/tasks.md`** — Fase 5
+  completa; toda la feature 004 (Fases 1-6) queda cerrada.
+- Trabajo hecho en worktree aislado (`worktree-agent-a9d0d1c7ce3fc19db`); commiteado en esa rama,
+  sin push ni PR (pendiente de confirmación del usuario antes de abrir PR contra `main`).
+
+### 2026-07-01 (cierre de sesión — feature 004 fusionada, spec 005 creada, integración a `main`)
+
+- **Feature 004 fusionada:** el worktree `worktree-agent-a9d0d1c7ce3fc19db` se fusionó en
+  `claude/crear-loop-nxnktr` (merge commit `08065df`), resolviendo conflictos en `HANDOFF.md` y
+  `loops/reservas-ui-ciclo-pagos.md`. Se re-corrió el VERIFY completo sobre la rama ya fusionada
+  (no solo lo reportado por el agente): typecheck/lint/format:check/test (384 passing, 7 skipped)/
+  build de `apps/admin` en verde. Un commit adicional (`f7fb95b`) corrigió formato Prettier que solo
+  aparecía tras el merge (`SKILL.md`, `PROGRESS.md`, `loops/reservas-ui-ciclo-pagos.state.md`).
+- **Spec de la siguiente feature creada:** `specs/005-worker-email/spec.md` (worker de notificación
+  por email) — ejecutado manualmente el flujo de `speckit-specify` (no está registrado como skill de
+  Claude Code en este proyecto, solo vive en `.agents/skills/`). Cubre: entrega fiable por email de
+  los 7 eventos del ciclo de reserva (confirmed/cancelled/rescheduled/reminder/rejected/completed/
+  no_show), eliminación del intento de SMS (Brevo lo rechaza con `sms-not-supported` y el cliente se
+  queda sin nada), y un proceso real corriendo en producción (hoy `dispatchBookingNotification` solo
+  lo invoca su propio test). Checklist de calidad en verde, sin `[NEEDS CLARIFICATION]`. Sin
+  `plan.md`/`tasks.md` todavía — siguiente paso es `/speckit-plan`.
+- **Integración a `main`:** por indicación explícita del dueño, se abrió PR desde
+  `claude/crear-loop-nxnktr` y se fusionó a `main`; la rama de trabajo se borró (remoto y local) para
+  no dejar ramas sueltas. Detalle del PR y su número en `HANDOFF.md`.
+
 ## How To Update This File
 
 Append dated entries when:

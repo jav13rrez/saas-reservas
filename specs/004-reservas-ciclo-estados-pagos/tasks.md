@@ -60,9 +60,9 @@ description: "Task list for feature 004 — Reservas: ciclo de estados y pagos m
 
 ## Phase 5: Admin console (US1+US3 UI)
 
-- [ ] T012 [US1] Reservas screen: per-row status actions (Aprobar/Rechazar/Completar/No-show) through
+- [x] T012 [US1] Reservas screen: per-row status actions (Aprobar/Rechazar/Completar/No-show) through
   the seam (`source/bookings.ts` + demo store transitions) in both modes.
-- [ ] T013 [US3] Reservas screen: Payment section (método/estado/importe/depósito/referencia/notas)
+- [x] T013 [US3] Reservas screen: Payment section (método/estado/importe/depósito/referencia/notas)
   via `source/booking-payment.ts` + demo store get/upsert + `app/api/bookings/[id]/payment/route.ts`.
 
 ## Phase 6: Polish

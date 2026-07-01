@@ -50,7 +50,11 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          include: ["tests/unit/**/*.test.ts", "packages/*/src/**/*.test.ts"],
+          include: [
+            "tests/unit/**/*.test.ts",
+            "packages/*/src/**/*.test.ts",
+            "apps/admin/src/**/*.test.ts",
+          ],
         },
       },
       {
