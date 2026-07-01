@@ -5,11 +5,12 @@ description: Diseña y redacta "loops" (bucles autónomos plan→implementación
 
 # Crear Loop
 
-Un loop no es un prompt. Es: **objetivo + criterio de éxito verificable automáticamente
-+ condición de parada**. Esta skill no ejecuta el loop — produce su especificación
-(un archivo listo para lanzar con `/loop` o `/goal`) y confirma con el usuario, con
-preguntas, todo lo que un agente no podría resolver por sí solo a mitad de la
-ejecución.
+Un loop no es un prompt. Es: \*\*objetivo + criterio de éxito verificable automáticamente
+
+- condición de parada\*\*. Esta skill no ejecuta el loop — produce su especificación
+  (un archivo listo para lanzar con `/loop` o `/goal`) y confirma con el usuario, con
+  preguntas, todo lo que un agente no podría resolver por sí solo a mitad de la
+  ejecución.
 
 Fundamento (no lo repitas al usuario salvo que pregunte "por qué así"):
 plan → implementación → validación → corrección → promoción → verificación

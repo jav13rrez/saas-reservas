@@ -29,7 +29,7 @@ Iniciado: 2026-07-01
 - `pnpm lint` -> verde (eslint .)
 - `pnpm format:check` -> verde (tras `prettier --write` sobre el test nuevo y loops/\*)
 - `pnpm test` -> 384 passed | 7 skipped (63 archivos pasan, 4 skipped) — incluye
-  apps/admin/src/server/__tests__/booking-lifecycle.test.ts (8 tests nuevos)
+  apps/admin/src/server/**tests**/booking-lifecycle.test.ts (8 tests nuevos)
 - `pnpm --filter @saas-reservas/admin build` -> verde, 24 rutas generadas
 - Extra: `pnpm -r --filter "./apps/*" build` (las 3 apps) -> verde
 

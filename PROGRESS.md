@@ -969,7 +969,7 @@ None — production deployment and real adapter wiring are deferred per ADR-0007
   que en modo demo mutan el store y en modo API llaman a las rutas ya existentes
   `POST /v1/admin/bookings/:id/{approve,reject,complete,no-show}`.
 - **Nuevo `source/booking-payment.ts`** + rutas Next `app/api/bookings/[id]/{approve,reject,
-  complete,no-show,payment}/route.ts` (patrón de 3 capas igual que `source/settings.ts`).
+complete,no-show,payment}/route.ts` (patrón de 3 capas igual que `source/settings.ts`).
 - **UI (`features/bookings/index.tsx`):** badge de estado por color/icono de token (pending=warning,
   approved=success, completed=primary con icono doble-check para distinguirlo de approved,
   rejected/no_show=danger, canceled=muted); botones de acción por fila solo para las transiciones
