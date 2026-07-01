@@ -5,7 +5,7 @@
  *
  * Admin bookings are no-charge "book on behalf" (decided). Impedance owned here:
  * the persistent booking carries ids and a richer status set, while the console
- * DTO carries resolved names and a confirmed/cancelled status. This module
+ * DTO carries resolved names alongside the domain status. This module
  * enriches ids to names from the admin list endpoints and maps the status.
  *
  * Note: the API validates the slot against the availability engine (no double
@@ -16,9 +16,13 @@
 
 import { dataMode } from "../config";
 import {
+  approveBooking as demoApproveBooking,
   cancelBooking as demoCancelBooking,
+  completeBooking as demoCompleteBooking,
   createBooking as demoCreateBooking,
   listBookings as demoListBookings,
+  noShowBooking as demoNoShowBooking,
+  rejectBooking as demoRejectBooking,
   type AdminBooking,
   type CreateBookingInput,
   type StoreResult,
@@ -84,7 +88,7 @@ function toAdmin(booking: ApiBooking, lookups: Lookups): AdminBooking {
     customerEmail: customer?.email ?? "",
     startAt: booking.startAt,
     endAt: booking.endAt,
-    status: booking.status === "approved" ? "confirmed" : "cancelled",
+    status: booking.status as AdminBooking["status"],
     priceAmount: booking.totalAmount,
     currency: booking.currency,
     createdAt: "",
@@ -130,9 +134,45 @@ export async function cancelBooking(id: string): Promise<StoreResult<AdminBookin
   if (dataMode() === "demo") {
     return demoCancelBooking(id);
   }
-  const result = await apiSend<ApiBooking>("POST", `/v1/admin/bookings/${id}/cancel`, {});
+  return runLifecycleAction(id, "cancel", "No se pudo cancelar la reserva.");
+}
+
+export async function approveBooking(id: string): Promise<StoreResult<AdminBooking>> {
+  if (dataMode() === "demo") {
+    return demoApproveBooking(id);
+  }
+  return runLifecycleAction(id, "approve", "No se pudo aprobar la reserva.");
+}
+
+export async function rejectBooking(id: string): Promise<StoreResult<AdminBooking>> {
+  if (dataMode() === "demo") {
+    return demoRejectBooking(id);
+  }
+  return runLifecycleAction(id, "reject", "No se pudo rechazar la reserva.");
+}
+
+export async function completeBooking(id: string): Promise<StoreResult<AdminBooking>> {
+  if (dataMode() === "demo") {
+    return demoCompleteBooking(id);
+  }
+  return runLifecycleAction(id, "complete", "No se pudo marcar la reserva como completada.");
+}
+
+export async function noShowBooking(id: string): Promise<StoreResult<AdminBooking>> {
+  if (dataMode() === "demo") {
+    return demoNoShowBooking(id);
+  }
+  return runLifecycleAction(id, "no-show", "No se pudo marcar la reserva como no-show.");
+}
+
+async function runLifecycleAction(
+  id: string,
+  action: "cancel" | "approve" | "reject" | "complete" | "no-show",
+  fallbackError: string,
+): Promise<StoreResult<AdminBooking>> {
+  const result = await apiSend<ApiBooking>("POST", `/v1/admin/bookings/${id}/${action}`, {});
   if (!result.ok || result.data === undefined) {
-    return { ok: false, error: result.error ?? "No se pudo cancelar la reserva." };
+    return { ok: false, error: lifecycleError(result.error) ?? fallbackError };
   }
   return { ok: true, value: toAdmin(result.data, await loadLookups()) };
 }
@@ -148,4 +188,11 @@ function bookingError(reason: string | undefined): string {
     return "No se pudo crear la reserva.";
   }
   return BOOKING_ERRORS[reason] ?? reason;
+}
+
+function lifecycleError(reason: string | undefined): string | undefined {
+  if (reason === "invalid-transition") {
+    return "La reserva no admite esa transición desde su estado actual.";
+  }
+  return reason;
 }

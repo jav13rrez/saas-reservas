@@ -1,10 +1,25 @@
 import { NextResponse } from "next/server";
-import { cancelBooking } from "@/server/source/bookings";
+import {
+  approveBooking,
+  cancelBooking,
+  completeBooking,
+  noShowBooking,
+  rejectBooking,
+} from "@/server/source/bookings";
+import type { AdminBooking, StoreResult } from "@/server/demo-store";
 
 /**
- * PATCH /api/bookings/:id  -> cancel a booking
- * Body: { status: "cancelled" }
+ * PATCH /api/bookings/:id  -> apply a lifecycle transition
+ * Body: { status: "approved" | "rejected" | "canceled" | "completed" | "no_show" }
  */
+
+const ACTIONS: Record<string, (id: string) => Promise<StoreResult<AdminBooking>>> = {
+  approved: approveBooking,
+  rejected: rejectBooking,
+  canceled: cancelBooking,
+  completed: completeBooking,
+  no_show: noShowBooking,
+};
 
 export async function PATCH(
   request: Request,
@@ -18,13 +33,14 @@ export async function PATCH(
     return NextResponse.json({ error: "Cuerpo JSON inválido." }, { status: 400 });
   }
   const status = (body as { status?: unknown }).status;
-  if (status !== "cancelled") {
+  const action = typeof status === "string" ? ACTIONS[status] : undefined;
+  if (action === undefined) {
     return NextResponse.json(
-      { error: "Solo se admite la transición a 'cancelled'." },
+      { error: "Estado no admitido: approved, rejected, canceled, completed o no_show." },
       { status: 400 },
     );
   }
-  const result = await cancelBooking(id);
+  const result = await action(id);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

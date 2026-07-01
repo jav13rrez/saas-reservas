@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-06-26 (feature 004 backend — booking lifecycle + manual payments)
+Last updated: 2026-07-01 (feature 004 completa — booking lifecycle + manual payments, backend + UI)
 
 > **Qué es este archivo:** el punto de reanudación corto para el siguiente agente
 > (estado, próximas acciones, blockers). **No es un diario** — el historial
@@ -8,16 +8,14 @@ Last updated: 2026-06-26 (feature 004 backend — booking lifecycle + manual pay
 > el backlog de features (por área del sidebar) en
 > `docs/analysis/menu-walkthrough-gap-analysis.md`.
 
-## Punto de reanudación (2026-06-26 — feature 004 backend en `main`, UI pendiente)
+## Punto de reanudación (2026-07-01 — feature 004 100% completa, MVP de negocio cerrado)
 
-- **`main` está al día con TODO lo de esta sesión** (sin rama de trabajo pendiente). Integraciones por PR:
-  consolidación ADR-0021 + feature 002 (PR #5), **CI** (PR #7), feature 003 (PR #6), feature 004 backend (PR #8).
+- **Rama de trabajo:** `claude/crear-loop-cawtoj` (adelante de `main` solo con esto; sin PR abierto
+  todavía — abrir uno para integrar T012/T013 antes de seguir).
 - **CI vivo:** `.github/workflows/ci.yml` corre typecheck + lint + format:check + tests + build de las 3
   apps en cada PR y push a `main`. Valida lo mismo en local antes de abrir PR. **Integra por PR, no
-  commitees features directo en `main`.** Nota: la app GitGuardian del repo a veces da un fallo
-  transitorio de 0 s (no bloquea); en el PR #8 pasó en verde.
-- **Para trabajar:** parte de `main` (`git checkout main && git pull`), crea rama, PR a `main`.
-- **Feature 004 — `reservas-ciclo-estados-pagos` BACKEND COMPLETO (T001–T011, T014–T016; UI T012/T013 pendiente):**
+  commitees features directo en `main`.**
+- **Feature 004 — `reservas-ciclo-estados-pagos` COMPLETA (T001–T016, backend + UI):**
   - **US1 ciclo:** `completed`/`no_show` en el state machine (terminales desde `approved`);
     rutas `POST /v1/admin/bookings/:id/{approve,reject,complete,no-show}` (409 inválida); `reject`
     libera ocupación, `complete`/`no_show` no. Notificaciones para los nuevos estados.
@@ -25,9 +23,16 @@ Last updated: 2026-06-26 (feature 004 backend — booking lifecycle + manual pay
     checkout de pago intacto.
   - **US3 pagos manuales:** migración `012-manual-payments.sql` (RLS, 1/reserva) + dominio + servicio
     - `GET`/`PUT /v1/admin/bookings/:id/payment`. Tabla separada de la pasarela.
-  - **ADR-0024.** Suite **376 passing, 7 skipped**. Typecheck/lint/Prettier verdes.
-  - **Pendiente:** UI Reservas (acciones de estado + sección de pago); incluye extender el demo-store
-    de 2 a 6 estados. → T012/T013.
+  - **UI (T012/T013, esta sesión):** pantalla Reservas (`apps/admin/src/features/bookings`) con
+    botones de acción por fila (Aprobar/Rechazar/Cancelar/Completar/No-show, según transición válida)
+    y sección de pago manual expandible por fila, en ambos modos (demo+API). `demo-store.ts` extendido
+    de 2 a 6 estados con el mismo naming que el dominio (`canceled` una L, no `cancelled`); nuevo seam
+    `source/booking-payment.ts` + ruta `app/api/bookings/[id]/payment/route.ts`. Calendario ajustado
+    (filtra `status === "approved"`, mismo comportamiento).
+  - **ADR-0024.** Suite **376 passing, 7 skipped**. Typecheck/lint/format/build (3 apps) verdes. Smoke
+    test manual vía curl en modo demo (crear→completar, transición inválida rechazada, alta/lectura
+    de pago). No hay infraestructura de test de componentes React en el repo (ni antes ni ahora) — la
+    UI se validó por API, no con un test automatizado de la pantalla.
 - **Feature 003 — `tenant-settings` COMPLETA (T001–T025, US1–US3 + Polish):**
   - Superficie de ajustes real sobre el agregado `Tenant` (Perfil, Localización, Políticas, Marca) +
     nuevo campo **`currency`**. Reemplaza el wizard de la ruta `/settings`.
@@ -58,13 +63,11 @@ Last updated: 2026-06-26 (feature 004 backend — booking lifecycle + manual pay
 
 ## Próximas acciones (priorizadas) — PRÓXIMA SESIÓN
 
-> **→ Empieza por aquí:** terminar la **UI de la feature 004** (T012/T013) en la pantalla Reservas,
-> luego abrir PR si no está abierto. Después, siguiente feature con `/speckit-specify`.
+> **→ Empieza por aquí:** abrir el PR de `claude/crear-loop-cawtoj` a `main` (T012/T013 + refresco de
+> continuidad), confirmar CI verde y mergear. Después, siguiente feature con `/speckit-specify`.
 
-1. **UI feature 004 (T012/T013):** acciones de estado por fila (Aprobar/Rechazar/Completar/No-show)
-   - sección de pago manual en `apps/admin` Reservas, vía el seam (demo+api). Requiere extender el
-     demo-store de 2 (`confirmed/cancelled`) a los 6 estados del dominio y añadir get/upsert de pago.
-     El backend (rutas, dominio, persistencia) ya está completo y probado.
+1. **Abrir/mergear el PR pendiente** de esta rama (feature 004 UI). Nada de código nuevo debería
+   hacer falta — el gate ya está verde localmente.
 2. **Siguiente feature** (`/speckit-specify`):
    - **Email worker**: Brevo ADR-0020 listo; dispatcher arma SMS y no cae a email. Necesita
      bootstrap + handler de email en el worker. Ver `TECH_DEBT.md`. (Buen cierre del MVP: ya hay

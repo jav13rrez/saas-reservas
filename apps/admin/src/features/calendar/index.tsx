@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Calendario screen. A weekly grid of confirmed bookings grouped by provider:
+ * Calendario screen. A weekly grid of approved bookings grouped by provider:
  * one row per provider, one column per day. Each cell lists that provider's
  * bookings that day (time + service + customer). Navigate weeks with the
  * arrows. Talks to /api/bookings and /api/providers.
@@ -25,7 +25,7 @@ interface AdminBooking {
   customerName: string;
   startAt: string;
   endAt: string;
-  status: "confirmed" | "cancelled";
+  status: "pending" | "approved" | "rejected" | "canceled" | "completed" | "no_show";
 }
 
 const DAY_NAMES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -102,7 +102,7 @@ export function Calendar() {
   const weekBookings = useMemo(
     () =>
       bookings.filter((b) => {
-        if (b.status !== "confirmed") {
+        if (b.status !== "approved") {
           return false;
         }
         const start = new Date(b.startAt);

@@ -11,8 +11,8 @@
  * Styling reads design tokens; icons from lucide-react only. No emojis.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarCheck, Plus, RefreshCw, X } from "lucide-react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { CalendarCheck, Check, CreditCard, Plus, RefreshCw, X } from "lucide-react";
 import { formatDateTime, formatMoney } from "@/lib/format";
 
 interface AdminService {
@@ -32,6 +32,9 @@ interface AdminCustomer {
   email: string;
   active: boolean;
 }
+
+type BookingStatus = "pending" | "approved" | "rejected" | "canceled" | "completed" | "no_show";
+
 interface AdminBooking {
   id: string;
   serviceId: string;
@@ -43,10 +46,75 @@ interface AdminBooking {
   customerEmail: string;
   startAt: string;
   endAt: string;
-  status: "confirmed" | "cancelled";
+  status: BookingStatus;
   priceAmount: number;
   currency: string;
 }
+
+type ManualPaymentMethod = "cash" | "card" | "bank_transfer" | "other";
+type ManualPaymentStatus = "paid" | "partial" | "not_paid";
+
+interface ManualPayment {
+  bookingId: string;
+  method: ManualPaymentMethod;
+  status: ManualPaymentStatus;
+  amount: number;
+  deposit: number;
+  currency: string;
+  transactionRef?: string;
+  notes?: string;
+}
+
+const STATUS_LABEL: Record<BookingStatus, string> = {
+  pending: "Pendiente",
+  approved: "Aprobada",
+  rejected: "Rechazada",
+  canceled: "Cancelada",
+  completed: "Completada",
+  no_show: "No-show",
+};
+
+/** Status color mapping per docs/design-system.md; completed/no_show follow the
+ * same success/danger convention (positive vs. negative operational outcome). */
+const STATUS_COLOR: Record<BookingStatus, { color: string; background: string }> = {
+  pending: { color: "var(--ui-color-warning)", background: "#fdf3e7" },
+  approved: { color: "var(--ui-color-success)", background: "#e7f6ec" },
+  rejected: { color: "var(--ui-color-danger)", background: "#fdeaea" },
+  canceled: { color: "var(--ui-color-text-muted)", background: "var(--ui-color-bg)" },
+  completed: { color: "var(--ui-color-success)", background: "#e7f6ec" },
+  no_show: { color: "var(--ui-color-danger)", background: "#fdeaea" },
+};
+
+/** Next statuses reachable from each status, mirroring the domain state machine. */
+const NEXT_STATUSES: Record<BookingStatus, BookingStatus[]> = {
+  pending: ["approved", "rejected"],
+  approved: ["canceled", "completed", "no_show"],
+  rejected: [],
+  canceled: [],
+  completed: [],
+  no_show: [],
+};
+
+const ACTION_LABEL: Record<BookingStatus, string> = {
+  pending: "Pendiente",
+  approved: "Aprobar",
+  rejected: "Rechazar",
+  canceled: "Cancelar",
+  completed: "Completar",
+  no_show: "No-show",
+};
+
+const PAYMENT_METHOD_LABEL: Record<ManualPaymentMethod, string> = {
+  cash: "Efectivo",
+  card: "Tarjeta",
+  bank_transfer: "Transferencia",
+  other: "Otro",
+};
+const PAYMENT_STATUS_LABEL: Record<ManualPaymentStatus, string> = {
+  paid: "Pagado",
+  partial: "Parcial",
+  not_paid: "No pagado",
+};
 
 const CELL: React.CSSProperties = {
   padding: "var(--ui-space-3)",
@@ -154,17 +222,17 @@ export function Bookings() {
     }
   }
 
-  async function cancel(booking: AdminBooking) {
+  async function transition(booking: AdminBooking, to: BookingStatus) {
     setError(null);
     try {
       const res = await fetch(`/api/bookings/${booking.id}`, {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ status: "cancelled" }),
+        body: JSON.stringify({ status: to }),
       });
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
-        throw new Error(body.error ?? `Cancelación falló con ${String(res.status)}`);
+        throw new Error(body.error ?? `La transición falló con ${String(res.status)}`);
       }
       await load();
     } catch (e) {
@@ -174,6 +242,78 @@ export function Bookings() {
 
   const canSubmit =
     serviceId !== "" && providerId !== "" && customerId !== "" && startAt !== "" && !submitting;
+
+  const [paymentBookingId, setPaymentBookingId] = useState<string | null>(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const [paymentSaved, setPaymentSaved] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<ManualPaymentMethod>("cash");
+  const [paymentStatus, setPaymentStatus] = useState<ManualPaymentStatus>("paid");
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentDeposit, setPaymentDeposit] = useState("");
+  const [paymentRef, setPaymentRef] = useState("");
+  const [paymentNotes, setPaymentNotes] = useState("");
+
+  async function togglePayment(booking: AdminBooking) {
+    if (paymentBookingId === booking.id) {
+      setPaymentBookingId(null);
+      return;
+    }
+    setPaymentBookingId(booking.id);
+    setPaymentError(null);
+    setPaymentSaved(false);
+    setPaymentLoading(true);
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}/payment`);
+      if (!res.ok) {
+        throw new Error(`No se pudo cargar el pago (${String(res.status)}).`);
+      }
+      const loaded = (await res.json()) as ManualPayment | null;
+      setPaymentMethod(loaded?.method ?? "cash");
+      setPaymentStatus(loaded?.status ?? "paid");
+      setPaymentAmount(loaded !== null ? String(loaded.amount / 100) : "");
+      setPaymentDeposit(loaded !== null ? String(loaded.deposit / 100) : "");
+      setPaymentRef(loaded?.transactionRef ?? "");
+      setPaymentNotes(loaded?.notes ?? "");
+    } catch (e) {
+      setPaymentError(e instanceof Error ? e.message : "Error inesperado");
+    } finally {
+      setPaymentLoading(false);
+    }
+  }
+
+  async function savePayment(booking: AdminBooking) {
+    setPaymentSaving(true);
+    setPaymentError(null);
+    setPaymentSaved(false);
+    try {
+      const res = await fetch(`/api/bookings/${booking.id}/payment`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          method: paymentMethod,
+          status: paymentStatus,
+          amount: Math.round(Number(paymentAmount || "0") * 100),
+          deposit: Math.round(Number(paymentDeposit || "0") * 100),
+          currency: booking.currency,
+          ...(paymentRef.trim() !== "" ? { transactionRef: paymentRef.trim() } : {}),
+          ...(paymentNotes.trim() !== "" ? { notes: paymentNotes.trim() } : {}),
+        }),
+      });
+      const body = (await res.json()) as ManualPayment | { error?: string };
+      if (!res.ok) {
+        throw new Error(
+          (body as { error?: string }).error ?? `El guardado falló (${String(res.status)}).`,
+        );
+      }
+      setPaymentSaved(true);
+    } catch (e) {
+      setPaymentError(e instanceof Error ? e.message : "Error inesperado");
+    } finally {
+      setPaymentSaving(false);
+    }
+  }
 
   return (
     <section>
@@ -321,54 +461,194 @@ export function Bookings() {
           </thead>
           <tbody>
             {bookings.map((b) => (
-              <tr key={b.id}>
-                <td style={CELL}>{formatDateTime(b.startAt)}</td>
-                <td style={CELL}>{b.serviceName}</td>
-                <td style={CELL}>{b.providerName}</td>
-                <td style={CELL}>
-                  <div>{b.customerName}</div>
-                  <div
-                    style={{ color: "var(--ui-color-text-muted)", fontSize: "var(--ui-text-sm)" }}
-                  >
-                    {b.customerEmail}
-                  </div>
-                </td>
-                <td style={CELL}>{formatMoney(b.priceAmount, b.currency)}</td>
-                <td style={CELL}>
-                  <span
-                    style={{
-                      padding: "2px var(--ui-space-2)",
-                      borderRadius: "var(--ui-radius-sm)",
-                      fontSize: "var(--ui-text-sm)",
-                      fontWeight: 500,
-                      color:
-                        b.status === "confirmed"
-                          ? "var(--ui-color-success)"
-                          : "var(--ui-color-danger)",
-                      background: b.status === "confirmed" ? "#e7f6ec" : "#fdeaea",
-                    }}
-                  >
-                    {b.status === "confirmed" ? "Confirmada" : "Cancelada"}
-                  </span>
-                </td>
-                <td style={{ ...CELL, textAlign: "right" }}>
-                  {b.status === "confirmed" && (
-                    <button
-                      onClick={() => void cancel(b)}
+              <Fragment key={b.id}>
+                <tr>
+                  <td style={CELL}>{formatDateTime(b.startAt)}</td>
+                  <td style={CELL}>{b.serviceName}</td>
+                  <td style={CELL}>{b.providerName}</td>
+                  <td style={CELL}>
+                    <div>{b.customerName}</div>
+                    <div
                       style={{
-                        height: 30,
-                        padding: "0 var(--ui-space-3)",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "var(--ui-space-1)",
+                        color: "var(--ui-color-text-muted)",
+                        fontSize: "var(--ui-text-sm)",
                       }}
                     >
-                      <X size={14} aria-hidden />
-                      Cancelar
-                    </button>
-                  )}
-                </td>
-              </tr>
+                      {b.customerEmail}
+                    </div>
+                  </td>
+                  <td style={CELL}>{formatMoney(b.priceAmount, b.currency)}</td>
+                  <td style={CELL}>
+                    <span
+                      style={{
+                        padding: "2px var(--ui-space-2)",
+                        borderRadius: "var(--ui-radius-sm)",
+                        fontSize: "var(--ui-text-sm)",
+                        fontWeight: 500,
+                        color: STATUS_COLOR[b.status].color,
+                        background: STATUS_COLOR[b.status].background,
+                      }}
+                    >
+                      {STATUS_LABEL[b.status]}
+                    </span>
+                  </td>
+                  <td style={{ ...CELL, textAlign: "right" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        gap: "var(--ui-space-2)",
+                      }}
+                    >
+                      {NEXT_STATUSES[b.status].map((next) => (
+                        <button
+                          key={next}
+                          onClick={() => void transition(b, next)}
+                          style={{
+                            height: 30,
+                            padding: "0 var(--ui-space-3)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "var(--ui-space-1)",
+                          }}
+                        >
+                          {next === "approved" ? (
+                            <Check size={14} aria-hidden />
+                          ) : (
+                            <X size={14} aria-hidden />
+                          )}
+                          {ACTION_LABEL[next]}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => void togglePayment(b)}
+                        style={{
+                          height: 30,
+                          padding: "0 var(--ui-space-3)",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "var(--ui-space-1)",
+                        }}
+                      >
+                        <CreditCard size={14} aria-hidden />
+                        Pago
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {paymentBookingId === b.id && (
+                  <tr>
+                    <td colSpan={7} style={{ ...CELL, background: "var(--ui-color-bg)" }}>
+                      {paymentLoading ? (
+                        <p role="status">Cargando pago…</p>
+                      ) : (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            alignItems: "flex-end",
+                            gap: "var(--ui-space-3)",
+                          }}
+                        >
+                          <label>
+                            Método
+                            <select
+                              value={paymentMethod}
+                              onChange={(e) => {
+                                setPaymentMethod(e.target.value as ManualPaymentMethod);
+                              }}
+                            >
+                              {Object.entries(PAYMENT_METHOD_LABEL).map(([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Estado
+                            <select
+                              value={paymentStatus}
+                              onChange={(e) => {
+                                setPaymentStatus(e.target.value as ManualPaymentStatus);
+                              }}
+                            >
+                              {Object.entries(PAYMENT_STATUS_LABEL).map(([value, label]) => (
+                                <option key={value} value={value}>
+                                  {label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label>
+                            Importe ({b.currency})
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={paymentAmount}
+                              onChange={(e) => {
+                                setPaymentAmount(e.target.value);
+                              }}
+                              style={{ width: 120 }}
+                            />
+                          </label>
+                          <label>
+                            Depósito ({b.currency})
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={paymentDeposit}
+                              onChange={(e) => {
+                                setPaymentDeposit(e.target.value);
+                              }}
+                              style={{ width: 120 }}
+                            />
+                          </label>
+                          <label>
+                            Referencia
+                            <input
+                              type="text"
+                              value={paymentRef}
+                              onChange={(e) => {
+                                setPaymentRef(e.target.value);
+                              }}
+                              style={{ width: 160 }}
+                            />
+                          </label>
+                          <label>
+                            Notas
+                            <input
+                              type="text"
+                              value={paymentNotes}
+                              onChange={(e) => {
+                                setPaymentNotes(e.target.value);
+                              }}
+                              style={{ width: 200 }}
+                            />
+                          </label>
+                          <button
+                            onClick={() => void savePayment(b)}
+                            disabled={paymentSaving}
+                            style={{ height: 36, padding: "0 var(--ui-space-4)" }}
+                          >
+                            {paymentSaving ? "Guardando…" : "Guardar pago"}
+                          </button>
+                          {paymentSaved && (
+                            <span style={{ color: "var(--ui-color-success)" }}>Guardado.</span>
+                          )}
+                          {paymentError !== null && (
+                            <span role="alert" style={{ color: "var(--ui-color-danger)" }}>
+                              {paymentError}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             ))}
           </tbody>
         </table>

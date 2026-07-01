@@ -115,7 +115,36 @@ export type AdminScheduleEntry =
     }
   | { kind: "day-off"; date: string };
 
-export type BookingStatus = "confirmed" | "cancelled";
+/**
+ * Booking lifecycle (feature 004, mirrors packages/domain/src/bookings/booking.ts
+ * minus `expired`/`rescheduled`, which the admin console has no action for):
+ * pending -> approved -> canceled|completed|no_show; pending -> rejected.
+ * Terminal: rejected, canceled, completed, no_show.
+ */
+export type BookingStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "canceled"
+  | "completed"
+  | "no_show";
+
+const BOOKING_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
+  pending: ["approved", "rejected"],
+  approved: ["canceled", "completed", "no_show"],
+  rejected: [],
+  canceled: [],
+  completed: [],
+  no_show: [],
+};
+
+/** Statuses that still hold their resource/provider occupancy. */
+const OCCUPYING_STATUSES: readonly BookingStatus[] = [
+  "pending",
+  "approved",
+  "completed",
+  "no_show",
+];
 
 export interface AdminBooking {
   id: string;
@@ -133,6 +162,29 @@ export interface AdminBooking {
   currency: string;
   createdAt: string;
 }
+
+/** Manual payment record (feature 004, US3): one per booking, off-gateway. */
+export type ManualPaymentMethod = "cash" | "card" | "bank_transfer" | "other";
+export type ManualPaymentStatus = "paid" | "partial" | "not_paid";
+
+export interface ManualPayment {
+  bookingId: string;
+  method: ManualPaymentMethod;
+  status: ManualPaymentStatus;
+  amount: number;
+  deposit: number;
+  currency: string;
+  transactionRef?: string;
+  notes?: string;
+}
+
+const MANUAL_PAYMENT_METHODS: readonly ManualPaymentMethod[] = [
+  "cash",
+  "card",
+  "bank_transfer",
+  "other",
+];
+const MANUAL_PAYMENT_STATUSES: readonly ManualPaymentStatus[] = ["paid", "partial", "not_paid"];
 
 /** Tenant settings projection (feature 003); mirrors the API GET/PATCH shape. */
 export interface AdminSettings {
@@ -161,6 +213,8 @@ interface DemoData {
   providers: AdminProvider[];
   customers: AdminCustomer[];
   bookings: AdminBooking[];
+  /** Manual payment records keyed by booking id. */
+  payments: Record<string, ManualPayment>;
   /** Provider schedules keyed by provider id. */
   schedules: Record<string, AdminScheduleEntry[]>;
   settings: AdminSettings;
@@ -339,7 +393,7 @@ function seed(): DemoData {
       customerEmail: lucia.email,
       startAt,
       endAt: addMinutes(startAt, consulta.durationMinutes),
-      status: "confirmed",
+      status: "approved",
       priceAmount: consulta.priceAmount,
       currency: consulta.currency,
       createdAt: isoAt(-1, 9),
@@ -358,7 +412,7 @@ function seed(): DemoData {
       customerEmail: marcos.email,
       startAt,
       endAt: addMinutes(startAt, terapia.durationMinutes),
-      status: "confirmed",
+      status: "approved",
       priceAmount: terapia.priceAmount,
       currency: terapia.currency,
       createdAt: isoAt(-2, 14),
@@ -396,7 +450,17 @@ function seed(): DemoData {
     branding: { primaryColor: "#1f6feb" },
   };
 
-  return { locations, resources, services, providers, customers, bookings, schedules, settings };
+  return {
+    locations,
+    resources,
+    services,
+    providers,
+    customers,
+    bookings,
+    payments: {},
+    schedules,
+    settings,
+  };
 }
 
 const globalForStore = globalThis as typeof globalThis & {
@@ -867,14 +931,14 @@ export interface CreateBookingInput {
 }
 
 /**
- * Units of `resourceId` already consumed by confirmed bookings that overlap
- * [start, end). Each confirmed booking whose service is in resource.serviceIds
+ * Units of `resourceId` already consumed by occupying bookings that overlap
+ * [start, end). Each occupying booking whose service is in resource.serviceIds
  * consumes 1 unit of that resource.
  */
 function unitsInUse(resource: AdminResource, start: string, end: string): number {
   let used = 0;
   for (const booking of data().bookings) {
-    if (booking.status !== "confirmed") continue;
+    if (!OCCUPYING_STATUSES.includes(booking.status)) continue;
     if (!resource.serviceIds.includes(booking.serviceId)) continue;
     if (intervalsOverlap(start, end, booking.startAt, booking.endAt)) {
       used += 1;
@@ -883,11 +947,11 @@ function unitsInUse(resource: AdminResource, start: string, end: string): number
   return used;
 }
 
-/** True if the provider already has a confirmed booking overlapping [start, end). */
+/** True if the provider already has an occupying booking overlapping [start, end). */
 function providerBusy(providerId: string, start: string, end: string): boolean {
   return data().bookings.some(
     (b) =>
-      b.status === "confirmed" &&
+      OCCUPYING_STATUSES.includes(b.status) &&
       b.providerId === providerId &&
       intervalsOverlap(start, end, b.startAt, b.endAt),
   );
@@ -990,7 +1054,7 @@ export function createBooking(input: CreateBookingInput): StoreResult<AdminBooki
     customerEmail: customer.email,
     startAt,
     endAt,
-    status: "confirmed",
+    status: data().settings.policies.requiresApproval ? "pending" : "approved",
     priceAmount: service.priceAmount,
     currency: service.currency,
     createdAt: new Date().toISOString(),
@@ -999,16 +1063,96 @@ export function createBooking(input: CreateBookingInput): StoreResult<AdminBooki
   return { ok: true, value: booking };
 }
 
-export function cancelBooking(id: string): StoreResult<AdminBooking> {
+/**
+ * Applies a booking transition if valid. Occupancy is derived from the current
+ * status (`OCCUPYING_STATUSES`), so a transition to a non-occupying status
+ * (e.g. rejected/canceled) frees the slot automatically.
+ */
+function transitionBooking(id: string, to: BookingStatus): StoreResult<AdminBooking> {
   const booking = data().bookings.find((b) => b.id === id);
   if (booking === undefined) {
     return { ok: false, error: "Reserva no encontrada." };
   }
-  if (booking.status === "cancelled") {
-    return { ok: false, error: "La reserva ya está cancelada." };
+  if (!BOOKING_TRANSITIONS[booking.status].includes(to)) {
+    return {
+      ok: false,
+      error: `No se puede pasar de "${booking.status}" a "${to}".`,
+    };
   }
-  booking.status = "cancelled";
+  booking.status = to;
   return { ok: true, value: booking };
+}
+
+export function cancelBooking(id: string): StoreResult<AdminBooking> {
+  return transitionBooking(id, "canceled");
+}
+
+export function approveBooking(id: string): StoreResult<AdminBooking> {
+  return transitionBooking(id, "approved");
+}
+
+export function rejectBooking(id: string): StoreResult<AdminBooking> {
+  return transitionBooking(id, "rejected");
+}
+
+export function completeBooking(id: string): StoreResult<AdminBooking> {
+  return transitionBooking(id, "completed");
+}
+
+export function noShowBooking(id: string): StoreResult<AdminBooking> {
+  return transitionBooking(id, "no_show");
+}
+
+// ---------------------------------------------------------------------------
+// Manual payments (feature 004, US3)
+// ---------------------------------------------------------------------------
+
+export function getPayment(bookingId: string): ManualPayment | null {
+  return data().payments[bookingId] ?? null;
+}
+
+export interface UpsertPaymentInput {
+  method: string;
+  status: string;
+  amount: number;
+  deposit: number;
+  currency: string;
+  transactionRef?: string;
+  notes?: string;
+}
+
+export function upsertPayment(
+  bookingId: string,
+  input: UpsertPaymentInput,
+): StoreResult<ManualPayment> {
+  const booking = data().bookings.find((b) => b.id === bookingId);
+  if (booking === undefined) {
+    return { ok: false, error: "Reserva no encontrada." };
+  }
+  if (!MANUAL_PAYMENT_METHODS.includes(input.method as ManualPaymentMethod)) {
+    return { ok: false, error: "Método de pago no válido." };
+  }
+  if (!MANUAL_PAYMENT_STATUSES.includes(input.status as ManualPaymentStatus)) {
+    return { ok: false, error: "Estado de pago no válido." };
+  }
+  if (!Number.isInteger(input.amount) || input.amount < 0) {
+    return { ok: false, error: "El importe debe ser un entero no negativo." };
+  }
+  if (!Number.isInteger(input.deposit) || input.deposit < 0 || input.deposit > input.amount) {
+    return { ok: false, error: "El depósito debe ser un entero entre 0 y el importe." };
+  }
+  const payment: ManualPayment = {
+    bookingId,
+    method: input.method as ManualPaymentMethod,
+    status: input.status as ManualPaymentStatus,
+    amount: input.amount,
+    deposit: input.deposit,
+    currency: input.currency,
+    ...(input.transactionRef !== undefined ? { transactionRef: input.transactionRef } : {}),
+    ...(input.notes !== undefined ? { notes: input.notes } : {}),
+  };
+  data().payments[bookingId] = payment;
+  return { ok: true, value: payment };
 }
 
 // ---------------------------------------------------------------------------

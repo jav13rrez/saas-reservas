@@ -947,6 +947,32 @@ None — production deployment and real adapter wiring are deferred per ADR-0007
 - Documentos de flujo, hook de arranque (`.claude/hooks/session-start-context.sh`) y `docs/START_PROMPT.md`
   actualizados al cierre.
 
+### 2026-07-01 (feature 004 UI — T012/T013 completas, MVP cerrado)
+
+- **Reservas (`apps/admin/src/features/bookings`):** botones de acción por fila según transición
+  válida (Aprobar/Rechazar desde `pending`; Cancelar/Completar/No-show desde `approved`) + sección de
+  pago manual expandible por fila (método/estado/importe/depósito/referencia/notas), en ambos modos
+  (demo/API) vía el seam.
+- **`demo-store.ts` extendido** de 2 a 6 estados (`pending/approved/rejected/canceled/completed/
+  no_show`, mismo naming que el dominio) con su propio `BOOKING_TRANSITIONS`; la ocupación de recursos/
+  proveedor ahora se deriva de `OCCUPYING_STATUSES` (pending/approved/completed/no_show) en vez de un
+  único estado `confirmed`. `createBooking` demo ahora respeta `settings.policies.requiresApproval`
+  (antes solo lo hacía el modo API). Nuevo storage `payments: Record<bookingId, ManualPayment>` +
+  `getPayment`/`upsertPayment`.
+- **Nuevo seam `source/booking-payment.ts`** (demo+API, GET/PUT) y nueva ruta Next
+  `app/api/bookings/[id]/payment/route.ts`; `source/bookings.ts` gana `approveBooking/rejectBooking/
+  completeBooking/noShowBooking` (antes solo `cancelBooking`); `app/api/bookings/[id]/route.ts` PATCH
+  ahora resuelve cualquiera de los 5 estados destino, no solo `cancelled`.
+- **Calendario:** su filtro de "reservas confirmadas" pasó a leer `status === "approved"` (mismo
+  comportamiento, nombre de estado alineado con el dominio). Colores de badge de estado según la
+  tabla de `docs/design-system.md` (pending/approved/rejected/canceled); completed/no_show sin
+  entrada explícita en esa tabla, mapeados a success/danger por analogía.
+- Gate verde: typecheck/lint/format/test (376 passing, 7 skipped) + build de las 3 apps. Smoke test
+  manual vía curl en modo demo: crear→completar, transición inválida rechazada (409-equivalente),
+  alta y lectura de pago manual.
+- **Con esto, tasks.md de la feature 004 queda 100% completo (T001–T016).** Backend + UI del MVP de
+  negocio cerrados.
+
 ## How To Update This File
 
 Append dated entries when:
