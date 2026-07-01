@@ -60,6 +60,8 @@ Last updated: 2026-06-26 (feature 004 backend — booking lifecycle + manual pay
 
 > **→ Empieza por aquí:** terminar la **UI de la feature 004** (T012/T013) en la pantalla Reservas,
 > luego abrir PR si no está abierto. Después, siguiente feature con `/speckit-specify`.
+> Loop listo para esta tarea: `loops/reservas-ui-ciclo-pagos.md` (lanzar con
+> `/loop "usa la especificación de loops/reservas-ui-ciclo-pagos.md"`).
 
 1. **UI feature 004 (T012/T013):** acciones de estado por fila (Aprobar/Rechazar/Completar/No-show)
    - sección de pago manual en `apps/admin` Reservas, vía el seam (demo+api). Requiere extender el
