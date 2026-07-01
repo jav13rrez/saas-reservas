@@ -994,6 +994,26 @@ complete,no-show,payment}/route.ts` (patrón de 3 capas igual que `source/settin
 - Trabajo hecho en worktree aislado (`worktree-agent-a9d0d1c7ce3fc19db`); commiteado en esa rama,
   sin push ni PR (pendiente de confirmación del usuario antes de abrir PR contra `main`).
 
+### 2026-07-01 (cierre de sesión — feature 004 fusionada, spec 005 creada, integración a `main`)
+
+- **Feature 004 fusionada:** el worktree `worktree-agent-a9d0d1c7ce3fc19db` se fusionó en
+  `claude/crear-loop-nxnktr` (merge commit `08065df`), resolviendo conflictos en `HANDOFF.md` y
+  `loops/reservas-ui-ciclo-pagos.md`. Se re-corrió el VERIFY completo sobre la rama ya fusionada
+  (no solo lo reportado por el agente): typecheck/lint/format:check/test (384 passing, 7 skipped)/
+  build de `apps/admin` en verde. Un commit adicional (`f7fb95b`) corrigió formato Prettier que solo
+  aparecía tras el merge (`SKILL.md`, `PROGRESS.md`, `loops/reservas-ui-ciclo-pagos.state.md`).
+- **Spec de la siguiente feature creada:** `specs/005-worker-email/spec.md` (worker de notificación
+  por email) — ejecutado manualmente el flujo de `speckit-specify` (no está registrado como skill de
+  Claude Code en este proyecto, solo vive en `.agents/skills/`). Cubre: entrega fiable por email de
+  los 7 eventos del ciclo de reserva (confirmed/cancelled/rescheduled/reminder/rejected/completed/
+  no_show), eliminación del intento de SMS (Brevo lo rechaza con `sms-not-supported` y el cliente se
+  queda sin nada), y un proceso real corriendo en producción (hoy `dispatchBookingNotification` solo
+  lo invoca su propio test). Checklist de calidad en verde, sin `[NEEDS CLARIFICATION]`. Sin
+  `plan.md`/`tasks.md` todavía — siguiente paso es `/speckit-plan`.
+- **Integración a `main`:** por indicación explícita del dueño, se abrió PR desde
+  `claude/crear-loop-nxnktr` y se fusionó a `main`; la rama de trabajo se borró (remoto y local) para
+  no dejar ramas sueltas. Detalle del PR y su número en `HANDOFF.md`.
+
 ## How To Update This File
 
 Append dated entries when:

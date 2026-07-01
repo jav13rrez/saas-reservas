@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-07-01 (feature 004 UI — ciclo de 6 estados + pago manual en Reservas, T012/T013)
+Last updated: 2026-07-01 (feature 004 UI fusionada a `main`; spec de feature 005 creada)
 
 > **Qué es este archivo:** el punto de reanudación corto para el siguiente agente
 > (estado, próximas acciones, blockers). **No es un diario** — el historial
@@ -8,11 +8,14 @@ Last updated: 2026-07-01 (feature 004 UI — ciclo de 6 estados + pago manual en
 > el backlog de features (por área del sidebar) en
 > `docs/analysis/menu-walkthrough-gap-analysis.md`.
 
-## Punto de reanudación (2026-07-01 — feature 004 COMPLETA, en worktree sin mergear a `main`)
+## Punto de reanudación (2026-07-01 — `main` al día; feature 005 especificada, plan pendiente)
 
-- **Trabajo hecho en un worktree aislado** (`worktree-agent-a9d0d1c7ce3fc19db`), commiteado ahí,
-  **sin push ni PR todavía** — pide confirmación al dueño antes de abrir PR contra `main`
-  (regla del proyecto). Revisa el diff de ese worktree antes de fusionar.
+- **`main` está al día con todo lo de esta sesión.** Feature 004 (backend + UI) fusionada a `main`
+  por PR y la rama de trabajo se borró (remoto y local) — no hay ramas sueltas pendientes.
+- **Feature 005 — `worker-email` ESPECIFICADA (spec.md listo, sin plan/tasks):** entrega fiable por
+  email de los 7 eventos del ciclo de reserva y un proceso real que los dispare en producción (hoy
+  `dispatchBookingNotification` solo lo llama su propio test). Ver `specs/005-worker-email/spec.md`.
+  **Siguiente paso: `/speckit-plan`.**
 - **Feature 004 — `reservas-ciclo-estados-pagos` COMPLETA (T001–T016, todas las fases, US1–US3 + Polish):**
   - Backend (ya estaba, sesión anterior): ciclo de 6 estados, rutas
     `POST /v1/admin/bookings/:id/{approve,reject,complete,no-show}`,
@@ -64,18 +67,15 @@ Last updated: 2026-07-01 (feature 004 UI — ciclo de 6 estados + pago manual en
 
 ## Próximas acciones (priorizadas) — PRÓXIMA SESIÓN
 
-> **→ Empieza por aquí:** feature 004 (T012/T013) ya está fusionada en la rama
-> `claude/crear-loop-nxnktr` (loop `loops/reservas-ui-ciclo-pagos.md` completado con éxito, VERIFY
-> en verde). Falta confirmar con el dueño si se abre PR contra `main` y hacer push. Después,
-> siguiente feature con `/speckit-specify`.
+> **→ Empieza por aquí:** feature 005 (`worker-email`) ya está especificada
+> (`specs/005-worker-email/spec.md`) — sigue con `/speckit-plan`, luego `/speckit-tasks` y
+> `/speckit-implement`. `main` está al día, sin ramas de trabajo sueltas.
 
-1. **Cerrar feature 004:** pedir confirmación al dueño para hacer push de `claude/crear-loop-nxnktr`
-   y abrir PR contra `main`.
-2. **Siguiente feature** (`/speckit-specify`):
-   - **Email worker**: Brevo ADR-0020 listo; dispatcher arma SMS y no cae a email. Necesita
-     bootstrap + handler de email en el worker. Ver `TECH_DEBT.md`. (Buen cierre del MVP: ya hay
-     transiciones que disparan notificaciones tras 004.)
-   - `reservas-gestion-ux` (búsqueda/filtros/bulk en Reservas) · `cupones` · `finanzas-pagos`.
+1. **Feature 005 — worker de email:** `/speckit-plan` sobre `specs/005-worker-email/spec.md`. Resuelve
+   ahí la decisión técnica de entrega (cola real tipo BullMQ per ADR-0004, vs. consumir el outbox de
+   eventos ya existente) — el spec deja eso abierto a propósito (es un detalle de plan, no de producto).
+2. **Después de 005:** `reservas-gestion-ux` (búsqueda/filtros/bulk en Reservas) · `cupones` ·
+   `finanzas-pagos`.
 
 ## Blockers / notas de entorno
 
