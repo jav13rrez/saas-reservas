@@ -1014,6 +1014,44 @@ complete,no-show,payment}/route.ts` (patrón de 3 capas igual que `source/settin
   `claude/crear-loop-nxnktr` y se fusionó a `main`; la rama de trabajo se borró (remoto y local) para
   no dejar ramas sueltas. Detalle del PR y su número en `HANDOFF.md`.
 
+### 2026-07-01 (cierre de sesión — skills Spec-Kit mirroreadas + plan de la feature 005)
+
+- **Skills Spec-Kit disponibles como comandos nativos de Claude Code:** copiadas las 9 skills de
+  `.agents/skills/speckit-*` (fuente, formato de spec-kit, la lee Codex) a `.claude/skills/speckit-*`
+  (la carpeta que el `Skill` tool de Claude Code escanea). Antes tuve que leer el `SKILL.md` a mano y
+  seguir sus instrucciones paso a paso porque `/speckit-specify` no existía como comando invocable;
+  ahora `/speckit-specify`, `/speckit-plan`, `/speckit-tasks`, `/speckit-implement`, `/speckit-clarify`,
+  `/speckit-analyze`, `/speckit-checklist`, `/speckit-constitution`, `/speckit-taskstoissues` funcionan
+  igual que `crear-loop`/`handoff`. Nota de mantenimiento: si `specify update` refresca los templates
+  en `.agents/skills/`, hay que volver a copiarlos a `.claude/skills/` o se desincronizan.
+- **`/speckit-plan` ejecutado para `specs/005-worker-email/`:** genera `plan.md`, `research.md`,
+  `data-model.md`, `contracts/notification-relay-queue.md`, `quickstart.md`. Investigación previa
+  (dos rondas de agentes) confirmó: `domain_events` es un outbox transaccional existente sin columna
+  de "procesado"; `job-runner.ts` (T080) solo tiene idempotencia en memoria (no sobrevive reinicios);
+  `outbound-webhook-dispatcher.ts` es reintento in-process, no un poller de tabla; `bullmq` no está
+  instalado en ningún `package.json` del monorepo pese a que ADR-0004 ya lo decidió; `ioredis` sí está
+  disponible y el cliente Redis de `services/api/src/main.ts` ya trae `maxRetriesPerRequest: null`
+  (la opción que BullMQ exige), como si se hubiera dejado preparado.
+- **Decisión técnica del plan:** relay que lee `domain_events` (sin tocar su esquema) → encola un job
+  BullMQ por evento (`jobId = eventId`, dedup nativo) → consumer nuevo en un `services/worker/src/
+main.ts` que hoy no existe → registra el resultado en una tabla nueva `notification_deliveries`
+  (queued/sent/failed). Esto cierra un follow-up nunca resuelto de ADR-0004 ("document the outbox
+  dispatch pattern"); se registrará como **ADR-0025** al implementar. Alternativas descartadas
+  (enqueue directo no transaccional, poller manual sin BullMQ, columna de estado en `domain_events`
+  en vez de tabla propia, reutilizar `job-runner.ts`) documentadas con su razón en `research.md`.
+  El fix trivial del bug SMS→email (`buildMessage` en `booking-notification-dispatcher.ts`) queda
+  descrito como independiente del resto del diseño.
+- **Verificado con evidencia real, no solo texto, que 001-004 están implementadas:** conteo de
+  archivos fuente (`packages/domain/src`: 14, `services/api/src`: 52, `apps/admin/src`: 27,
+  `apps/platform/src`: 6) + suite real en verde (384 passing, 7 skipped) — no solo `tasks.md` marcado
+  `[x]`. Feature 005 confirmada en el estado opuesto: cero archivos de código nuevos, `tasks.md` no
+  existe todavía.
+- **PR #11 cerrado sin fusionar:** rama paralela `claude/crear-loop-cawtoj` (otra sesión, mismo
+  alcance que la UI de la feature 004) descartada por decisión explícita del dueño — `main` ya tenía
+  una versión completa y verificada de esa funcionalidad vía PR #10.
+- **Todo commiteado y pusheado directo a `main`** (autorización explícita del dueño esta sesión, sin
+  PR): `e11eb56` (mirror de skills), `722252b` (plan de la 005).
+
 ## How To Update This File
 
 Append dated entries when:

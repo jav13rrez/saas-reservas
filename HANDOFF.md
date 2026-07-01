@@ -1,6 +1,6 @@
 # Handoff
 
-Last updated: 2026-07-01 (feature 004 UI fusionada a `main`; spec de feature 005 creada)
+Last updated: 2026-07-01 (feature 004 fusionada a `main`; feature 005 planificada, sin tasks/código)
 
 > **Qué es este archivo:** el punto de reanudación corto para el siguiente agente
 > (estado, próximas acciones, blockers). **No es un diario** — el historial
@@ -8,14 +8,33 @@ Last updated: 2026-07-01 (feature 004 UI fusionada a `main`; spec de feature 005
 > el backlog de features (por área del sidebar) en
 > `docs/analysis/menu-walkthrough-gap-analysis.md`.
 
-## Punto de reanudación (2026-07-01 — `main` al día; feature 005 especificada, plan pendiente)
+## Punto de reanudación (2026-07-01 — `main` al día; feature 005 con plan, sin tasks.md ni código)
 
-- **`main` está al día con todo lo de esta sesión.** Feature 004 (backend + UI) fusionada a `main`
-  por PR y la rama de trabajo se borró (remoto y local) — no hay ramas sueltas pendientes.
-- **Feature 005 — `worker-email` ESPECIFICADA (spec.md listo, sin plan/tasks):** entrega fiable por
-  email de los 7 eventos del ciclo de reserva y un proceso real que los dispare en producción (hoy
-  `dispatchBookingNotification` solo lo llama su propio test). Ver `specs/005-worker-email/spec.md`.
-  **Siguiente paso: `/speckit-plan`.**
+- **`main` está al día con todo lo de esta sesión** (`git log -1`: `docs(005): implementation plan
+for the email notification worker`). Sin ramas de trabajo sueltas ni PRs abiertos.
+- **Skills de Spec-Kit ahora invocables como comandos nativos de Claude Code**: `.agents/skills/
+speckit-*` (fuente, la lee Codex) se copió también a `.claude/skills/speckit-*` (Claude Code solo
+  escanea esa carpeta). Si algún día corres `specify update` y se refrescan los templates en
+  `.agents/skills/`, hay que volver a copiarlos a `.claude/skills/` para no desincronizar.
+- **Feature 005 — `worker-email`: ESPECIFICADA + PLANIFICADA, sin `tasks.md` ni código todavía.**
+  Verificado con evidencia real (no solo texto): `specs/005-worker-email/` tiene `spec.md`, `plan.md`,
+  `research.md`, `data-model.md`, `contracts/notification-relay-queue.md`, `quickstart.md` — pero
+  **cero archivos de código nuevos**, ningún test nuevo, y `tasks.md` no existe. La suite sigue en
+  384 passing / 7 skipped, exactamente igual que al cerrar la feature 004 — 005 no ha tocado código.
+  - **Qué resuelve:** dos gaps de producción — (1) `buildMessage` en
+    `booking-notification-dispatcher.ts` manda SMS cuando el cliente tiene teléfono y Brevo lo
+    rechaza (`sms-not-supported`), dejando al cliente sin nada; (2) `dispatchBookingNotification` es
+    correcta pero nadie la invoca en producción — no existe bootstrap de `services/worker`.
+  - **Decisión técnica del plan** (cierra un follow-up nunca resuelto de ADR-0004: "document the
+    outbox dispatch pattern"): un **relay** lee la tabla `domain_events` (outbox transaccional ya
+    existente) y encola un job de **BullMQ** por evento (`jobId = eventId`, dedup nativo); un
+    **consumer** nuevo hace el envío y registra el resultado en una tabla nueva
+    `notification_deliveries` (queued/sent/failed, con reintentos acotados). `bullmq` es dependencia
+    nueva (decidida en principio por ADR-0004, nunca instalada hasta ahora). Detalle completo con
+    alternativas descartadas en `specs/005-worker-email/research.md`.
+  - **Siguiente paso: `/speckit-tasks`** sobre `specs/005-worker-email/plan.md`, y después
+    `/speckit-implement`. Al implementar, registrar **ADR-0025** documentando el patrón
+    relay→BullMQ (ya previsto en el plan, sección "Governance follow-up").
 - **Feature 004 — `reservas-ciclo-estados-pagos` COMPLETA (T001–T016, todas las fases, US1–US3 + Polish):**
   - Backend (ya estaba, sesión anterior): ciclo de 6 estados, rutas
     `POST /v1/admin/bookings/:id/{approve,reject,complete,no-show}`,
@@ -67,13 +86,18 @@ Last updated: 2026-07-01 (feature 004 UI fusionada a `main`; spec de feature 005
 
 ## Próximas acciones (priorizadas) — PRÓXIMA SESIÓN
 
-> **→ Empieza por aquí:** feature 005 (`worker-email`) ya está especificada
-> (`specs/005-worker-email/spec.md`) — sigue con `/speckit-plan`, luego `/speckit-tasks` y
-> `/speckit-implement`. `main` está al día, sin ramas de trabajo sueltas.
+> **→ Empieza por aquí:** feature 005 (`worker-email`) tiene spec **y plan** listos
+> (`specs/005-worker-email/plan.md`) pero **cero código**. Ejecuta `/speckit-tasks` (genera
+> `tasks.md` desde el plan) y luego `/speckit-implement`. `main` está al día, sin ramas sueltas.
 
-1. **Feature 005 — worker de email:** `/speckit-plan` sobre `specs/005-worker-email/spec.md`. Resuelve
-   ahí la decisión técnica de entrega (cola real tipo BullMQ per ADR-0004, vs. consumir el outbox de
-   eventos ya existente) — el spec deja eso abierto a propósito (es un detalle de plan, no de producto).
+1. **Feature 005 — worker de email:**
+   - `/speckit-tasks` sobre `specs/005-worker-email/plan.md` → genera `tasks.md`.
+   - `/speckit-implement` → construye de verdad: `services/worker/src/main.ts` (bootstrap nuevo,
+     el paquete no tiene ninguno hoy), el relay sobre `domain_events`, el consumer BullMQ, la tabla
+     `notification_deliveries` (migración `013-notification-deliveries.sql`), el fix del branch
+     SMS→email en `booking-notification-dispatcher.ts`, y **ADR-0025** documentando el patrón.
+   - Nueva dependencia a añadir en `services/worker/package.json`: `bullmq` (más `ioredis`, que ya
+     existe en el workspace). Verificar el gate completo (typecheck/lint/format/test) antes de cerrar.
 2. **Después de 005:** `reservas-gestion-ux` (búsqueda/filtros/bulk en Reservas) · `cupones` ·
    `finanzas-pagos`.
 
@@ -103,8 +127,10 @@ Last updated: 2026-07-01 (feature 004 UI fusionada a `main`; spec de feature 005
 
 ## Suggested skills (próximo agente)
 
-- `/speckit-specify` — para la siguiente feature (`tenant-settings` o `reservas-ciclo-estados-pagos`).
-- `/speckit-implement` — una vez especificada la siguiente feature.
+- `/speckit-tasks` — genera `specs/005-worker-email/tasks.md` a partir del plan ya escrito.
+- `/speckit-implement` — una vez exista `tasks.md`, construye el worker de verdad.
+- Todas las skills `speckit-*` ahora son comandos nativos (`.claude/skills/speckit-*`), no hace falta
+  leer `.agents/skills/*/SKILL.md` a mano como se hizo la primera vez esta sesión.
 - `/handoff` — al cerrar la sesión, para refrescar este archivo.
 
 ## Reglas de cierre de sesión
