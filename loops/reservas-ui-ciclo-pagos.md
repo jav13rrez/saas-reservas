@@ -81,32 +81,32 @@ estados, las transiciones válidas/inválidas y el alta/lectura del pago manual.
    qué sub-tarea sigue y qué falló en el intento anterior.
 2. Ejecuta la siguiente sub-tarea pendiente, en este orden si empiezas de cero:
    a. Añadir `apps/admin/src/**/*.test.ts` al `include` del proyecto `unit` en
-      `vitest.config.ts`.
+   `vitest.config.ts`.
    b. Extender `BookingStatus` a los 6 estados en `demo-store.ts` (tipo,
-      creación respetando `requiresApproval`, cálculo de ocupación) y en la
-      interfaz `AdminBooking` de `features/bookings/index.tsx` (o eliminar la
-      duplicación importando el tipo del store/seam si es más simple).
+   creación respetando `requiresApproval`, cálculo de ocupación) y en la
+   interfaz `AdminBooking` de `features/bookings/index.tsx` (o eliminar la
+   duplicación importando el tipo del store/seam si es más simple).
    c. Reescribir el mapeo de `source/bookings.ts` para pasar los 6 estados sin
-      colapsar, y añadir las funciones de transición
-      (`approveBooking`/`rejectBooking`/`completeBooking`/`noShowBooking`) que
-      en modo `demo` mutan el store validando contra `TRANSITIONS` de
-      `packages/domain`, y en modo `api` llaman a las rutas
-      `POST /v1/admin/bookings/:id/{approve,reject,complete,no-show}`.
+   colapsar, y añadir las funciones de transición
+   (`approveBooking`/`rejectBooking`/`completeBooking`/`noShowBooking`) que
+   en modo `demo` mutan el store validando contra `TRANSITIONS` de
+   `packages/domain`, y en modo `api` llaman a las rutas
+   `POST /v1/admin/bookings/:id/{approve,reject,complete,no-show}`.
    d. Añadir `apps/admin/app/api/bookings/[id]/{approve,reject,complete,no-show}/route.ts`
-      (Next route handlers finos, mismo patrón que `[id]/route.ts` existente).
+   (Next route handlers finos, mismo patrón que `[id]/route.ts` existente).
    e. Añadir `source/booking-payment.ts` (get/upsert, demo llama al store, api
-      llama a `GET`/`PUT /v1/admin/bookings/:id/payment`), extender
-      `demo-store.ts` con almacenamiento de pago por reserva, y añadir
-      `app/api/bookings/[id]/payment/route.ts`.
+   llama a `GET`/`PUT /v1/admin/bookings/:id/payment`), extender
+   `demo-store.ts` con almacenamiento de pago por reserva, y añadir
+   `app/api/bookings/[id]/payment/route.ts`.
    f. UI: botones de acción por fila (solo las transiciones válidas desde el
-      estado actual, deshabilita o esconde el resto) y sección de Payment
-      (formulario método/estado/importe/depósito/referencia/notas) en
-      `features/bookings/index.tsx`, usando iconos `lucide-react` y tokens de
-      `packages/ui` únicamente.
+   estado actual, deshabilita o esconde el resto) y sección de Payment
+   (formulario método/estado/importe/depósito/referencia/notas) en
+   `features/bookings/index.tsx`, usando iconos `lucide-react` y tokens de
+   `packages/ui` únicamente.
    g. Tests unitarios (`apps/admin/src/**/*.test.ts`): mapeo de 6 estados sin
-      colapso, transición inválida rechazada (espeja `TRANSITIONS` del
-      dominio), ocupación correcta tras cada transición, upsert/get de pago
-      manual (incluye validación de depósito ≤ importe).
+   colapso, transición inválida rechazada (espeja `TRANSITIONS` del
+   dominio), ocupación correcta tras cada transición, upsert/get de pago
+   manual (incluye validación de depósito ≤ importe).
 3. Ejecuta VERIFY.
 4. Si falla: anota en el archivo de estado qué falló y por qué (mensaje de error
    real, no una suposición), corrige solo eso, vuelve a VERIFY. No avances a la

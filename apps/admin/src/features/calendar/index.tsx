@@ -1,10 +1,15 @@
 "use client";
 
 /**
- * Calendario screen. A weekly grid of confirmed bookings grouped by provider:
- * one row per provider, one column per day. Each cell lists that provider's
- * bookings that day (time + service + customer). Navigate weeks with the
- * arrows. Talks to /api/bookings and /api/providers.
+ * Calendario screen. A weekly grid of slot-occupying bookings grouped by
+ * provider: one row per provider, one column per day. Each cell lists that
+ * provider's bookings that day (time + service + customer). Navigate weeks
+ * with the arrows. Talks to /api/bookings and /api/providers.
+ *
+ * Feature 004: a booking occupies its slot in states
+ * pending/approved/completed/no_show (mirrors the demo-store's
+ * `OCCUPIES_SLOT`); rejected/canceled bookings free the slot and are hidden
+ * here, same as the backend's occupancy calculation.
  *
  * Styling reads design tokens; icons from lucide-react only. No emojis.
  */
@@ -17,6 +22,16 @@ interface AdminProvider {
   name: string;
   active: boolean;
 }
+
+type BookingStatus = "pending" | "approved" | "rejected" | "canceled" | "completed" | "no_show";
+
+const OCCUPIES_SLOT: ReadonlySet<BookingStatus> = new Set([
+  "pending",
+  "approved",
+  "completed",
+  "no_show",
+]);
+
 interface AdminBooking {
   id: string;
   providerId: string;
@@ -25,7 +40,7 @@ interface AdminBooking {
   customerName: string;
   startAt: string;
   endAt: string;
-  status: "confirmed" | "cancelled";
+  status: BookingStatus;
 }
 
 const DAY_NAMES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
@@ -98,11 +113,11 @@ export function Calendar() {
   );
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart]);
 
-  // Confirmed bookings within the visible week.
+  // Slot-occupying bookings within the visible week.
   const weekBookings = useMemo(
     () =>
       bookings.filter((b) => {
-        if (b.status !== "confirmed") {
+        if (!OCCUPIES_SLOT.has(b.status)) {
           return false;
         }
         const start = new Date(b.startAt);
@@ -142,8 +157,8 @@ export function Calendar() {
         Calendario
       </h1>
       <p style={{ color: "var(--ui-color-text-muted)", maxWidth: 640 }}>
-        Vista semanal de reservas confirmadas por proveedor. Cada celda muestra las citas de ese
-        profesional ese día.
+        Vista semanal de reservas que ocupan agenda (pendientes, aprobadas, completadas o no-show)
+        por proveedor. Cada celda muestra las citas de ese profesional ese día.
       </p>
 
       <div

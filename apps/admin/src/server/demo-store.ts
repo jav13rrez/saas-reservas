@@ -28,6 +28,15 @@
  */
 
 import { randomUUID } from "node:crypto";
+import {
+  canTransition,
+  InvalidBookingTransitionError,
+  type BookingStatus as DomainBookingStatus,
+} from "@saas-reservas/domain/bookings/booking";
+import {
+  validateManualPayment,
+  type ManualPayment,
+} from "@saas-reservas/domain/payments/manual-payment";
 
 export type StoreResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -115,7 +124,21 @@ export type AdminScheduleEntry =
     }
   | { kind: "day-off"; date: string };
 
-export type BookingStatus = "confirmed" | "cancelled";
+/**
+ * The demo store's booking status mirrors the domain's 6-state lifecycle
+ * (feature 004); it deliberately excludes `expired` and `rescheduled` because
+ * those transitions have no admin-console trigger (expiry is time-based,
+ * reschedule is a separate flow not yet built here).
+ */
+export type BookingStatus = DomainBookingStatus;
+
+/** Occupancy is held for every status except the two that free the slot. */
+const OCCUPIES_SLOT: ReadonlySet<BookingStatus> = new Set<BookingStatus>([
+  "pending",
+  "approved",
+  "completed",
+  "no_show",
+]);
 
 export interface AdminBooking {
   id: string;
@@ -164,6 +187,8 @@ interface DemoData {
   /** Provider schedules keyed by provider id. */
   schedules: Record<string, AdminScheduleEntry[]>;
   settings: AdminSettings;
+  /** Manual payments (feature 004), one per booking, keyed by booking id. */
+  payments: Record<string, ManualPayment>;
 }
 
 // ---------------------------------------------------------------------------
@@ -339,7 +364,7 @@ function seed(): DemoData {
       customerEmail: lucia.email,
       startAt,
       endAt: addMinutes(startAt, consulta.durationMinutes),
-      status: "confirmed",
+      status: "approved",
       priceAmount: consulta.priceAmount,
       currency: consulta.currency,
       createdAt: isoAt(-1, 9),
@@ -358,7 +383,7 @@ function seed(): DemoData {
       customerEmail: marcos.email,
       startAt,
       endAt: addMinutes(startAt, terapia.durationMinutes),
-      status: "confirmed",
+      status: "approved",
       priceAmount: terapia.priceAmount,
       currency: terapia.currency,
       createdAt: isoAt(-2, 14),
@@ -396,7 +421,17 @@ function seed(): DemoData {
     branding: { primaryColor: "#1f6feb" },
   };
 
-  return { locations, resources, services, providers, customers, bookings, schedules, settings };
+  return {
+    locations,
+    resources,
+    services,
+    providers,
+    customers,
+    bookings,
+    schedules,
+    settings,
+    payments: {},
+  };
 }
 
 const globalForStore = globalThis as typeof globalThis & {
@@ -867,14 +902,15 @@ export interface CreateBookingInput {
 }
 
 /**
- * Units of `resourceId` already consumed by confirmed bookings that overlap
- * [start, end). Each confirmed booking whose service is in resource.serviceIds
+ * Units of `resourceId` already consumed by bookings that occupy the slot
+ * (see `OCCUPIES_SLOT`: pending/approved/completed/no_show) and overlap
+ * [start, end). Each such booking whose service is in resource.serviceIds
  * consumes 1 unit of that resource.
  */
 function unitsInUse(resource: AdminResource, start: string, end: string): number {
   let used = 0;
   for (const booking of data().bookings) {
-    if (booking.status !== "confirmed") continue;
+    if (!OCCUPIES_SLOT.has(booking.status)) continue;
     if (!resource.serviceIds.includes(booking.serviceId)) continue;
     if (intervalsOverlap(start, end, booking.startAt, booking.endAt)) {
       used += 1;
@@ -883,17 +919,26 @@ function unitsInUse(resource: AdminResource, start: string, end: string): number
   return used;
 }
 
-/** True if the provider already has a confirmed booking overlapping [start, end). */
+/** True if the provider already has a slot-occupying booking overlapping [start, end). */
 function providerBusy(providerId: string, start: string, end: string): boolean {
   return data().bookings.some(
     (b) =>
-      b.status === "confirmed" &&
+      OCCUPIES_SLOT.has(b.status) &&
       b.providerId === providerId &&
       intervalsOverlap(start, end, b.startAt, b.endAt),
   );
 }
 
-export function createBooking(input: CreateBookingInput): StoreResult<AdminBooking> {
+/**
+ * Create a booking. When `requiresApproval` is true (tenant policy, feature
+ * 003) the booking starts `pending`, mirroring the real
+ * `AdminBookingService.createBooking`; otherwise it starts `approved`.
+ * Occupancy is held in both cases (see `OCCUPIES_SLOT`).
+ */
+export function createBooking(
+  input: CreateBookingInput,
+  requiresApproval = false,
+): StoreResult<AdminBooking> {
   const service = findService(input.serviceId);
   if (service === undefined) {
     return { ok: false, error: "El servicio seleccionado no existe." };
@@ -990,7 +1035,7 @@ export function createBooking(input: CreateBookingInput): StoreResult<AdminBooki
     customerEmail: customer.email,
     startAt,
     endAt,
-    status: "confirmed",
+    status: requiresApproval ? "pending" : "approved",
     priceAmount: service.priceAmount,
     currency: service.currency,
     createdAt: new Date().toISOString(),
@@ -999,16 +1044,57 @@ export function createBooking(input: CreateBookingInput): StoreResult<AdminBooki
   return { ok: true, value: booking };
 }
 
+export function findBooking(id: string): AdminBooking | undefined {
+  return data().bookings.find((b) => b.id === id);
+}
+
 export function cancelBooking(id: string): StoreResult<AdminBooking> {
-  const booking = data().bookings.find((b) => b.id === id);
+  const booking = findBooking(id);
   if (booking === undefined) {
     return { ok: false, error: "Reserva no encontrada." };
   }
-  if (booking.status === "cancelled") {
+  if (booking.status === "canceled") {
     return { ok: false, error: "La reserva ya está cancelada." };
   }
-  booking.status = "cancelled";
+  if (!canTransition(booking.status, "canceled")) {
+    return { ok: false, error: `No se puede cancelar una reserva en estado "${booking.status}".` };
+  }
+  booking.status = "canceled";
   return { ok: true, value: booking };
+}
+
+/**
+ * Apply a lifecycle transition (approve/reject/complete/no_show), validating
+ * against the domain `TRANSITIONS` (via `canTransition`) so the demo store
+ * never accepts a move the real backend would reject with 409. Reject frees
+ * occupancy; approve/complete/no_show do not (`OCCUPIES_SLOT`).
+ */
+function transitionBookingStatus(id: string, to: BookingStatus): StoreResult<AdminBooking> {
+  const booking = findBooking(id);
+  if (booking === undefined) {
+    return { ok: false, error: "Reserva no encontrada." };
+  }
+  if (!canTransition(booking.status, to)) {
+    throw new InvalidBookingTransitionError(booking.status, to);
+  }
+  booking.status = to;
+  return { ok: true, value: booking };
+}
+
+export function approveBooking(id: string): StoreResult<AdminBooking> {
+  return transitionBookingStatus(id, "approved");
+}
+
+export function rejectBooking(id: string): StoreResult<AdminBooking> {
+  return transitionBookingStatus(id, "rejected");
+}
+
+export function completeBooking(id: string): StoreResult<AdminBooking> {
+  return transitionBookingStatus(id, "completed");
+}
+
+export function noShowBooking(id: string): StoreResult<AdminBooking> {
+  return transitionBookingStatus(id, "no_show");
 }
 
 // ---------------------------------------------------------------------------
@@ -1081,4 +1167,28 @@ export function updateSettings(input: UpdateSettingsInput): StoreResult<AdminSet
 
   data().settings = next;
   return { ok: true, value: structuredClone(next) };
+}
+
+// ---------------------------------------------------------------------------
+// Manual payments (feature 004, US3): one off-gateway payment record per
+// booking, entered by staff (method/status/amount/deposit/reference/notes).
+// ---------------------------------------------------------------------------
+
+export function getBookingPayment(bookingId: string): ManualPayment | undefined {
+  const payment = data().payments[bookingId];
+  return payment === undefined ? undefined : structuredClone(payment);
+}
+
+export function upsertBookingPayment(payment: ManualPayment): StoreResult<ManualPayment> {
+  if (findBooking(payment.bookingId) === undefined) {
+    return { ok: false, error: "Reserva no encontrada." };
+  }
+  try {
+    validateManualPayment(payment);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Pago manual no válido.";
+    return { ok: false, error: message };
+  }
+  data().payments[payment.bookingId] = structuredClone(payment);
+  return { ok: true, value: structuredClone(payment) };
 }

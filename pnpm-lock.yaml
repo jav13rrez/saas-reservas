@@ -71,6 +71,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@saas-reservas/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@saas-reservas/ui':
         specifier: workspace:*
         version: link:../../packages/ui
